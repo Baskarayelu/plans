@@ -10,6 +10,9 @@ VARIANT="${2:-debug}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 SECRETS="${PLANS_SECRETS_DIR:-$HERE/../../secrets}"
 
+# Refuse to build if any user-visible string uses crypto vocabulary (wallet, address, gas, transaction, …).
+node "$HERE/scripts/check-copy.mjs"
+
 export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
 export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
