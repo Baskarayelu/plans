@@ -1,0 +1,20 @@
+# Second phone, same passkey: restore, open the plan and the spend; the encrypted note is readable.
+# -e PLAN_NAME='Metropolis Judges’ Trip' -e NOTE='Dinner at Taberna'
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "btn-restore"
+- runFlow: subflows/passkey.yaml
+- extendedWaitUntil:
+    visible: "Welcome back.*"
+    timeout: 30000
+- tapOn:
+    id: "btn-go-to-my-plans"
+- tapOn: ${PLAN_NAME}
+- extendedWaitUntil:
+    visible: ".*${NOTE}.*"
+    timeout: 30000
+- tapOn: ".*${NOTE}.*"
+- assertVisible: ".*${NOTE}.*"

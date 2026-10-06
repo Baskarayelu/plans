@@ -1,0 +1,23 @@
+# Spend over the instant limit → "Needs 1 more approval" → a demo member approves → paid.
+# (judge step 5c: $0.40; Ben · Demo approves within ~10 s)
+appId: ${APP_ID}
+---
+- assertVisible:
+    id: "plan-home"
+- tapOn:
+    id: "btn-pay"
+- tapOn: ${MEMBER_NAME}
+- tapOn:
+    id: "key-dot"
+- tapOn:
+    id: "key-4"
+- tapOn:
+    id: "key-0"
+- extendedWaitUntil:
+    visible: ".*Needs 1 more approval.*"
+    timeout: 10000
+- tapOn:
+    id: "btn-ask-for-an-ok"
+- extendedWaitUntil:
+    visible: ".*(said OK|Approved|paid).*"
+    timeout: 40000

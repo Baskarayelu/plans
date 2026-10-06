@@ -1,0 +1,32 @@
+# "Try a settle-up" (judge step 5e): demo plan with Ben, Asha, Maya (Demo) → one-tap settle.
+appId: ${APP_ID}
+---
+- launchApp
+- tapOn:
+    id: "tab-you"
+- tapOn:
+    id: "row-try-settle-up"
+- tapOn:
+    id: "btn-start-the-demo"
+- extendedWaitUntil:
+    visible:
+      id: "btn-end-plan-and-settle-up"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: ".*(step 3 of 3|Next: end the plan).*"
+    timeout: 180000
+- tapOn:
+    id: "btn-end-plan-and-settle-up"
+- extendedWaitUntil:
+    visible:
+      id: "btn-settle-up"
+    timeout: 60000
+- tapOn:
+    id: "btn-settle-up"
+- extendedWaitUntil:
+    visible: "All settled"
+    timeout: 30000
+- assertVisible:
+    id: "settled-in"
+- assertVisible:
+    id: "proof"

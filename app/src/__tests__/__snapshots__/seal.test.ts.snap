@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`fingerprint emoji is three emoji and stable 1`] = `"🥁🐤🐻"`;
+
+exports[`sealed box is deterministic given ephemeral key and nonce (vector) 1`] = `"0x017b0d47d93427f8311160781c7c733fd89f88970aef490d8aa0ee19a4cb8a1b144444444444444444444444444444444444444444444444440f76455cd1e80ee66333eaf55d35ab3300a8b43207"`;

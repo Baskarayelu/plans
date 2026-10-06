@@ -1,0 +1,32 @@
+# Instant spend from the pot (judge step 5b: $0.10 to Asha, Food & drink, split with everyone).
+# Run while unlocked and inside a plan (e.g. after 02). -e MEMBER_NAME=Asha
+appId: ${APP_ID}
+---
+- assertVisible:
+    id: "plan-home"
+- tapOn:
+    id: "btn-pay"
+- tapOn: ${MEMBER_NAME}
+- tapOn:
+    id: "btn-swap-currency"
+    optional: true
+- tapOn:
+    id: "key-dot"
+- tapOn:
+    id: "key-1"
+- tapOn:
+    id: "key-0"
+- tapOn:
+    id: "chip-category-3"
+- extendedWaitUntil:
+    visible: "Goes through now"
+    timeout: 10000
+- tapOn:
+    id: "btn-confirm-with-fingerprint"
+- extendedWaitUntil:
+    visible: "Paid"
+    timeout: 30000
+- assertVisible:
+    id: "settled-in"
+- assertVisible:
+    id: "proof"

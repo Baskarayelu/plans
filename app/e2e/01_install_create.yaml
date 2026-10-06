@@ -1,0 +1,20 @@
+# Fresh install → Create account (one passkey prompt) → name/country → empty home.
+# maestro test -e APP_ID=in.oxo.plans.test -e PIN=1234 -e NAME=Sam -e COUNTRY=US -e COUNTRY_NAME="United States" e2e/01_install_create.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible: "One pot for the.*"
+- tapOn:
+    id: "btn-create-account"
+- runFlow: subflows/passkey.yaml
+- runFlow:
+    when:
+      visible: "What should friends call you?"
+    commands:
+      - runFlow: subflows/profile.yaml
+- extendedWaitUntil:
+    visible: "Your plans"
+    timeout: 20000
+- assertVisible:
+    id: "home-balance"

@@ -1,0 +1,11 @@
+# Question a spend you were part of → the group votes.
+# Start on a spend detail screen (tap a feed item in plan home first).
+appId: ${APP_ID}
+---
+- tapOn: "Question this spend"
+- tapOn: "Not part of the plan"
+- tapOn:
+    id: "btn-send-to-the-group"
+- extendedWaitUntil:
+    visible: ".*Should .* cover.*"
+    timeout: 30000

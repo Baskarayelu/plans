@@ -1,0 +1,32 @@
+# Android Credential Manager sheet (Google Password Manager). Plans never draws this sheet.
+# Handles: account picker (Continue), screen-lock PIN entry, and "Use passkey"/"Create" confirms.
+# Set PIN to the emulator's screen-lock PIN (maestro test -e PIN=1234 ...).
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      text: ".*(passkey|Passkey|screen lock|Continue|PIN).*"
+    timeout: 15000
+    optional: true
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- runFlow:
+    when:
+      visible: "Create"
+    commands:
+      - tapOn: "Create"
+- runFlow:
+    when:
+      visible:
+        text: ".*(Enter your PIN|Use your PIN|Confirm your PIN|screen lock).*"
+    commands:
+      - runFlow:
+          when:
+            visible: "Use PIN"
+          commands:
+            - tapOn: "Use PIN"
+      - inputText: ${PIN}
+      - pressKey: Enter

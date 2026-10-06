@@ -1,0 +1,16 @@
+# Fresh-device test: clear storage → "I already use Plans" → one prompt → everything back,
+# same key fingerprint. -e FINGERPRINT='🦊🌵🎈' (the three emoji seen before clearing)
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "btn-restore"
+- runFlow: subflows/passkey.yaml
+- extendedWaitUntil:
+    visible: "Welcome back.*"
+    timeout: 30000
+- assertVisible: ${FINGERPRINT}
+- tapOn:
+    id: "btn-go-to-my-plans"
+- assertVisible: "Your plans"

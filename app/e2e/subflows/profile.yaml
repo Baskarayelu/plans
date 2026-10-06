@@ -1,0 +1,17 @@
+# Screen 03: name, country (currency follows).
+appId: ${APP_ID}
+---
+- assertVisible: "What should friends call you?"
+- tapOn:
+    id: "field-name"
+- inputText: ${NAME}
+- hideKeyboard
+- tapOn:
+    id: "field-country"
+- tapOn:
+    id: "field-country-search"
+- inputText: ${COUNTRY_NAME}
+- tapOn:
+    id: "country-${COUNTRY}"
+- tapOn:
+    id: "btn-continue"

@@ -1,0 +1,29 @@
+# Agora path: send £1.00 to a Plans code; receipt shows both currencies, rate, settled time, Proof.
+# -e CODE_URL='https://plans.0xo.in/p/0x…#n=Sam&c=New%20York&cc=US&cur=USD'
+appId: ${APP_ID}
+---
+- launchApp
+- openLink: ${CODE_URL}
+- extendedWaitUntil:
+    visible:
+      id: "amount-display"
+    timeout: 20000
+- tapOn:
+    id: "key-1"
+- extendedWaitUntil:
+    visible:
+      id: "recipient-gets"
+    timeout: 10000
+- tapOn:
+    id: "btn-continue"
+- tapOn:
+    id: "btn-confirm-with-fingerprint"
+- extendedWaitUntil:
+    visible:
+      id: "screen-sent"
+    timeout: 30000
+- assertVisible: "Sent"
+- assertVisible:
+    id: "settled-in"
+- assertVisible:
+    id: "proof"

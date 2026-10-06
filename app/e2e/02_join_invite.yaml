@@ -1,0 +1,32 @@
+# Join a plan from an invite App Link with ONE passkey prompt (new user: account + join).
+# -e INVITE_URL='https://plans.0xo.in/j/0x…#s=…&n=Maya'
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- openLink: ${INVITE_URL}
+- extendedWaitUntil:
+    visible:
+      id: "btn-join-with-fingerprint"
+    timeout: 20000
+- tapOn:
+    id: "btn-join-with-fingerprint"
+- runFlow: subflows/passkey.yaml
+- runFlow:
+    when:
+      visible: "What should friends call you?"
+    commands:
+      - runFlow: subflows/profile.yaml
+      - extendedWaitUntil:
+          visible:
+            id: "btn-join-with-fingerprint"
+          timeout: 20000
+      - tapOn:
+          id: "btn-join-with-fingerprint"
+- extendedWaitUntil:
+    visible: "You're in!"
+    timeout: 30000
+- tapOn:
+    id: "btn-open-the-plan"
+- assertVisible:
+    id: "plan-home"

@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`account derivation (Mera recipe) is deterministic (fixed vector) 1`] = `"0x37566338ADFbf56aa41FE8FC38aA92dB1e12aD59"`;
+
+exports[`keys namespace is deterministic across devices (fixed vector) 1`] = `
+{
+  "fingerprint": "🥁⛄🦜",
+  "pub": "0xd12bfe8c9ced77aee260bd24c878084f4236f638120ded2379f615ca6e991c5c",
+}
+`;

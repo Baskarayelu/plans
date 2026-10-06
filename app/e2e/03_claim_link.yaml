@@ -1,0 +1,35 @@
+# Claim a link (judge step 3). Works signed-in or as a brand-new user (one prompt).
+# -e CLAIM_URL='https://plans.0xo.in/c/1#k=…&n=Plans'
+appId: ${APP_ID}
+---
+- launchApp
+- openLink: ${CLAIM_URL}
+- extendedWaitUntil:
+    visible:
+      id: "claim-status"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "btn-create-account-and-claim"
+    commands:
+      - tapOn:
+          id: "btn-create-account-and-claim"
+      - runFlow: subflows/passkey.yaml
+      - runFlow:
+          when:
+            visible: "What should friends call you?"
+          commands:
+            - runFlow: subflows/profile.yaml
+- runFlow:
+    when:
+      visible:
+        id: "btn-claim"
+    commands:
+      - tapOn:
+          id: "btn-claim"
+- extendedWaitUntil:
+    visible: ".*is in your Plans account.*"
+    timeout: 30000
+- assertVisible:
+    id: "settled-in"
