@@ -24,7 +24,7 @@ Bounty judging weights adherence to the written requirements at 40%. This file l
 | Demo video: completed send and receive, settled instantly | Official | Phone A → Phone B on mainnet; receipt shows settlement time and a Proof link | ⏳ | — |
 | Mobile app | 2nd (card summary) | Native Android APK | ⏳ | — |
 | Mera passkey onboarding | 2nd (card summary) | Mera is the only account layer | ⏳ | — |
-| Uses AUSD (not a mock) | 2nd | AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` on mainnet | ⏳ | AUSD ERC-3009 relay simulated on mainnet, 6 Oct (local evidence) |
+| Uses AUSD (not a mock) | 2nd | AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` on mainnet | 🟡 tested on a mainnet fork, not deployed | [contracts/test/fork](../contracts/test/fork) runs the full lifecycle against real AUSD |
 
 ## Monad Foundation: Best Mera-Powered UX on Monad ($2,500, all tracks)
 
@@ -53,8 +53,8 @@ Bounty judging weights adherence to the written requirements at 40%. This file l
 |---|---|---|---|---|
 | HyperIndex, HyperSync or HyperRPC actually drives a feature | Official | Balances, budget bars, settle-up preview, fresh-device rebuild, stats page | ⏳ | — |
 | Optional video: data flowing end to end | Official | Spend → GraphQL console → app updates | ⏳ | — |
-| Public repo with `config.yaml`, `schema.graphql` and handlers | 2nd | `indexer/` in this repo | ⏳ | — |
-| Non-trivial schema with derived or aggregated entities | 2nd | MemberBalance, CategorySpend, SettlementEdge, Corridor, PotDaily | ⏳ | — |
+| Public repo with `config.yaml`, `schema.graphql` and handlers | 2nd | `indexer/` in this repo | 🟡 built, not deployed | [indexer/config.yaml](../indexer/config.yaml), [schema.graphql](../indexer/schema.graphql), [src/handlers](../indexer/src/handlers); 21 tests |
+| Non-trivial schema with derived or aggregated entities | 2nd | MemberBalance, CategorySpend, SettlementEdge, Corridor, PotDaily, GlobalStats | 🟡 built, not deployed | 32 entities; settlement-graph tests on 2,000 random pots |
 | A consumer of the data, plus a demo | 2nd | The Android app and the stats page | ⏳ | — |
 
 ## Aurora Intents: Bring Any-Chain Liquidity to Monad ($5,000, all tracks): not added
