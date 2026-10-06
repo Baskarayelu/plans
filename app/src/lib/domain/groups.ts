@@ -9,6 +9,7 @@
  * Member profiles are KeyWrapped entries a member posts for themself: 0x50 || groupBox(profile).
  */
 import type { Address, Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { fromHex, toHex } from "../crypto/bytes";
 import { inviteKeyPair } from "../crypto/keys";
 import { decodeMeta, decodeProfileWrap, unwrapGroupKey, WRAP_GROUP_KEY, WRAP_PROFILE, type PlanMeta, type Profile } from "../crypto/seal";
@@ -63,14 +64,25 @@ export function groupKeyFor(pot: string, opts: { me?: string; keyWraps?: KeyWrap
     }
   }
   const secret = opts.inviteSecret ?? (keys ? inviteSecretFor(p) : null);
-  if (secret && opts.inviteKeyWrap && opts.inviteKeyWrap.length > 4) {
-    try {
-      const k = unwrapGroupKey(inviteKeyPair(secret).secret, fromHex(opts.inviteKeyWrap), p);
-      if (keys) rememberGroupKey(p, k);
-      else memGroupKeys.set(p, k);
-      return k;
-    } catch {
-      /* not for this secret */
+  if (secret) {
+    // The original invite wrap (createPot), then wraps posted for a replacement invite key
+    // (KeyWrapped entries addressed to that invite key's signer address).
+    const candidates: string[] = [];
+    if (opts.inviteKeyWrap && opts.inviteKeyWrap.length > 4) candidates.push(opts.inviteKeyWrap);
+    if (opts.keyWraps) {
+      const signer = lc(privateKeyToAccount(toHex(secret)).address);
+      for (const w of [...opts.keyWraps].reverse()) if (lc(w.member_id) === signer && w.wrap.startsWith("0x01")) candidates.push(w.wrap);
+    }
+    const inv = inviteKeyPair(secret).secret;
+    for (const c of candidates) {
+      try {
+        const k = unwrapGroupKey(inv, fromHex(c), p);
+        if (keys) rememberGroupKey(p, k);
+        else memGroupKeys.set(p, k);
+        return k;
+      } catch {
+        /* not for this secret */
+      }
     }
   }
   return null;

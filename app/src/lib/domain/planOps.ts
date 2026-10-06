@@ -103,12 +103,20 @@ export function currentInviteUrl(pot: string): string | null {
   return inviteUrl(config.linkHost, pot, s, identity.get().profile?.name);
 }
 
-/** "Turn off link" / "Make a new link": rotate the invite signer. A new invite wrap is not possible
- * (events only), so new joiners read the plan through re-wraps once they're in. */
+/**
+ * "Make a new link": rotate the invite signer to a fresh invite key, then post the group key
+ * sealed to the new invite key as a KeyWrapped entry addressed to the new signer's address, so
+ * people opening the new link can read the plan before they join (see docs/crypto.md §5).
+ */
 export async function newInviteLink(pot: Address): Promise<string> {
   const secret = randomBytes(32);
-  await A.rotateInvite(pot, privateKeyToAccount(toHex(secret)).address);
+  const signer = privateKeyToAccount(toHex(secret)).address;
+  await A.rotateInvite(pot, signer);
   rememberInviteSecret(pot, secret);
+  const gk = groupKeyFor(pot, { me: identity.get().address });
+  if (gk) {
+    await A.postKeyWraps(pot, [{ member: signer, wrap: toHex(wrapGroupKey(inviteKeyPair(secret).publicKey, gk, pot)) as Hex }]).catch(() => undefined);
+  }
   return inviteUrl(config.linkHost, pot, secret, identity.get().profile?.name);
 }
 

@@ -243,7 +243,7 @@ export function friendlyError(e: unknown): { title: string; message: string; cod
     return { title: "You're offline", message: "Check your connection and try again. Nothing moved.", code: "OFFLINE", offline: true };
   }
   if (e instanceof RelayError) {
-    if (e.status === 429) return { title: "Slow down a little", message: CODE_COPY.RATE_LIMITED, code: e.code, offline: false };
+    if (e.status === 429 && !CODE_COPY[e.code]) return { title: "Slow down a little", message: CODE_COPY.RATE_LIMITED, code: e.code, offline: false };
     if (e.status >= 500) return { title: "Plans is having a moment", message: "Our side didn't respond properly. Nothing moved. Try again in a minute.", code: e.code, offline: false };
     const mapped = CODE_COPY[e.code];
     const server = e.serverMessage && !BANNED.test(e.serverMessage) ? e.serverMessage : undefined;

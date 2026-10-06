@@ -120,9 +120,12 @@ Meta starting with `0x00` is plaintext JSON (the relayer's demo plans). `receipt
 `SHA-256(receipt box)`. The ciphertext is stored on the phone and uploaded to the relayer's blob
 store at `PUT /v1/blob/<hash>` when that endpoint exists (it doesn't yet; see the lead's notes).
 
-Known limit: wraps are events, so a rotated invite link cannot carry a new invite wrap; the old
-invite wrap stays readable by anyone holding an old link. People joining with a new link read the
-plan once a member's phone re-wraps the group key for them (seconds after they join).
+New invite links: "Make a new link" rotates the invite signer to a fresh invite key and posts
+`seal(newInvitePub, groupKey)` as a `KeyWrapped` entry whose `member` is the new signer's address
+(`postKeyWraps` doesn't restrict the wrapped address). A phone opening the link looks for the
+`createPot` invite wrap and for wraps addressed to `address(inviteSecret)`. Known limit: the old
+invite wrap stays readable by anyone holding an old link (they can read the plan's name and notes
+but can no longer join).
 
 ## 6. Send note (PlansSend)
 
