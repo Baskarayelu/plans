@@ -62,4 +62,5 @@ console.log("AUSD transferWithAuthorization, relayed");
 console.log(`  chain      ${chainId}, block ${block.toLocaleString("en-US")}`);
 console.log(`  gas        ${gas.toLocaleString("en-US")}`);
 console.log(`  gas price  ${gasPrice / 1e9} gwei`);
-console.log(`  cost       ${mon.toFixed(5)} MON` + (usd ? ` = $${(mon * usd).toFixed(5)} (MON $${usd.toFixed(4)})` : ""));
+console.log(`  cost       ${mon.toFixed(5)} MON`);
+if (usd) console.log(`  in USD     $${(mon * usd).toFixed(5)} at MON $${usd.toFixed(4)}`);

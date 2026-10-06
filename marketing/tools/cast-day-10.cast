@@ -1,0 +1,9 @@
+{"version":3,"term":{"cols":48,"rows":21},"timestamp":1791301482,"command":"bash day-10.sh","env":{"SHELL":"/bin/zsh"}}
+[0.129, "o", "\u001b[38;2;245;184;61mplans/app $\u001b[0m npm run -s lint:copy\r\n"]
+[0.789, "o", "copy ok\r\n"]
+[0.006, "o", "\u001b[38;2;245;184;61mplans/app $\u001b[0m sed -i '' 's/>Send</>Send to a wallet address</' 'src/app/(tabs)/send.tsx'\r\n"]
+[0.608, "o", "\u001b[38;2;245;184;61mplans/app $\u001b[0m bash scripts/build-apk.sh mainnet release\r\n"]
+[0.640, "o", "src/app/(tabs)/send.tsx: \"Send to a wallet address\" → wallet\r\n"]
+[0.007, "o", "\r\n1 copy problem(s).\r\n"]
+[0.003, "o", "\u001b[2mexit 1\u001b[0m\r\n"]
+[1.008, "x", "0"]
