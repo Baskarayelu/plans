@@ -315,4 +315,4 @@ The bounty's video must show "funds arriving from another chain and being used w
 | Field | Status |
 |---|---|
 | Product advertisement (up to 30 s) | **Pending.** Cut from the technical demo after it is recorded. |
-| X profile link for the project | **Pending.** No project X account exists. You would need to create it. |
+| X profile link for the project | https://x.com/PlansOnMonad (36 characters, URL field limit 2,000) |

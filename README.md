@@ -15,7 +15,7 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 | Relayer | [`relayer/`](relayer) | Built and tested, not deployed | **85 passing** (unit, plus integration against anvil) |
 | Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **21 passing** |
 | Android app | [`app/`](app) | Built and tested, not released | **137 passing**, plus a copy check that fails the build on crypto words |
-| Website and docs | [`site/`](site) | Live preview at https://plans-0xo.vercel.app (the plans.0xo.in domain is pending DNS) | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
+| Website and docs | [`site/`](site) | Live at https://plans.0xo.in | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
 
 ## Run the tests
 
@@ -43,7 +43,7 @@ cd contracts && npm --prefix tools install && npm --prefix tools run gas
 - **Rules:** enforced by the pot contract — instant limit, approvals, category budgets, per-person caps, payee policy, pause, timelocked rule changes, disputes and one-transaction settle-up. See [`docs/protocol.md`](docs/protocol.md).
 - **Data:** an Envio HyperIndex indexer derives balances, the who-owes-whom graph and cross-border corridors.
 
-Docs: [`docs/`](docs) in this repo, and the docs site at https://plans-0xo.vercel.app/docs.
+Docs: [`docs/`](docs) in this repo, and the docs site at https://plans.0xo.in/docs. Updates on X: [@PlansOnMonad](https://x.com/PlansOnMonad).
 
 ## AI tool disclosure
 

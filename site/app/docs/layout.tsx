@@ -1,7 +1,7 @@
 import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 import { source } from "@/lib/source";
 import { LogoMark } from "@/components/site/Logo";
-import { GITHUB_URL } from "@/lib/site";
+import { GITHUB_URL, X_URL } from "@/lib/site";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { text: "Home", url: "/", active: "none" },
         { text: "Download", url: "/download", active: "none" },
         { text: "Live stats", url: "/stats", active: "none" },
+        { text: "X", url: X_URL, active: "none", external: true },
       ]}
     >
       {children}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "./Logo";
-import { GITHUB_URL } from "@/lib/site";
+import { GITHUB_URL, X_HANDLE, X_URL } from "@/lib/site";
 
 const LINKS = [
   { href: "/#how", label: "How it works" },
@@ -27,6 +27,11 @@ export function SiteFooter() {
         <li>
           <a href={GITHUB_URL} className="no-underline hover:text-ink" rel="noopener">
             GitHub
+          </a>
+        </li>
+        <li>
+          <a href={X_URL} className="no-underline hover:text-ink" rel="noopener">
+            {X_HANDLE} on X
           </a>
         </li>
       </ul>
