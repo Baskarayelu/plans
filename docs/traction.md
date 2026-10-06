@@ -41,17 +41,21 @@ These need recruiting by the entrant. They are targets and are reported as resul
 
 ## Metrics: definitions (all from the Envio indexer unless marked)
 
+Excluded from every metric: the demo accounts (Ben, Asha, Maya), our team accounts (treasury, deployer, test phones), every plan created by a team account, and every plan any demo account has joined. The list is `indexer/internal-accounts.json`. If a demo account joins a plan after it was counted, the plan's numbers are withdrawn.
+
 | Metric | Definition |
 |---|---|
-| Accounts | Distinct addresses with a `KeyRegistered` event |
-| Plans created | `PotCreated` events from the Plans factory |
-| Funded plans | Plans with at least one `Contributed` event |
-| Members per plan | Active members at the plan's end, median |
-| Countries per plan | Distinct country codes among a plan's members, median |
-| Time to first funded action | From a member's `Joined` to their first `Contributed`, `Sent` or `Claimed`, median, in seconds |
-| Spends / approvals | `SpendExecuted` and `Approved` events |
-| Settlements and settled volume | `Settled` events, and the sum of their payouts |
-| Cross-border volume | AUSD volume where the sender's and receiver's country codes differ, by country pair |
+| **Users** (headline) | Accounts that joined at least one counted plan, or sent or claimed at least one send that doesn't involve an internal account |
+| Accounts | Distinct addresses with a `KeyRegistered` event, excluding internal accounts. Secondary to Users. |
+| Plans created | `PotCreated` from the Plans factory, counted plans only |
+| Funded plans | Counted plans with at least one `Contributed` |
+| Members per plan | Active members at the end, or currently for open plans; median |
+| Countries per plan | Distinct member country codes; median |
+| Time to first funded action | From an account's first `MemberJoined` (in a counted plan) to its first `Contributed`, `Sent` or `Claimed`; median, in seconds |
+| Spends | `SpendExecuted` |
+| Approvals | `Voted` with approve = true |
+| Settlements and settled volume | `Settled`, and the sum of its `Payout`s |
+| Cross-border volume | AUSD moved between accounts with different country codes, by country pair. Covers direct sends, claimed links (including a plan's link spends), settlement collections and debt payments. |
 | APK downloads (offchain) | GitHub release asset download count |
 
 ## Public stats page

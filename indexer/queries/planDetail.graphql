@@ -1,0 +1,107 @@
+# Plan detail: members + live balances + budget bars + settle-up graph + open items.
+query PlanDetail($pot: String!, $chainId: Int!) {
+  Pot(where: { id: { _eq: $pot }, chainId: { _eq: $chainId } }) {
+    id
+    meta
+    creator_id
+    status
+    startTime
+    endTime
+    reviewWindow
+    settledAt
+    balance
+    frozenUntil
+    ackEpoch
+    acksInEpoch
+    rulesVersion
+    instantMax
+    oneApprovalMax
+    highTier
+    memberDailyCap
+    memberTotalCap
+    payeePolicy
+    minContribution
+    proposalTtl
+    ruleTimelock
+    totalContributed
+    totalSpent
+    totalPaidOut
+    memberCount
+    activeMemberCount
+    countries
+    members(order_by: { memberIndex: asc }) {
+      address
+      country
+      status
+      safetyNet
+      contributed
+      personalPaid
+      share
+      withdrawn
+      net
+      debt
+      lastAckEpoch
+    }
+    balances(order_by: { net: desc }) {
+      account_id
+      net
+      owes
+      owedByMembers
+      owedByPot
+      settledUp
+    }
+    categorySpends(order_by: { category: asc }) {
+      category
+      name
+      budget
+      spent
+      refunded
+      remaining
+      spendCount
+    }
+    settlementEdges(order_by: { amount: desc }) {
+      kind
+      from_id
+      to_id
+      amount
+      fromCountry
+      toCountry
+    }
+    spends(where: { status: { _in: ["Pending", "Approved"] } }, order_by: { proposedAt: desc }) {
+      id
+      spendId
+      kind
+      proposer_id
+      payee
+      amount
+      category
+      memo
+      receiptHash
+      approvals
+      approvalsRequired
+      expiresAt
+      votes {
+        account_id
+        approve
+      }
+    }
+    disputes(where: { status: { _eq: "Open" } }) {
+      id
+      disputeId
+      spend_id
+      openedBy_id
+      reason
+      votesSpenderCovers
+      votesKeep
+      openedAt
+    }
+    ruleChanges(where: { status: { _neq: "Applied" } }) {
+      id
+      ruleChangeId
+      status
+      approvals
+      eta
+      expiresAt
+    }
+  }
+}

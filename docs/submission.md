@@ -82,7 +82,7 @@ Live on mainnet: nothing yet. This description is updated as each part ships, wi
 ### Go-to-market and user acquisition strategy
 
 <!-- field: Go-to-market and user acquisition strategy | limit: 8000 -->
-Characters: 4017 / 8000
+Characters: 4029 / 8000
 ```text
 FIRST USERS
 Friend groups that already collect money in a group chat for a trip or a festival, with at least one member living in another country. For example: students and young professionals in the UK and US travelling with friends from home in India or Nigeria, or a mixed group going to a festival together. Each group has one organiser who brings 4 to 8 people, so every plan is its own small acquisition loop.
@@ -104,7 +104,7 @@ The two known friction points are the sideloaded APK and getting dollars without
 
 MEASURED SO FAR (onchain, 6 Oct 2026)
 Nothing is deployed yet, so every onchain number is zero. We report only numbers we can read onchain. From the first mainnet deployment, the public stats page (pending) and docs/traction.md in the repository will report these, straight from our Envio indexer:
-- accounts: a member key's first onchain appearance
+- users: people who joined a real plan or sent money to someone
 - plans created, and plans with at least one contribution
 - members per plan, and countries per plan
 - median time from joining a plan to its first funded action

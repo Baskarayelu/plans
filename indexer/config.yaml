@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+#
+# Plans — Envio HyperIndex config.
+#
+# Contract addresses are NOT deployed yet. Every address/start block below is read from an
+# ENVIO_* environment variable (see .env.example). The defaults are inert TODO placeholders
+# (addresses with no code, so nothing is indexed) that keep `envio codegen` and the tests working.
+# After deployment: set the env vars locally in .env and in Envio Cloud → Indexer → Env vars.
+# Pots are never listed here: they are registered dynamically from PlansFactory.PotCreated.
+name: plans-indexer
+description: Plans — group money pots on Monad (pots, ledgers, settle-up graph, corridors, traction stats)
+
+# Entities are per chain (composite key (id, chainId)): mainnet and testnet never mix,
+# and GlobalStats/DailyStats are per chain. Filter GraphQL queries by chainId.
+disable_default_cross_chain: true
+# Addresses are stored lowercase so the app can query with addr.toLowerCase().
+address_format: lowercase
+# Every handler needs the tx hash (activity feed, links to the explorer). Block number/timestamp are always present.
+field_selection:
+  transaction_fields:
+    - hash
+
+contracts:
+  - name: PlansFactory
+    abi_file_path: ./abis/PlansFactory.json
+    events:
+      - event: PotCreated
+  - name: Pot
+    # No address: registered dynamically by the PotCreated contractRegister handler.
+    abi_file_path: ./abis/Pot.json
+    events:
+      - event: RulesSet
+      - event: AllowlistChanged
+      - event: MemberJoined
+      - event: InviteRotated
+      - event: KeyWrapped
+      - event: Contributed
+      - event: SpendProposed
+      - event: Voted
+      - event: SpendApproved
+      - event: SpendExecuted
+      - event: SpendCancelled
+      - event: DisputeOpened
+      - event: DisputeVoted
+      - event: DisputeResolved
+      - event: Frozen
+      - event: Unfrozen
+      - event: RuleChangeProposed
+      - event: RuleChangeVoted
+      - event: RuleChangeApproved
+      - event: RuleChangeApplied
+      - event: Acked
+      - event: AcksReset
+      - event: Pulled
+      - event: Payout
+      - event: DebtRecorded
+      - event: DebtPaid
+      - event: MemberExited
+      - event: Settled
+      - event: EscrowRefunded
+  - name: KeyRegistry
+    abi_file_path: ./abis/KeyRegistry.json
+    events:
+      - event: KeyRegistered
+  - name: ClaimEscrow
+    abi_file_path: ./abis/ClaimEscrow.json
+    events:
+      - event: ClaimCreated
+      - event: Claimed
+      - event: ClaimRefunded
+  - name: PlansSend
+    abi_file_path: ./abis/PlansSend.json
+    events:
+      - event: Sent
+
+chains:
+  # Monad mainnet (HyperSync: https://143.hypersync.xyz)
+  - id: 143
+    # 0 = let HyperSync find the first block with events. Set to the deployment block to be explicit.
+    start_block: ${ENVIO_MAINNET_START_BLOCK:-0}
+    contracts:
+      - name: PlansFactory
+        address: "${ENVIO_MAINNET_FACTORY_ADDRESS:-0x00000000000000000000000000000000000f0001}" # TODO after deploy
+      - name: Pot
+      - name: KeyRegistry
+        address: "${ENVIO_MAINNET_KEY_REGISTRY_ADDRESS:-0x00000000000000000000000000000000000f0002}" # TODO after deploy
+      - name: ClaimEscrow
+        address: "${ENVIO_MAINNET_CLAIM_ESCROW_ADDRESS:-0x00000000000000000000000000000000000f0003}" # TODO after deploy
+      - name: PlansSend
+        address: "${ENVIO_MAINNET_SEND_ADDRESS:-0x00000000000000000000000000000000000f0004}" # TODO after deploy
+
+  # Monad testnet (HyperSync: https://10143.hypersync.xyz)
+  - id: 10143
+    start_block: ${ENVIO_TESTNET_START_BLOCK:-0}
+    contracts:
+      - name: PlansFactory
+        address: "${ENVIO_TESTNET_FACTORY_ADDRESS:-0x00000000000000000000000000000000000f1001}" # TODO after deploy
+      - name: Pot
+      - name: KeyRegistry
+        address: "${ENVIO_TESTNET_KEY_REGISTRY_ADDRESS:-0x00000000000000000000000000000000000f1002}" # TODO after deploy
+      - name: ClaimEscrow
+        address: "${ENVIO_TESTNET_CLAIM_ESCROW_ADDRESS:-0x00000000000000000000000000000000000f1003}" # TODO after deploy
+      - name: PlansSend
+        address: "${ENVIO_TESTNET_SEND_ADDRESS:-0x00000000000000000000000000000000000f1004}" # TODO after deploy

@@ -1,0 +1,30 @@
+{
+  "_format": "accounts: list of { address (0x-prefixed, any case), kind: \"demo\" | \"team\", label (free text, optional) }. demo = demo members (Ben, Asha, Maya): any plan they join is a demo plan. team = team test accounts: excluded from traction, and any plan they create is a demo plan. Edit, commit, then redeploy the indexer (classification is applied while indexing).",
+  "accounts": [
+    {
+      "address": "0x88ACA9b29A1a5D85c36807cbf07C6AdA94785018",
+      "kind": "demo",
+      "label": "Ben (demo, GB)"
+    },
+    {
+      "address": "0x87f89d8E31868c390d32bC2F3b3FCC832A54A7c0",
+      "kind": "demo",
+      "label": "Asha (demo, IN)"
+    },
+    {
+      "address": "0xBC3102eBE6ba65f162B67b69C5E81ceD2Afd5Fc9",
+      "kind": "demo",
+      "label": "Maya (demo, US)"
+    },
+    {
+      "address": "0x0C2118133d7dFC751c326c86a5ddff5cF3846E35",
+      "kind": "team",
+      "label": "Plans treasury (claim links)"
+    },
+    {
+      "address": "0x44E61d9E73394EDEBAB7095D224B0a6185EDa4e3",
+      "kind": "team",
+      "label": "Plans deployer"
+    }
+  ]
+}

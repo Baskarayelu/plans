@@ -1,0 +1,64 @@
+# Public /stats page (traction; internal accounts and demo plans excluded).
+query Stats($chainId: Int!) {
+  GlobalStats(where: { id: { _eq: "global" }, chainId: { _eq: $chainId } }) {
+    users
+    accounts
+    potsCreated
+    fundedPots
+    medianMembersPerPot
+    medianCountriesPerPot
+    membersPerPotHistogram
+    countriesPerPotHistogram
+    ttffaSamples
+    ttffaBucketsSeconds
+    ttffaHistogram
+    medianTtffaLowerSeconds
+    medianTtffaUpperSeconds
+    spends
+    spendVolume
+    approvals
+    settlements
+    settledVolume
+    sends
+    sendVolume
+    claims
+    claimVolume
+    crossBorderVolume
+    crossBorderCount
+    contributionVolume
+    allPots
+    demoPots
+    updatedAt
+  }
+  DailyStats(where: { chainId: { _eq: $chainId } }, order_by: { day: asc }) {
+    date
+    newUsers
+    potsCreated
+    fundedPots
+    spends
+    approvals
+    settlements
+    settledVolume
+    sendVolume
+    crossBorderVolume
+  }
+  Corridor(
+    where: { chainId: { _eq: $chainId }, isCrossBorder: { _eq: true }, count: { _gt: 0 } }
+    order_by: { volume: desc }
+  ) {
+    fromCountry
+    toCountry
+    volume
+    count
+    sendVolume
+    claimVolume
+    potVolume
+  }
+  # exact median time to first funded action
+  Account(
+    where: { chainId: { _eq: $chainId }, ttffaCounted: { _eq: true } }
+    order_by: { timeToFirstFundedAction: asc }
+  ) {
+    timeToFirstFundedAction
+  }
+}

@@ -1,0 +1,47 @@
+# One spend with its exact cost shares, votes, disputes and LINK claim.
+query SpendDetail($spend: String!, $chainId: Int!) {
+  Spend(where: { id: { _eq: $spend }, chainId: { _eq: $chainId } }) {
+    id
+    kind
+    status
+    amount
+    category
+    categoryName
+    payee
+    memo
+    receiptHash
+    approvals
+    approvalsRequired
+    refunded
+    lastDisputeOutcome
+    shares(order_by: { position: asc }) {
+      account_id
+      originalAmount
+      refunded
+      amount
+    }
+    votes {
+      account_id
+      approve
+      timestamp
+    }
+    disputes {
+      id
+      status
+      outcome
+      reason
+      previousMembers
+      previousShares
+      resolvedMembers
+      resolvedShares
+    }
+    claims {
+      id
+      status
+      amount
+      expiry
+      toCountry
+      recipient_id
+    }
+  }
+}

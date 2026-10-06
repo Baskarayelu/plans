@@ -1,0 +1,8 @@
+{
+  "accounts": [
+    { "address": "0xbe00000000000000000000000000000000000001", "kind": "demo", "label": "Ben (demo)" },
+    { "address": "0xa500000000000000000000000000000000000002", "kind": "demo", "label": "Asha (demo)" },
+    { "address": "0x3a00000000000000000000000000000000000003", "kind": "demo", "label": "Maya (demo)" },
+    { "address": "0x7e00000000000000000000000000000000000004", "kind": "team", "label": "team test phone" }
+  ]
+}

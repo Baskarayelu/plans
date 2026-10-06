@@ -1,0 +1,36 @@
+# Activity feed for a plan (newest first). Use $offset for paging.
+query PlanActivity($pot: String!, $chainId: Int!, $limit: Int = 50, $offset: Int = 0) {
+  Activity(
+    where: { pot_id: { _eq: $pot }, chainId: { _eq: $chainId } }
+    order_by: [{ timestamp: desc }, { id: desc }]
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    kind
+    account_id
+    counterparty
+    amount
+    ref
+    timestamp
+    txHash
+  }
+}
+
+# Activity for one account across plans, sends and claims.
+query AccountActivity($account: String!, $chainId: Int!, $limit: Int = 50) {
+  Activity(
+    where: { account_id: { _eq: $account }, chainId: { _eq: $chainId } }
+    order_by: [{ timestamp: desc }, { id: desc }]
+    limit: $limit
+  ) {
+    id
+    kind
+    pot_id
+    counterparty
+    amount
+    ref
+    timestamp
+    txHash
+  }
+}

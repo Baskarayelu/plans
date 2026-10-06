@@ -1,0 +1,45 @@
+# Plan list for an address (home screen). $account must be lowercase.
+query MyPlans($account: String!, $chainId: Int!) {
+  Member(
+    where: { account_id: { _eq: $account }, chainId: { _eq: $chainId } }
+    order_by: { joinedAt: desc }
+  ) {
+    id
+    status
+    net
+    contributed
+    share
+    debt
+    pot {
+      id
+      meta
+      inviteKeyWrap
+      status
+      startTime
+      endTime
+      balance
+      memberCount
+      activeMemberCount
+      countries
+      frozenUntil
+      isDemo
+      lastActivityAt
+      spends(where: { status: { _in: ["Pending", "Approved"] } }) {
+        id
+      }
+    }
+  }
+  Account(where: { id: { _eq: $account }, chainId: { _eq: $chainId } }) {
+    id
+    key
+    country
+    isUser
+    # fresh-device rebuild: group keys sealed to this account
+    keyWraps(order_by: { timestamp: desc }) {
+      pot_id
+      by_id
+      wrap
+      timestamp
+    }
+  }
+}

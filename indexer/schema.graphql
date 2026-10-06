@@ -1,0 +1,809 @@
+# Plans — HyperIndex schema.
+#
+# Conventions
+# - Entities are per chain (`disable_default_cross_chain: true`): every row also has `chainId`.
+# - Addresses are lowercase hex. Amounts are AUSD base units (6 decimals) as BigInt.
+# - `*At` fields ending in a block time are unix seconds (Int). Times that come from the contract
+#   (startTime, endTime, expiresAt, frozenUntil, eta, expiry) are BigInt, exactly as emitted.
+# - Ids: Pot = pot address; Member/MemberBalance = "<pot>-<member>"; Spend = "<pot>-<spendId>";
+#   Dispute = "<pot>-<disputeId>"; RuleChange = "<pot>-<id>"; RulesVersion = "<pot>-<version>";
+#   Claim = "<escrow>-<claimId>"; per-event rows = "<block>-<logIndex>".
+#
+# Two layers:
+#   1. Raw / lifecycle entities, one per onchain object or event.
+#   2. Derived / aggregated entities maintained in handlers: MemberBalance, CategorySpend,
+#      SettlementEdge, Corridor (+ PotCorridor, CorridorFlow), PotDaily, DailyStats, GlobalStats.
+# Traction metrics (GlobalStats, DailyStats, Corridor.volume/count) exclude internal accounts and
+# demo plans; see README.md "Metric definitions".
+
+# ───────────────────────────── enums ─────────────────────────────
+
+enum PotStatus {
+  Active
+  Settled
+}
+
+enum MemberStatus {
+  Active
+  Exited
+}
+
+enum SpendKind {
+  PAY
+  LINK
+  PERSONAL
+}
+
+enum SpendStatus {
+  Pending
+  Approved
+  Executed
+  Cancelled
+}
+
+enum DisputeStatus {
+  Open
+  Resolved
+}
+
+enum DisputeOutcome {
+  None
+  Keep
+  Resplit
+  SpenderCovers
+}
+
+enum RuleChangeStatus {
+  Proposed
+  Approved
+  Applied
+}
+
+enum ClaimStatus {
+  Open
+  Claimed
+  Refunded
+}
+
+enum EdgeKind {
+  "debtor member pays creditor member"
+  MemberToMember
+  "the pot's own balance pays a creditor (leftover money)"
+  PotToMember
+  "debtor pays into the pot (only if debts exceed credits; never under invariant I1)"
+  MemberToPot
+}
+
+enum InternalKind {
+  None
+  Demo
+  Team
+}
+
+enum DebtEventKind {
+  Recorded
+  Paid
+}
+
+enum CorridorSource {
+  Send
+  SendLinkClaim
+  PotLinkClaim
+  SettlementPull
+  DebtPayment
+}
+
+enum ActivityKind {
+  PotCreated
+  RulesSet
+  AllowlistChanged
+  MemberJoined
+  InviteRotated
+  KeyWrapped
+  Contributed
+  SpendProposed
+  Voted
+  SpendApproved
+  SpendExecuted
+  SpendCancelled
+  DisputeOpened
+  DisputeVoted
+  DisputeResolved
+  Frozen
+  Unfrozen
+  RuleChangeProposed
+  RuleChangeVoted
+  RuleChangeApproved
+  RuleChangeApplied
+  Acked
+  AcksReset
+  Pulled
+  Payout
+  DebtRecorded
+  DebtPaid
+  MemberExited
+  Settled
+  EscrowRefunded
+  KeyRegistered
+  ClaimCreated
+  Claimed
+  ClaimRefunded
+  Sent
+}
+
+# ───────────────────────────── accounts ─────────────────────────────
+
+type Account {
+  id: ID!
+  address: String!
+  "true if the address is listed in internal-accounts.json (demo members, team test accounts)"
+  isInternal: Boolean!
+  internalKind: InternalKind!
+  "X25519 public key from KeyRegistry"
+  key: String
+  keyRegisteredAt: Int
+  "latest ISO 3166-1 alpha-2 country seen for this account (join, send, claim)"
+  country: String
+  firstSeen: Int!
+  firstSeenBlock: Int!
+
+  # traction bookkeeping (see README)
+  "counts as a user: non-internal and (joined ≥1 non-demo plan or sent/claimed ≥1 non-internal send)"
+  isUser: Boolean!
+  userSinceDay: Int
+  nonDemoPotCount: Int!
+  nonInternalSendCount: Int!
+  firstJoinedAt: Int
+  firstJoinPot: Pot
+  "first Contributed/Sent/Claimed at or after firstJoinedAt"
+  firstFundedActionAt: Int
+  "seconds from first MemberJoined to first funded action"
+  timeToFirstFundedAction: Int @index
+  "whether timeToFirstFundedAction is included in GlobalStats (non-internal account, first join in a non-demo plan)"
+  ttffaCounted: Boolean!
+
+  memberships: [Member!]! @derivedFrom(field: "account")
+  potsCreated: [Pot!]! @derivedFrom(field: "creator")
+  sendsOut: [Send!]! @derivedFrom(field: "from")
+  sendsIn: [Send!]! @derivedFrom(field: "to")
+  claimsCreated: [Claim!]! @derivedFrom(field: "sourceAccount")
+  claimsReceived: [Claim!]! @derivedFrom(field: "recipient")
+  activity: [Activity!]! @derivedFrom(field: "account")
+  "group-key wraps sealed to this account (fresh-device rebuild)"
+  keyWraps: [KeyWrap!]! @derivedFrom(field: "member")
+}
+
+# ───────────────────────────── plans ─────────────────────────────
+
+type Pot {
+  id: ID!
+  address: String!
+  "set once PotCreated is seen (pot events in the same block can arrive first)"
+  registered: Boolean!
+  factory: String
+  creator: Account
+  createdAt: Int
+  createdBlock: Int
+  createdTx: String
+  createdDay: Int
+  startTime: BigInt!
+  endTime: BigInt!
+  reviewWindow: BigInt!
+  "group-key ciphertext of name/emoji/cover"
+  meta: String!
+  inviteKeyWrap: String!
+  inviteSigner: String
+
+  status: PotStatus!
+  settledAt: Int
+  frozenUntil: BigInt!
+  lastFreeze: Freeze
+  ackEpoch: BigInt!
+  acksInEpoch: Int!
+
+  # current rules (mirrors the latest RulesSet)
+  rulesVersion: BigInt!
+  currentRules: RulesVersion
+  instantMax: BigInt!
+  oneApprovalMax: BigInt!
+  highTier: String!
+  memberDailyCap: BigInt!
+  memberTotalCap: BigInt!
+  payeePolicy: String!
+  minContribution: BigInt!
+  proposalTtl: BigInt!
+  ruleTimelock: BigInt!
+  categoryBudgets: [BigInt!]!
+
+  # membership
+  memberCount: Int!
+  activeMemberCount: Int!
+  countryCount: Int!
+  countries: [String!]!
+  memberAddresses: [String!]!
+
+  # money (Σ member.net == balance, invariant I1)
+  balance: BigInt!
+  totalContributed: BigInt!
+  totalPulled: BigInt!
+  totalDebtPaid: BigInt!
+  totalSpent: BigInt!
+  totalPotSpent: BigInt!
+  totalPersonalSpent: BigInt!
+  totalRefunded: BigInt!
+  totalPaidOut: BigInt!
+  totalDebtRecorded: BigInt!
+  contributionCount: Int!
+  spendCount: Int!
+  approvalCount: Int!
+  settlementCount: Int!
+  settledVolume: BigInt!
+  crossBorderVolume: BigInt!
+  crossBorderCount: Int!
+  fundedAt: Int
+  fundedDay: Int
+  lastActivityAt: Int
+
+  # demo / traction
+  "creator is internal, or any member is a Demo account"
+  isDemo: Boolean!
+  hasDemoMember: Boolean!
+  "currently included in GlobalStats / DailyStats"
+  countedInStats: Boolean!
+  dailyIds: [String!]!
+  corridorIds: [String!]!
+  edgeIds: [String!]!
+
+  members: [Member!]! @derivedFrom(field: "pot")
+  balances: [MemberBalance!]! @derivedFrom(field: "pot")
+  categorySpends: [CategorySpend!]! @derivedFrom(field: "pot")
+  settlementEdges: [SettlementEdge!]! @derivedFrom(field: "pot")
+  contributions: [Contribution!]! @derivedFrom(field: "pot")
+  spends: [Spend!]! @derivedFrom(field: "pot")
+  disputes: [Dispute!]! @derivedFrom(field: "pot")
+  ruleChanges: [RuleChange!]! @derivedFrom(field: "pot")
+  rulesVersions: [RulesVersion!]! @derivedFrom(field: "pot")
+  allowlist: [AllowlistEntry!]! @derivedFrom(field: "pot")
+  keyWraps: [KeyWrap!]! @derivedFrom(field: "pot")
+  freezes: [Freeze!]! @derivedFrom(field: "pot")
+  acks: [Ack!]! @derivedFrom(field: "pot")
+  payouts: [Payout!]! @derivedFrom(field: "pot")
+  pulls: [Pull!]! @derivedFrom(field: "pot")
+  debts: [Debt!]! @derivedFrom(field: "pot")
+  settlements: [PotSettlement!]! @derivedFrom(field: "pot")
+  daily: [PotDaily!]! @derivedFrom(field: "pot")
+  activity: [Activity!]! @derivedFrom(field: "pot")
+}
+
+type Member {
+  id: ID!
+  pot: Pot!
+  account: Account!
+  address: String! @index
+  memberIndex: BigInt
+  country: String
+  safetyNet: BigInt!
+  status: MemberStatus!
+  joinedAt: Int
+  exitedAt: Int
+
+  # ledger (protocol.md): net = contributed + personalPaid − share − withdrawn
+  contributed: BigInt!
+  personalPaid: BigInt!
+  share: BigInt!
+  withdrawn: BigInt!
+  net: BigInt!
+  "subset of contributed collected through the safety-net allowance"
+  pulled: BigInt!
+  "subset of contributed paid through payDebt"
+  debtPaid: BigInt!
+  "recorded debt still outstanding (DebtRecorded − DebtPaid)"
+  debt: BigInt!
+  lastAckEpoch: BigInt
+  netAtExit: BigInt
+  paidOutAtExit: BigInt
+  pulledInAtExit: BigInt
+
+  shares: [SpendShare!]! @derivedFrom(field: "member")
+  contributions: [Contribution!]! @derivedFrom(field: "member")
+}
+
+type RulesVersion {
+  id: ID!
+  pot: Pot!
+  version: BigInt!
+  instantMax: BigInt!
+  oneApprovalMax: BigInt!
+  highTier: String!
+  memberDailyCap: BigInt!
+  memberTotalCap: BigInt!
+  payeePolicy: String!
+  minContribution: BigInt!
+  proposalTtl: BigInt!
+  ruleTimelock: BigInt!
+  categoryBudgets: [BigInt!]!
+  setAt: Int!
+  txHash: String!
+}
+
+type AllowlistEntry {
+  id: ID!
+  pot: Pot!
+  payee: String!
+  allowed: Boolean!
+  updatedAt: Int!
+}
+
+# ───────────────────────────── money in ─────────────────────────────
+
+type Contribution {
+  id: ID!
+  pot: Pot!
+  member: Member!
+  account: Account!
+  amount: BigInt!
+  timestamp: Int! @index
+  txHash: String!
+}
+
+# ───────────────────────────── spends ─────────────────────────────
+
+type Spend {
+  id: ID!
+  pot: Pot!
+  spendId: BigInt!
+  proposer: Account!
+  proposerMember: Member!
+  kind: SpendKind!
+  payee: String!
+  amount: BigInt!
+  category: Int!
+  categoryName: String!
+  categorySpend: CategorySpend!
+  "split as proposed (weights); executed costs are in `shares`"
+  splitMembers: [String!]!
+  splitWeights: [BigInt!]!
+  receiptHash: String!
+  "encrypted memo bytes (hex)"
+  memo: String!
+  approvalsRequired: Int!
+  "approvals so far, including the proposer's implied approval"
+  approvals: Int!
+  rejections: Int!
+  status: SpendStatus! @index
+  "0 withdrawn by proposer, 1 rejected, 2 expired"
+  cancelReason: Int
+  expiresAt: BigInt!
+  proposedAt: Int! @index
+  approvedAt: Int
+  executedAt: Int
+  cancelledAt: Int
+  claimId: BigInt
+  "escrow refund (LINK) reversed into shares"
+  refunded: BigInt!
+  refundedAt: Int
+  disputeCount: Int!
+  hasOpenDispute: Boolean!
+  lastDisputeOutcome: DisputeOutcome!
+  "increments every time the share assignment is replaced (dispute resolution)"
+  shareVersion: Int!
+  "current share assignment order (position 0 takes rounding remainders)"
+  shareMembers: [String!]!
+  "weights of the current assignment (the contract reverses refunds as amount·w/Σw); empty if unknown"
+  shareWeights: [BigInt!]!
+  txHash: String!
+
+  shares: [SpendShare!]! @derivedFrom(field: "spend")
+  votes: [Vote!]! @derivedFrom(field: "spend")
+  disputes: [Dispute!]! @derivedFrom(field: "spend")
+  claims: [Claim!]! @derivedFrom(field: "spend")
+}
+
+"A member's cost share of an executed spend. Replaced when a dispute resolves; reduced by escrow refunds."
+type SpendShare {
+  id: ID!
+  spend: Spend!
+  pot: Pot!
+  member: Member!
+  account: Account!
+  position: Int!
+  version: Int!
+  "share assigned at execution / dispute resolution"
+  originalAmount: BigInt!
+  "reduced by escrow refunds"
+  refunded: BigInt!
+  "current cost borne by the member (originalAmount − refunded)"
+  amount: BigInt!
+}
+
+type Vote {
+  id: ID!
+  spend: Spend!
+  pot: Pot!
+  account: Account!
+  approve: Boolean!
+  timestamp: Int!
+  txHash: String!
+}
+
+# ───────────────────────────── disputes ─────────────────────────────
+
+type Dispute {
+  id: ID!
+  pot: Pot!
+  disputeId: BigInt!
+  spend: Spend!
+  openedBy: Account!
+  "0 wrong amount, 1 wrong split, 2 not a group cost"
+  reason: Int!
+  memo: String!
+  status: DisputeStatus!
+  outcome: DisputeOutcome!
+  votesSpenderCovers: Int!
+  votesKeep: Int!
+  openedAt: Int!
+  resolvedAt: Int
+  "share assignment before resolution"
+  previousMembers: [String!]!
+  previousShares: [BigInt!]!
+  "share assignment after resolution"
+  resolvedMembers: [String!]!
+  resolvedShares: [BigInt!]!
+  votes: [DisputeVote!]! @derivedFrom(field: "dispute")
+}
+
+type DisputeVote {
+  id: ID!
+  dispute: Dispute!
+  pot: Pot!
+  account: Account!
+  spenderCovers: Boolean!
+  timestamp: Int!
+}
+
+# ───────────────────────────── safety controls ─────────────────────────────
+
+type Freeze {
+  id: ID!
+  pot: Pot!
+  by: Account!
+  until: BigInt!
+  timestamp: Int!
+  liftedAt: Int
+  liftedBy: String
+  txHash: String!
+}
+
+type RuleChange {
+  id: ID!
+  pot: Pot!
+  ruleChangeId: BigInt!
+  proposer: Account!
+  instantMax: BigInt!
+  oneApprovalMax: BigInt!
+  highTier: String!
+  memberDailyCap: BigInt!
+  memberTotalCap: BigInt!
+  payeePolicy: String!
+  minContribution: BigInt!
+  proposalTtl: BigInt!
+  ruleTimelock: BigInt!
+  categoryBudgets: [BigInt!]!
+  allowAdd: [String!]!
+  allowRemove: [String!]!
+  expiresAt: BigInt!
+  status: RuleChangeStatus!
+  approvals: Int!
+  rejections: Int!
+  eta: BigInt
+  appliedRulesVersion: BigInt
+  proposedAt: Int!
+  approvedAt: Int
+  appliedAt: Int
+  votes: [RuleChangeVote!]! @derivedFrom(field: "ruleChange")
+}
+
+type RuleChangeVote {
+  id: ID!
+  ruleChange: RuleChange!
+  account: Account!
+  approve: Boolean!
+  timestamp: Int!
+}
+
+type KeyWrap {
+  id: ID!
+  pot: Pot!
+  member: Account!
+  by: Account!
+  wrap: String!
+  timestamp: Int!
+}
+
+type Ack {
+  id: ID!
+  pot: Pot!
+  account: Account!
+  ackEpoch: BigInt!
+  timestamp: Int!
+}
+
+# ───────────────────────────── ending ─────────────────────────────
+
+type Payout {
+  id: ID!
+  pot: Pot!
+  account: Account!
+  amount: BigInt!
+  "pot already settled when paid (debt distribution / post-settlement refund)"
+  afterSettlement: Boolean!
+  timestamp: Int!
+  txHash: String!
+}
+
+type Pull {
+  id: ID!
+  pot: Pot!
+  account: Account!
+  amount: BigInt!
+  timestamp: Int!
+  txHash: String!
+}
+
+type Debt {
+  id: ID!
+  pot: Pot!
+  account: Account!
+  kind: DebtEventKind!
+  amount: BigInt!
+  timestamp: Int!
+  txHash: String!
+}
+
+"One settle() call. (Not named `Settlement`: Hasura's Relay type for Settlement_connection.edges would be `SettlementEdge`, which collides with the SettlementEdge entity.)"
+type PotSettlement {
+  id: ID!
+  pot: Pot!
+  by: Account!
+  paidOut: BigInt!
+  pulledIn: BigInt!
+  unpaidClaims: BigInt!
+  timestamp: Int!
+  txHash: String!
+}
+
+# ───────────────────────────── escrow & sends ─────────────────────────────
+
+type Claim {
+  id: ID!
+  escrow: String!
+  claimId: BigInt!
+  "pot address for LINK spends, sender for send-by-link"
+  source: String!
+  sourceAccount: Account
+  sourcePot: Pot
+  spend: Spend
+  claimSigner: String!
+  amount: BigInt!
+  expiry: BigInt!
+  fromCountry: String
+  toCountry: String
+  recipient: Account
+  status: ClaimStatus!
+  "true if the sender or recipient is internal, or the source pot is demo"
+  isInternal: Boolean!
+  createdAt: Int!
+  claimedAt: Int
+  refundedAt: Int
+  txHash: String!
+}
+
+type Send {
+  id: ID!
+  from: Account!
+  to: Account!
+  amount: BigInt!
+  fromCountry: String
+  toCountry: String
+  fromCurrency: String
+  toCurrency: String
+  fxRateE8: BigInt!
+  fxTimestamp: BigInt!
+  memoHash: String!
+  isCrossBorder: Boolean!
+  isInternal: Boolean!
+  timestamp: Int! @index
+  txHash: String!
+}
+
+# ───────────────────────────── derived / aggregated ─────────────────────────────
+
+"Live net position of a member in a pot, plus their side of the settle-up graph."
+type MemberBalance {
+  id: ID!
+  pot: Pot!
+  member: Member!
+  account: Account!
+  net: BigInt!
+  "Σ outgoing SettlementEdges (what this member still has to pay)"
+  owes: BigInt!
+  "Σ incoming SettlementEdges from members"
+  owedByMembers: BigInt!
+  "incoming PotToMember edge (leftover pot money owed to this member)"
+  owedByPot: BigInt!
+  settledUp: Boolean!
+  updatedAt: Int!
+}
+
+"Per pot per category: executed spend vs budget."
+type CategorySpend {
+  id: ID!
+  pot: Pot!
+  category: Int!
+  name: String!
+  "0 = no budget"
+  budget: BigInt!
+  "gross executed spend amount"
+  spent: BigInt!
+  "LINK escrow refunds on spends of this category"
+  refunded: BigInt!
+  "spent − refunded"
+  netSpent: BigInt!
+  "budget − spent (null when no budget)"
+  remaining: BigInt
+  spendCount: Int!
+  updatedAt: Int!
+}
+
+"Minimal who-owes-whom graph per pot (deterministic greedy min-cash-flow), recomputed on every net change."
+type SettlementEdge {
+  id: ID!
+  pot: Pot!
+  kind: EdgeKind!
+  from: Account
+  to: Account
+  fromMember: Member
+  toMember: Member
+  amount: BigInt!
+  fromCountry: String
+  toCountry: String
+  updatedAt: Int!
+}
+
+"Country pair volume. volume/count are traction (exclude internal/demo); *All include everything."
+type Corridor {
+  id: ID!
+  fromCountry: String!
+  toCountry: String!
+  isCrossBorder: Boolean!
+  volume: BigInt!
+  count: Int!
+  sendVolume: BigInt!
+  claimVolume: BigInt!
+  potVolume: BigInt!
+  volumeAll: BigInt!
+  countAll: Int!
+  updatedAt: Int!
+  flows: [CorridorFlow!]! @derivedFrom(field: "corridor")
+}
+
+"Corridor volume attributed to one pot (lets demo flips retract it from Corridor)."
+type PotCorridor {
+  id: ID!
+  pot: Pot!
+  corridor: Corridor!
+  volume: BigInt!
+  count: Int!
+}
+
+"One attributed country-pair flow (audit trail for Corridor)."
+type CorridorFlow {
+  id: ID!
+  corridor: Corridor!
+  source: CorridorSource!
+  pot: Pot
+  from: String!
+  to: String!
+  amount: BigInt!
+  "counted in traction at the time of the flow"
+  counted: Boolean!
+  timestamp: Int!
+  txHash: String!
+}
+
+"Per pot per UTC day."
+type PotDaily {
+  id: ID!
+  pot: Pot!
+  day: Int!
+  date: String!
+  contributionVolume: BigInt!
+  contributionCount: Int!
+  spendVolume: BigInt!
+  spendCount: Int!
+  approvals: Int!
+  settlements: Int!
+  settledVolume: BigInt!
+  crossBorderVolume: BigInt!
+  crossBorderCount: Int!
+  eventCount: Int!
+}
+
+"Traction per UTC day (excludes internal accounts and demo plans)."
+type DailyStats {
+  id: ID!
+  day: Int!
+  date: String!
+  newUsers: Int!
+  potsCreated: Int!
+  fundedPots: Int!
+  contributionVolume: BigInt!
+  contributionCount: Int!
+  spendVolume: BigInt!
+  spends: Int!
+  approvals: Int!
+  settlements: Int!
+  settledVolume: BigInt!
+  sends: Int!
+  sendVolume: BigInt!
+  claims: Int!
+  claimVolume: BigInt!
+  crossBorderVolume: BigInt!
+  crossBorderCount: Int!
+}
+
+"Traction singleton (id 'global', one per chain). Excludes internal accounts and demo plans."
+type GlobalStats {
+  id: ID!
+  users: Int!
+  "non-internal accounts with a KeyRegistered event (docs/traction.md 'Accounts')"
+  accounts: Int!
+  potsCreated: Int!
+  fundedPots: Int!
+  contributionVolume: BigInt!
+  contributionCount: Int!
+  spends: Int!
+  spendVolume: BigInt!
+  approvals: Int!
+  settlements: Int!
+  settledVolume: BigInt!
+  sends: Int!
+  sendVolume: BigInt!
+  claims: Int!
+  claimVolume: BigInt!
+  crossBorderVolume: BigInt!
+  crossBorderCount: Int!
+  "index i = number of counted pots with i active members (0..50)"
+  membersPerPotHistogram: [Int!]!
+  medianMembersPerPot: Float!
+  "index i = number of counted pots with i distinct member countries (0..50)"
+  countriesPerPotHistogram: [Int!]!
+  medianCountriesPerPot: Float!
+  "bucket lower bounds in seconds for ttffaHistogram"
+  ttffaBucketsSeconds: [Int!]!
+  ttffaHistogram: [Int!]!
+  ttffaSamples: Int!
+  "median bucket bounds (seconds); exact values are on Account.timeToFirstFundedAction where ttffaCounted"
+  medianTtffaLowerSeconds: Int!
+  medianTtffaUpperSeconds: Int!
+  # unfiltered context (includes demo/internal)
+  allPots: Int!
+  demoPots: Int!
+  allAccounts: Int!
+  internalAccounts: Int!
+  updatedAt: Int!
+}
+
+"Unified activity feed (per pot and per account)."
+type Activity {
+  id: ID!
+  pot: Pot
+  account: Account
+  kind: ActivityKind!
+  amount: BigInt
+  counterparty: String
+  ref: String
+  timestamp: Int! @index
+  block: Int!
+  txHash: String!
+}
