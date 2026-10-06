@@ -198,7 +198,7 @@ IF SOMETHING FAILS
 
 ## Bounties
 
-The portal does not state a limit for bounty answers. They are kept under a self-imposed 3,000 characters, which the counter checks.
+Bounty answers are text areas with an 8,000-character limit; bounty video links are URL fields with a 2,000-character limit (confirmed by the entrant, 6 Oct).
 
 ### Recommended selection (6 Oct 2026)
 
@@ -214,8 +214,8 @@ The portal does not state a limit for bounty answers. They are kept under a self
 
 **Asked at submission:** "Describe the core features of your app with a focus on how it enables a user to send AUSD to another person or across borders"
 
-<!-- field: Agora: core features answer | limit: 3000 -->
-Characters: 1319 / 3000
+<!-- field: Agora: core features answer | limit: 8000 -->
+Characters: 1319 / 8000
 ```text
 Plans is a native Android app on Monad mainnet in which AUSD is the only money. Status (6 Oct 2026): designed and specified; every feature below is pending until marked live.
 
@@ -242,8 +242,8 @@ Funding: Leah's account is funded with a $3.00 claim link from the Plans treasur
 
 **Asked at submission:** "Describe how your project meaningfully integrates Mera as the entire account layer"
 
-<!-- field: Mera UX: account layer answer | limit: 3000 -->
-Characters: 1434 / 3000
+<!-- field: Mera UX: account layer answer | limit: 8000 -->
+Characters: 1434 / 8000
 ```text
 Mera is the only account layer in Plans: no Privy, no Dynamic, no injected wallet, no custody backend. Status (6 Oct 2026): designed and specified; each item below is pending until marked live.
 
@@ -261,8 +261,8 @@ Mera is the only account layer in Plans: no Privy, no Dynamic, no injected walle
 
 **Asked at submission:** "Describe how your project meaningfully utilizes Mera in non-account work."
 
-<!-- field: Mera Many Keys: non-account work answer | limit: 3000 -->
-Characters: 1419 / 3000
+<!-- field: Mera Many Keys: non-account work answer | limit: 8000 -->
+Characters: 1419 / 8000
 ```text
 Namespace: plans.keys.v1, a PRF salt of SHA-256("plans.keys.v1"), separate from the default salt that derives the account key. It never signs a transaction. Status (6 Oct 2026): designed and specified; pending until marked live.
 
@@ -280,8 +280,8 @@ How it is evaluated: a Mera WebAuthn client wrapper asks the authenticator for b
 
 **Asked at submission:** "Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature."
 
-<!-- field: Envio: usage answer | limit: 3000 -->
-Characters: 1282 / 3000
+<!-- field: Envio: usage answer | limit: 8000 -->
+Characters: 1282 / 8000
 ```text
 An Envio HyperIndex indexer on Monad mainnet (chain 143) is the app's data layer for everything except the sub-second live feed. Status (6 Oct 2026): designed and specified; pending until marked live.
 
