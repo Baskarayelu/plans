@@ -1,0 +1,323 @@
+[
+  {
+    "type": "error",
+    "name": "AlreadyAcked",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AlreadyInitialized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AlreadyMember",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AlreadyVoted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ApproveFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CannotSettle",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ClaimExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataTooLong",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DebtNotDue",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DeploymentFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DisputeAlreadyOpen",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ETHTransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FreezeCooldown",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HasOpenItems",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDisputeReason",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidExpiry",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidInvite",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidOutcome",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRefund",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRules",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSchedule",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSplit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidStatus",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NonceAlreadyUsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NonceMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotActiveMember",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEligibleVoter",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEscrow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotFactory",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotFrozen",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToDispute",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotInSplit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotMember",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotOpen",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotPot",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotProposer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Overflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Permit2AmountOverflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Permit2ApproveFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Permit2Failed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Permit2LockdownFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PermitFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PotFull",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PotSettled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProposalExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProposalNotExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafetyNetMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SaltDoesNotStartWith",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SignatureExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SpendBlocked",
+    "inputs": [
+      {
+        "name": "reason",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "StaleRegistration",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooEarly",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooManyEntries",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TotalSupplyQueryFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TransferFromFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "VotingClosed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroKey",
+    "inputs": []
+  }
+]
