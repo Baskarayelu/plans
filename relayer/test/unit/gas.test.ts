@@ -10,9 +10,11 @@ describe("gas-limit policy", () => {
     expect(gasLimitFor("vote", 100_001n, policy)).toBe(120_002n); // rounds up
   });
 
-  it("never exceeds the per-action cap", () => {
+  it("never clamps the limit to the cap: the cap only rejects", () => {
     const cap = BigInt(DEFAULT_GAS_CAPS.ack);
-    expect(gasLimitFor("ack", cap - 1n, policy)).toBe(cap);
+    // An estimate just under the cap keeps its full margin, even though the limit is above the cap.
+    expect(gasLimitFor("ack", cap - 1n, policy)).toBe(((cap - 1n) * 11_000n + 9_999n) / 10_000n + 10_000n);
+    expect(gasLimitFor("ack", cap, policy) > cap).toBe(true);
   });
 
   it("refuses actions whose estimate is over the cap", () => {

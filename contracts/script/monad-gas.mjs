@@ -352,8 +352,22 @@ async function warp(seconds, why) {
   await anvil('evm_mine', []);
 }
 
+let anvilChecked = false;
+/**
+ * The only transactions this script sends go to a LOCAL anvil fork (to record Ethereum traces for
+ * the Monad model). Their gas limit (2x anvil's estimate) never reaches Monad. Refuse anything that
+ * is not anvil, so ANVIL_URL can never point the sends at a live network.
+ */
+async function assertLocalAnvil() {
+  if (anvilChecked) return;
+  const v = String(await anvil('web3_clientVersion', []));
+  if (!/anvil/i.test(v)) throw new Error(`ANVIL_URL ${ANVIL} is not an anvil node (${v}); refusing to send`);
+  anvilChecked = true;
+}
+
 /** Sends one transaction from the relayer to the local anvil and records it. */
 async function send({ label, to = null, data, table = true, group = 'Pot', note = '' }) {
+  await assertLocalAnvil();
   const req = { from: RELAYER.address, data, ...(to ? { to } : {}) };
   let ethEstimate;
   try {

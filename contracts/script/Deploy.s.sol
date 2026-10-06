@@ -24,9 +24,12 @@ import {PlansSend} from "../src/PlansSend.sol";
 /// `forge script` must run with `--disable-code-size-limit`: the Pot runtime is ~29 KB, above
 /// EIP-170's 24 KB but well under Monad's 128 KB limit.
 ///
-/// On `--broadcast` the addresses are written to `deployments/<chainid>.json` (to
-/// `deployments/<chainid>-anvil.json` when the RPC is a local anvil node, e.g. an anvil fork of
-/// Monad, which keeps chain id 143). A dry run only logs them.
+/// On Monad this script is a DRY RUN ONLY: it says WHAT to deploy, and forge writes the
+/// transactions to `broadcast/Deploy.s.sol/<chainid>/dry-run/run-latest.json`. `script/monad-send.mjs`
+/// then sends them with gas limits from Monad's own `eth_estimateGas`. forge's broadcast would set
+/// each gas limit from its local Ethereum-priced simulation, and Monad charges the full limit and
+/// prices cold state differently (see GAS.md), so `--broadcast` reverts with BroadcastNotAllowed
+/// unless the RPC is a local anvil node (a rehearsal, which writes `deployments/<chainid>-anvil.json`).
 contract Deploy is Script {
     address public constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
@@ -52,8 +55,13 @@ contract Deploy is Script {
     error NoCreate2Deployer();
     error Create2Failed(bytes32 salt);
     error UnexpectedAddress(address expected, address actual);
+    /// @notice `forge script --broadcast` against a non-anvil RPC: use script/monad-send.mjs instead.
+    error BroadcastNotAllowed();
 
     function run() external returns (Deployment memory d) {
+        bool broadcasting =
+            vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume);
+        if (broadcasting && !_isAnvil()) revert BroadcastNotAllowed();
         address ausd = ausdFor(block.chainid);
         if (ausd.code.length == 0) revert NoAUSD(ausd);
 
@@ -62,10 +70,10 @@ contract Deploy is Script {
         vm.stopBroadcast();
 
         _log(d);
-        if (vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume)) {
+        if (broadcasting) {
             write(d, _outputPath());
         } else {
-            console.log("Dry run: deployments file not written (add --broadcast).");
+            console.log("Dry run: nothing sent. Send with: node script/monad-send.mjs check|send --chain", block.chainid);
         }
     }
 

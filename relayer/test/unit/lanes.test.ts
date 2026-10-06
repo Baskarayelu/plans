@@ -1,7 +1,8 @@
 import { keccak256, parseTransaction, type Hex } from "viem";
 import { describe, expect, it } from "vitest";
 import { Secret } from "../../src/config.js";
-import { LanePool } from "../../src/lanes.js";
+import { MonadGasEstimator } from "../../src/gas.js";
+import { LanePool, type Lane } from "../../src/lanes.js";
 
 const KEYS = [
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -18,10 +19,12 @@ const rpcReceipt = (hash: Hex) => ({
 function fakeClient(script: { sync?: (raw: Hex, n: number) => unknown; chainNonce?: () => number }) {
   const sent: Hex[] = [];
   const syncCalls: Hex[] = [];
+  const estimates: unknown[] = [];
   let nonceQueries = 0;
   const client = {
     sent,
     syncCalls,
+    estimates,
     get nonceQueries() {
       return nonceQueries;
     },
@@ -36,6 +39,10 @@ function fakeClient(script: { sync?: (raw: Hex, n: number) => unknown; chainNonc
       return 10n ** 19n;
     },
     async request({ method, params }: { method: string; params: [Hex] }) {
+      if (method === "eth_estimateGas") {
+        estimates.push(params[0]);
+        return "0xc350"; // 50,000: Monad's estimate for the test call
+      }
       if (method === "eth_sendRawTransactionSync") {
         syncCalls.push(params[0]);
         return script.sync!(params[0], syncCalls.length);
@@ -54,7 +61,14 @@ function fakeClient(script: { sync?: (raw: Hex, n: number) => unknown; chainNonc
 }
 
 const opts = { chainId: 143, priorityFeeWei: 2_000_000_000n, maxFeeWei: 10n ** 12n, minBalanceWei: 10n ** 17n };
-const tx = { to: "0x000000000000000000000000000000000000dEaD" as const, data: "0x" as Hex, gas: 50_000n };
+const TO = "0x000000000000000000000000000000000000dEaD" as const;
+const DATA = "0x" as Hex;
+/** The test call with a gas limit from the pool client's eth_estimateGas (no margin: limit = estimate). */
+const txFor = async (pool: LanePool, lane: Lane) => ({
+  to: TO,
+  data: DATA,
+  gas: await new MonadGasEstimator(pool.client, { marginBps: 0, marginFixed: 0, caps: {} }).limitFor("ausdTransfer", { from: lane.address, to: TO, data: DATA }),
+});
 
 describe("lane pool", () => {
   it("sends with eth_sendRawTransactionSync, tight gas and incrementing nonces", async () => {
@@ -62,6 +76,7 @@ describe("lane pool", () => {
     const pool = new LanePool(c as never, KEYS.slice(0, 1), opts);
     await pool.init();
     const lane = pool.lanes[0];
+    const tx = await txFor(pool, lane);
     const r1 = await pool.submit(lane, tx);
     const r2 = await pool.submit(lane, tx);
     expect(r1.sync).toBe(true);
@@ -89,7 +104,7 @@ describe("lane pool", () => {
     });
     const pool = new LanePool(c as never, KEYS.slice(0, 1), opts);
     await pool.init();
-    await pool.submit(pool.lanes[0], tx);
+    await pool.submit(pool.lanes[0], await txFor(pool, pool.lanes[0]));
     expect(parseTransaction(c.syncCalls[1]).nonce).toBe(12);
     expect(pool.lanes[0].nonce).toBe(13);
   });
@@ -98,6 +113,7 @@ describe("lane pool", () => {
     const c = fakeClient({ sync: () => { throw Object.assign(new Error("the method eth_sendRawTransactionSync does not exist"), { code: -32601 }); } });
     const pool = new LanePool(c as never, KEYS.slice(0, 1), opts);
     await pool.init();
+    const tx = await txFor(pool, pool.lanes[0]);
     const r = await pool.submit(pool.lanes[0], tx);
     expect(r.sync).toBe(false);
     expect(c.sent).toHaveLength(1);
@@ -111,7 +127,7 @@ describe("lane pool", () => {
     const c = fakeClient({ sync: (raw) => { throw Object.assign(new Error("timeout"), { code: 4, data: keccak256(raw) }); } });
     const pool = new LanePool(c as never, KEYS.slice(0, 1), opts);
     await pool.init();
-    const r = await pool.submit(pool.lanes[0], tx);
+    const r = await pool.submit(pool.lanes[0], await txFor(pool, pool.lanes[0]));
     expect(r.receipt.transactionHash).toBe(keccak256(c.syncCalls[0]));
     expect(pool.lanes[0].nonce).toBe(8);
   });
@@ -123,6 +139,7 @@ describe("lane pool", () => {
     const picks = [pool.pick(), pool.pick()];
     expect(new Set(picks.map((l) => l.index)).size).toBe(2);
     const lane = pool.lanes[0];
+    const tx = await txFor(pool, lane);
     await Promise.all([pool.submit(lane, tx), pool.submit(lane, tx), pool.submit(lane, tx)]);
     const nonces = c.syncCalls.map((r) => parseTransaction(r).nonce);
     expect(nonces).toEqual([7, 8, 9]);

@@ -71,6 +71,11 @@
   },
   {
     "type": "error",
+    "name": "InsufficientGas",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidAmount",
     "inputs": []
   },
@@ -166,11 +171,6 @@
   },
   {
     "type": "error",
-    "name": "NothingToDispute",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "NotInSplit",
     "inputs": []
   },
@@ -192,6 +192,11 @@
   {
     "type": "error",
     "name": "NotProposer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToDispute",
     "inputs": []
   },
   {

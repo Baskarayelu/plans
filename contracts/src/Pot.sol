@@ -137,6 +137,7 @@ contract Pot is IPot, EIP712 {
     error CannotSettle();
     error DebtNotDue();
     error InvalidRefund();
+    error InsufficientGas();
 
     // ───────────────────────────── storage types ─────────────────────────────
 
@@ -1090,13 +1091,16 @@ contract Pot is IPot, EIP712 {
         if (contributed >= _rules.minContribution) _metMinMask |= uint64(1 << i);
     }
 
-    /// @dev Pulls up to `want` from `account` through its safety-net allowance. Never reverts.
+    /// @dev Pulls up to `want` from `account` through its safety-net allowance. A refused pull returns 0;
+    /// only a pull starved of gas reverts (see `_revertIfOutOfGas`).
     function _pull(uint256 i, address account, uint256 want) internal returns (uint256 amount) {
         amount = _min(want, _min(IAUSD(ausd).allowance(account, address(this)), ausd.balanceOf(account)));
         if (amount == 0) return 0;
+        uint256 gasBefore = gasleft();
         try IAUSD(ausd).transferFrom(account, address(this), amount) returns (bool ok) {
             if (!ok) return 0;
         } catch {
+            _revertIfOutOfGas(gasBefore);
             return 0;
         }
         _credit(i, amount);
@@ -1107,13 +1111,25 @@ contract Pot is IPot, EIP712 {
     /// leaves the amount as the member's claim instead of blocking everyone else's payout.
     function _tryPay(uint256 i, uint256 amount) internal returns (bool ok) {
         address account = _members[i].account;
+        uint256 gasBefore = gasleft();
         try IAUSD(ausd).transfer(account, amount) returns (bool success) {
             ok = success;
-        } catch {}
+        } catch {
+            _revertIfOutOfGas(gasBefore);
+        }
         if (ok) {
             _members[i].net -= SafeCastLib.toInt96(amount);
             emit Payout(account, amount);
         }
+    }
+
+    /// @dev Called when a try/catch-wrapped AUSD call has failed. A call that ran out of gas
+    /// leaves at most 1/64 of the gas it started with (EIP-150), while a call that reverted for a
+    /// reason of its own (a refused or frozen account) leaves far more. Treating the first case as
+    /// a refusal would let whoever submits the transaction pick a gas limit that skips one member's
+    /// payout or pull while the rest of the call succeeds, so it reverts the whole call instead.
+    function _revertIfOutOfGas(uint256 gasBefore) internal view {
+        if (gasleft() <= gasBefore / 63) revert InsufficientGas();
     }
 
     /// @dev Pays `amount` out pro rata to members with a positive net (floored).

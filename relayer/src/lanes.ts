@@ -17,7 +17,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import type { Secret } from "./config.js";
 import { RelayError } from "./errors.js";
-import { feesFor } from "./gas.js";
+import { assertMonadGas, feesFor, type MonadGasLimit } from "./gas.js";
 import { log, shortErr } from "./log.js";
 
 export interface LaneStatus {
@@ -200,8 +200,14 @@ export class LanePool {
     return this.#baseFee.value;
   }
 
-  /** Sign and send one call on a lane; resolves with the receipt. */
-  async submit(lane: Lane, tx: { to: Address; data: Hex; gas: bigint; value?: bigint }): Promise<SubmitResult> {
+  /**
+   * Sign and send one call on a lane; resolves with the receipt. `gas` must be a MonadGasLimit that
+   * Monad's eth_estimateGas produced on this pool's RPC client for exactly this lane, target,
+   * calldata and value (see gas.ts). Anything else is refused before signing.
+   */
+  async submit(lane: Lane, tx: { to: Address; data: Hex; gas: MonadGasLimit; value?: bigint }): Promise<SubmitResult> {
+    assertMonadGas(tx.gas, this.client, { from: lane.address, to: tx.to, data: tx.data, value: tx.value ?? 0n });
+    const gasLimit = tx.gas.value;
     return lane.mutex.run(async () => {
       if (lane.nonce === null) await this.#resync(lane);
       let attempt = 0;
@@ -215,7 +221,7 @@ export class LanePool {
           to: tx.to,
           data: tx.data,
           value: tx.value ?? 0n,
-          gas: tx.gas,
+          gas: gasLimit,
           nonce,
           ...fees,
         });

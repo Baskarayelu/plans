@@ -1,13 +1,14 @@
 /**
- * The relay pipeline: validate → allowlist → simulate (eth_call) → estimate → tight gas limit →
- * send on a key lane (eth_sendRawTransactionSync) → decoded receipt.
+ * The relay pipeline: validate → allowlist → simulate (eth_call) → Monad eth_estimateGas → tight
+ * gas limit (MonadGasLimit, see gas.ts) → send on a key lane (eth_sendRawTransactionSync) →
+ * decoded receipt.
  */
 import type { Address, Hex, Log, PublicClient, TransactionReceipt } from "viem";
 import { factoryAbi } from "./abi.js";
 import { prepareAction, type PreparedAction } from "./actions.js";
 import { decodeRevert, extractRevertData, RelayError } from "./errors.js";
 import { decodeReceiptLogs, type DecodedEvent } from "./events.js";
-import { gasLimitFor, type GasPolicy } from "./gas.js";
+import { MonadGasEstimator, type GasPolicy, type MonadGasLimit } from "./gas.js";
 import type { Lane, LanePool } from "./lanes.js";
 import { log, shortErr } from "./log.js";
 import type { Store } from "./store.js";
@@ -44,6 +45,8 @@ export interface RelayContext {
 export class Relayer {
   #isPotCache = new Map<Address, { ok: boolean; at: number }>();
   onReceipt?: (logs: Log[], receipt: TransactionReceipt) => void;
+  /** Every gas limit this relayer sends comes from here: eth_estimateGas on the pool's Monad RPC. */
+  readonly estimator: MonadGasEstimator;
 
   constructor(
     readonly client: PublicClient,
@@ -51,7 +54,11 @@ export class Relayer {
     readonly contracts: Contracts,
     readonly gas: GasPolicy,
     readonly store?: Store,
-  ) {}
+  ) {
+    // Estimate on the same client the pool sends with: LanePool.submit() checks the limit was
+    // issued by that client for the exact transaction it signs.
+    this.estimator = new MonadGasEstimator(pool.client, gas);
+  }
 
   /** Fill in KeyRegistry / ClaimEscrow / AUSD from the factory when not configured. */
   async init() {
@@ -114,8 +121,12 @@ export class Relayer {
     }
   }
 
-  /** eth_call then estimateGas, both from the sending lane. Throws a decoded RelayError on revert. */
-  async simulate(to: Address, data: Hex, from: Address): Promise<bigint> {
+  /**
+   * eth_call, then Monad's eth_estimateGas, both from the sending lane. Returns the gas limit to
+   * send with (estimate + margin, refused if over the action's cap). Throws a decoded RelayError
+   * on revert.
+   */
+  async simulate(action: string, to: Address, data: Hex, from: Address): Promise<MonadGasLimit> {
     const fail = (e: unknown): never => {
       const revert = extractRevertData(e);
       const msg = shortErr(e);
@@ -137,8 +148,9 @@ export class Relayer {
       fail(e);
     }
     try {
-      return await this.client.estimateGas({ account: from, to, data });
+      return await this.estimator.limitFor(action, { from, to, data });
     } catch (e) {
+      if (e instanceof RelayError) throw e; // GAS_CAP_EXCEEDED / GAS_ESTIMATE_INVALID
       return fail(e);
     }
   }
@@ -165,8 +177,7 @@ export class Relayer {
 
   async #send(action: string, to: Address, data: Hex, t0: number, fixedLane?: Lane): Promise<RelayResult> {
     const lane = fixedLane ?? this.pool.pick();
-    const estimate = await this.simulate(to, data, lane.address);
-    const gas = gasLimitFor(action, estimate, this.gas);
+    const gas = await this.simulate(action, to, data, lane.address);
     const res = await this.pool.submit(lane, { to, data, gas });
     const submittedAt = Date.now() - res.latencyMs; // when the signed tx went to the RPC (after any lane queueing)
     const { receipt } = res;
@@ -181,7 +192,7 @@ export class Relayer {
       blockNumber: receipt.blockNumber.toString(),
       status: receipt.status,
       gasUsed: receipt.gasUsed.toString(),
-      gasLimit: gas.toString(),
+      gasLimit: gas.value.toString(),
       latencyMs: res.latencyMs,
       totalMs: Math.round(performance.now() - t0),
       lane: res.lane,

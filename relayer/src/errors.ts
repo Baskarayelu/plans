@@ -84,6 +84,7 @@ const NAMED: Record<string, string> = {
   TransferFailed: "A token transfer failed.",
   TransferFromFailed: "Couldn't collect the money: the balance or allowance is too low.",
   InsufficientBalance: "Not enough AUSD in the account.",
+  InsufficientGas: "The transaction ran with too little gas to pay everyone. Please try again.",
   ERC20InsufficientBalance: "Not enough AUSD in the account.",
   InsufficientAllowance: "The allowance is too low.",
   ERC20InsufficientAllowance: "The allowance is too low.",

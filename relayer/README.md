@@ -46,8 +46,8 @@ All bodies are JSON. Errors are always `{"error": {"code", "message", ...}}` wit
 
 1. Validate the body with zod.
 2. Check the target against the allowlist.
-3. Simulate with `eth_call`, then `estimateGas`, both from the sending lane.
-4. Set the gas limit to the estimate plus a small margin, capped per action.
+3. Simulate with `eth_call`, then Monad's `eth_estimateGas`, both from the sending lane, on the configured Monad RPC.
+4. Set the gas limit to that estimate plus a small margin. An estimate above the action's cap is refused (`GAS_CAP_EXCEEDED`); the cap is never used as the limit.
 5. Send with `eth_sendRawTransactionSync` (EIP-7966). If the RPC times out (error code 4), wait for the receipt. If the method is missing, fall back to `eth_sendRawTransaction` and poll for the receipt.
 
 **Success response (200):**
@@ -239,7 +239,7 @@ Every demo action is signed with that member's own key and goes through the same
   - On "nonce too low" or a nonce gap, the lane resyncs from the chain and retries.
   - On "already known", it waits for the receipt.
   - On any other ambiguous error, it checks for the receipt and the chain nonce before giving up.
-- **Gas.** Monad charges the gas limit, not gas used, so the limit is `estimate × 1.10 + 10,000`, capped per action (see `src/gas.ts`; `GAS_CAPS` overrides). The fee is `maxPriorityFee = 2 gwei` and `maxFee = 1.25 × max(baseFee, 100 gwei) + tip`.
+- **Gas.** Monad charges the gas limit, not gas used, and prices cold state differently from Ethereum, so the limit is Monad's `eth_estimateGas` for the exact transaction `× 1.10 + 10,000` (`GAS_MARGIN_BPS`, `GAS_MARGIN_FIXED`). This is enforced in code: `LanePool.submit()` only accepts a `MonadGasLimit`, which only `MonadGasEstimator.limitFor()` can create (it calls `eth_estimateGas` on the pool's RPC) and which is bound to that RPC client and to the exact sender, target, calldata and value. Per-action caps (`src/gas.ts`; `GAS_CAPS` overrides) only reject an estimate that is too high. `test/unit/monad-gas.test.ts` checks every sent transaction against the estimate made for it, and `test/unit/gas-sources.test.ts` fails on any new hard-coded `gas:` or send path. The fee is `maxPriorityFee = 2 gwei` and `maxFee = 1.25 × max(baseFee, 100 gwei) + tip`.
 - **Logging.** Keys come only from env and are wrapped so that they serialise as `[redacted]`. They are never logged.
 
 ## Run locally
