@@ -1,0 +1,7 @@
+{
+  "name": "plans-brand",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node scripts/build.mjs" },
+  "dependencies": { "opentype.js": "1.3.4" }
+}
