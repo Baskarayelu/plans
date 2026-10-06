@@ -1,0 +1,45 @@
+{
+  "ausd": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+  "chainId": 10143,
+  "claimEscrow": "0x28F6E6095761f003ff413cD99922894bee6e73C7",
+  "create2Deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+  "keyRegistry": "0xD5114ff91FD11B343c9193e9463020ca0D12d168",
+  "plansFactory": "0x01F92d40b765516d54ED551da0DC56984CAA2e74",
+  "plansSend": "0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C",
+  "potImplementation": "0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6",
+  "salts": {
+    "keyRegistry": "0xb21dc9b13edd71fe0b92de9a106a8cde521e4fd4e9614087291f9ec49810415f",
+    "plansFactory": "0x3aa3ec4abd0150d442d569c6c039f84d05cc63a3d4beb7581f62afd40dca0662",
+    "plansSend": "0x3e8989b41aa8b807cc101c49ed177125776251385c8fee254b4e03eefbc32641"
+  },
+  "deployer": "0x44E61d9E73394EDEBAB7095D224B0a6185EDa4e3",
+  "transactions": [
+    {
+      "contract": "KeyRegistry",
+      "address": "0xD5114ff91FD11B343c9193e9463020ca0D12d168",
+      "hash": "0x5ca4e39e1f6a10afce10c1dd82ab3db81e8abfe019823fea63152596e1cafd37",
+      "blockNumber": 68792004,
+      "estimate": "370720",
+      "gasLimit": "408000",
+      "gasUsed": "408000"
+    },
+    {
+      "contract": "PlansSend",
+      "address": "0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C",
+      "hash": "0x84f213791b9ede5206bc26c54261fe4bd048e74e3ccc8ca91f33e60a856d433b",
+      "blockNumber": 68792010,
+      "estimate": "348141",
+      "gasLimit": "383000",
+      "gasUsed": "383000"
+    },
+    {
+      "contract": "PlansFactory",
+      "address": "0x01F92d40b765516d54ED551da0DC56984CAA2e74",
+      "hash": "0xba15b4a00d7c8ff2bc0ef2891e54ddd573ccc0626879646da52b3bb1a6f73778",
+      "blockNumber": 68792017,
+      "estimate": "8511482",
+      "gasLimit": "9363000",
+      "gasUsed": "9363000"
+    }
+  ]
+}
