@@ -1,0 +1,13 @@
+{
+  "name": "plans-monad-gas",
+  "version": "1.0.0",
+  "description": "Monad gas measurement for the Plans contracts (see ../GAS.md)",
+  "scripts": {
+    "gas": "node ../script/monad-gas.mjs"
+  },
+  "type": "module",
+  "dependencies": {
+    "viem": "^2.57.3"
+  },
+  "private": true
+}

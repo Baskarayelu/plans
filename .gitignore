@@ -12,3 +12,4 @@ broadcast/*/31337/
 contracts/out/
 contracts/cache/
 contracts/tools/node_modules/
+contracts/broadcast/

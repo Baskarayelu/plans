@@ -62,7 +62,9 @@ interface IPot is IPlansTypes {
     /// @dev reason: 0 withdrawn by proposer, 1 rejected, 2 expired
     event SpendCancelled(uint256 indexed id, uint8 reason);
 
-    event DisputeOpened(uint256 indexed disputeId, uint256 indexed spendId, address indexed by, uint8 reason, bytes memo);
+    event DisputeOpened(
+        uint256 indexed disputeId, uint256 indexed spendId, address indexed by, uint8 reason, bytes memo
+    );
     event DisputeVoted(uint256 indexed disputeId, address indexed member, bool spenderCovers);
     /// @dev `members`/`shares` is the new cost assignment for the spend after resolution.
     event DisputeResolved(uint256 indexed disputeId, DisputeOutcome outcome, address[] members, uint256[] shares);
@@ -71,7 +73,12 @@ interface IPot is IPlansTypes {
     event Unfrozen(address indexed lastVoter);
 
     event RuleChangeProposed(
-        uint256 indexed id, address indexed proposer, Rules rules, address[] allowAdd, address[] allowRemove, uint64 expiresAt
+        uint256 indexed id,
+        address indexed proposer,
+        Rules rules,
+        address[] allowAdd,
+        address[] allowRemove,
+        uint64 expiresAt
     );
     event RuleChangeVoted(uint256 indexed id, address indexed member, bool approve);
     event RuleChangeApproved(uint256 indexed id, uint64 eta);
@@ -107,7 +114,8 @@ interface IPot is IPlansTypes {
 
     function contribute(address member, Auth3009 calldata auth) external;
 
-    function rotateInvite(address member, address newSigner, uint256 nonce, uint256 deadline, bytes calldata sig) external;
+    function rotateInvite(address member, address newSigner, uint256 nonce, uint256 deadline, bytes calldata sig)
+        external;
 
     function postKeyWraps(address member, KeyWrap[] calldata wraps, uint256 nonce, uint256 deadline, bytes calldata sig)
         external;
@@ -127,7 +135,8 @@ interface IPot is IPlansTypes {
         bytes calldata sig
     ) external returns (uint256 id);
 
-    function vote(address member, uint256 id, bool approve, uint256 nonce, uint256 deadline, bytes calldata sig) external;
+    function vote(address member, uint256 id, bool approve, uint256 nonce, uint256 deadline, bytes calldata sig)
+        external;
 
     function cancelSpend(address member, uint256 id, uint256 nonce, uint256 deadline, bytes calldata sig) external;
 
@@ -159,8 +168,14 @@ interface IPot is IPlansTypes {
         bytes calldata sig
     ) external;
 
-    function voteDispute(address member, uint256 disputeId, bool spenderCovers, uint256 nonce, uint256 deadline, bytes calldata sig)
-        external;
+    function voteDispute(
+        address member,
+        uint256 disputeId,
+        bool spenderCovers,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata sig
+    ) external;
 
     /// @notice Closes a dispute after its voting period, or once every eligible member voted. Anyone may call.
     function finalizeDispute(uint256 disputeId) external;
@@ -180,7 +195,8 @@ interface IPot is IPlansTypes {
         bytes calldata sig
     ) external returns (uint256 id);
 
-    function voteRules(address member, uint256 id, bool approve, uint256 nonce, uint256 deadline, bytes calldata sig) external;
+    function voteRules(address member, uint256 id, bool approve, uint256 nonce, uint256 deadline, bytes calldata sig)
+        external;
 
     /// @notice Applies an approved rule change after its timelock. Anyone may call.
     function applyRules(uint256 id) external;

@@ -1,0 +1,3036 @@
+{
+  "meta": {
+    "date": "2026-10-06",
+    "forkBlock": "110981023",
+    "anvilVersion": "anvil Version: 1.5.0-stable",
+    "lastHotSlot": 118,
+    "liveBlock": "110981079",
+    "liveSummary": "44 transactions replayed on live Monad mainnet; the model's minimum gas limit matches the live minimum exactly for 44 of them."
+  },
+  "contracts": {
+    "keyRegistry": "0xa44fd54345fedabedd053dcb06abe77a6473b44c",
+    "factory": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+    "send": "0xb0567ec024987a580795ce442bbd2aeb8f6a065b",
+    "escrow": "0x3BBeAf1C70FFbd3291A6EEB78C49067C1EfBEDdD",
+    "potImpl": "0x98a4325d0e96137BE0B7ad47B54C00697E61ff1d"
+  },
+  "records": [
+    {
+      "label": "deploy KeyRegistry",
+      "table": true,
+      "hash": "0xb01a792f26a1166de9c433f8009157334fdf4e6085a91c42a5eca258aaf27e34",
+      "to": null,
+      "ethGasUsed": "361673",
+      "ethEstimate": "361673",
+      "model": {
+        "intrinsic": "77936",
+        "floor7623": "83070",
+        "ethPreRefund": "361673",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "361673",
+        "monadExec": "361522",
+        "monadMinLimit": "361522",
+        "codeDeposit": "282800",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 0,
+          "sloads": 0,
+          "sstores": 0,
+          "pageLoads": 0,
+          "pageWrites": 0,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 0,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "0",
+          "monadStorage": "0",
+          "ethMem": "180",
+          "monadMem": "29",
+          "deltaStorage": "0",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-151",
+          "revertedFrames": 0,
+          "frames": 0
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "365558",
+        "minLimit": "361522",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "deploy PlansFactory (deploys ClaimEscrow + Pot impl)",
+      "table": true,
+      "hash": "0xb609d455490f7e582c8b1324b6948f8a5d8c7a32ea536dfef2f98813f44837b1",
+      "to": null,
+      "ethGasUsed": "8322632",
+      "ethEstimate": "8322632",
+      "model": {
+        "intrinsic": "663666",
+        "floor7623": "1541500",
+        "ethPreRefund": "8322632",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "8322632",
+        "monadExec": "8319938",
+        "monadMinLimit": "8319938",
+        "codeDeposit": "875000",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 0,
+          "sloads": 1,
+          "sstores": 1,
+          "pageLoads": 1,
+          "pageWrites": 1,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 1,
+          "freshSlotsEth": 1,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "22100",
+          "monadStorage": "28000",
+          "ethMem": "9610",
+          "monadMem": "1016",
+          "deltaStorage": "5900",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-8594",
+          "revertedFrames": 0,
+          "frames": 2
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "8387137",
+        "minLimit": "8319938",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "deploy PlansSend",
+      "table": true,
+      "hash": "0x33ee2a74b7f69df5fc9cc862823fc02cad6be32bd953adfd31abe9a1cbda80c1",
+      "to": null,
+      "ethGasUsed": "339439",
+      "ethEstimate": "339439",
+      "model": {
+        "intrinsic": "75266",
+        "floor7623": "76430",
+        "ethPreRefund": "339439",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "339439",
+        "monadExec": "339315",
+        "monadMinLimit": "339315",
+        "codeDeposit": "263600",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 0,
+          "sloads": 0,
+          "sstores": 0,
+          "pageLoads": 0,
+          "pageWrites": 0,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 0,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "0",
+          "monadStorage": "0",
+          "ethMem": "148",
+          "monadMem": "24",
+          "deltaStorage": "0",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-124",
+          "revertedFrames": 0,
+          "frames": 0
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "343175",
+        "minLimit": "339315",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "deploy Pot implementation (standalone)",
+      "table": true,
+      "hash": "0x06b408d26cb99d796349dcc5042f952cbd879ac7ddf88dfd03adb73c6e1e5c03",
+      "to": null,
+      "ethGasUsed": "6384489",
+      "ethEstimate": "6384489",
+      "model": {
+        "intrinsic": "520648",
+        "floor7623": "1185450",
+        "ethPreRefund": "6384489",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "6384489",
+        "monadExec": "6386363",
+        "monadMinLimit": "6386363",
+        "codeDeposit": "5833000",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 0,
+          "sloads": 1,
+          "sstores": 1,
+          "pageLoads": 1,
+          "pageWrites": 1,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 1,
+          "freshSlotsEth": 1,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "22100",
+          "monadStorage": "28000",
+          "ethMem": "4492",
+          "monadMem": "466",
+          "deltaStorage": "5900",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-4026",
+          "revertedFrames": 0,
+          "frames": 0
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "6438216",
+        "minLimit": "6386363",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "deploy ClaimEscrow (standalone)",
+      "table": true,
+      "hash": "0x9b79855cda4204ae5e04195d5955b66a0f2d8d9049ed03d462528b1379c313ca",
+      "to": null,
+      "ethGasUsed": "966286",
+      "ethEstimate": "966286",
+      "model": {
+        "intrinsic": "122164",
+        "floor7623": "193180",
+        "ethPreRefund": "966286",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "966286",
+        "monadExec": "965874",
+        "monadMinLimit": "965874",
+        "codeDeposit": "842200",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 0,
+          "sloads": 0,
+          "sstores": 0,
+          "pageLoads": 0,
+          "pageWrites": 0,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 0,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "0",
+          "monadStorage": "0",
+          "ethMem": "486",
+          "monadMem": "74",
+          "deltaStorage": "0",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-412",
+          "revertedFrames": 0,
+          "frames": 0
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "974707",
+        "minLimit": "965874",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "createPot (no deposit / permit / key)",
+      "table": true,
+      "hash": "0xe65e6907c15edc614dfe402ae6ec21f9bcb00ad51bf51438b24e3a4fe54c0da9",
+      "to": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+      "ethGasUsed": "303735",
+      "ethEstimate": "308512",
+      "model": {
+        "intrinsic": "36308",
+        "floor7623": "59270",
+        "ethPreRefund": "303735",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "303735",
+        "monadExec": "302786",
+        "monadMinLimit": "306949",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → 63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 3,
+          "sloads": 18,
+          "sstores": 19,
+          "pageLoads": 3,
+          "pageWrites": 3,
+          "stateGrowth": 8,
+          "ethSlotColdLoads": 8,
+          "freshSlotsEth": 8,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "183100",
+          "monadStorage": "172100",
+          "ethMem": "533",
+          "monadMem": "84",
+          "deltaStorage": "-11000",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-449",
+          "revertedFrames": 0,
+          "frames": 3
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "309928",
+        "minLimit": "306949",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "createPot (+ 3009 deposit + permit + keyReg)",
+      "table": true,
+      "hash": "0x2e577a45c7e17bb578cb310393df0a8b18fea3c71d97f1a49867dea6f64be910",
+      "to": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+      "ethGasUsed": "510759",
+      "ethEstimate": "511303",
+      "model": {
+        "intrinsic": "40484",
+        "floor7623": "69710",
+        "ethPreRefund": "510759",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "510759",
+        "monadExec": "572684",
+        "monadMinLimit": "573196",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0xa44fd54345fedabedd053dcb06abe77a6473b44c → its gas used",
+        "acc": {
+          "coldAccounts": 4,
+          "warmAccountAccesses": 14,
+          "sloads": 40,
+          "sstores": 29,
+          "pageLoads": 10,
+          "pageWrites": 9,
+          "stateGrowth": 15,
+          "ethSlotColdLoads": 16,
+          "freshSlotsEth": 15,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 4
+          },
+          "ecrecover": 4,
+          "ethStorage": "346500",
+          "monadStorage": "367100",
+          "ethMem": "803",
+          "monadMem": "128",
+          "deltaStorage": "20600",
+          "deltaAccounts": "30000",
+          "deltaPrecompiles": "12000",
+          "deltaMemory": "-675",
+          "revertedFrames": 0,
+          "frames": 10
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "578396",
+        "minLimit": "573196",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "KeyRegistry.register",
+      "table": true,
+      "hash": "0x8f9dc9066fb17d131681a1e6cbb5befc063358aaddb53533eb994b88c6f342aa",
+      "to": "0xa44fd54345fedabedd053dcb06abe77a6473b44c",
+      "ethGasUsed": "73543",
+      "ethEstimate": "73543",
+      "model": {
+        "intrinsic": "23564",
+        "floor7623": "27410",
+        "ethPreRefund": "73543",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "73543",
+        "monadExec": "77418",
+        "monadMinLimit": "77418",
+        "codeDeposit": "0",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 0,
+          "warmAccountAccesses": 1,
+          "sloads": 1,
+          "sstores": 2,
+          "pageLoads": 1,
+          "pageWrites": 1,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 1,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "44200",
+          "monadStorage": "45100",
+          "ethMem": "30",
+          "monadMem": "5",
+          "deltaStorage": "900",
+          "deltaAccounts": "0",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-25",
+          "revertedFrames": 0,
+          "frames": 0
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "78308",
+        "minLimit": "77418",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "join (bare)",
+      "table": true,
+      "hash": "0x516e2819eea89297b2f323bf79f99d6aa8e8596cdadf3f7285d0544f0635bdf8",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "105630",
+      "ethEstimate": "107857",
+      "model": {
+        "intrinsic": "27396",
+        "floor7623": "36990",
+        "ethPreRefund": "105630",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "105630",
+        "monadExec": "115200",
+        "monadMinLimit": "117461",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1327",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 2,
+          "sloads": 11,
+          "sstores": 6,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 7,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 2
+          },
+          "ecrecover": 2,
+          "ethStorage": "61100",
+          "monadStorage": "57300",
+          "ethMem": "155",
+          "monadMem": "25",
+          "deltaStorage": "-3800",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "6000",
+          "deltaMemory": "-130",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "118323",
+        "minLimit": "117461",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "join (+ 3009 deposit + permit + keyReg)",
+      "table": true,
+      "hash": "0x684bbbda5a1e1ce85d84c9ea66613d08bda98c0283d1a512014c6413b392eb7c",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "312452",
+      "ethEstimate": "317429",
+      "model": {
+        "intrinsic": "31524",
+        "floor7623": "47310",
+        "ethPreRefund": "312452",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "312452",
+        "monadExec": "382933",
+        "monadMinLimit": "388879",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → 63/64 rule into 0xa44fd54345fedabedd053dcb06abe77a6473b44c → its gas used",
+        "acc": {
+          "coldAccounts": 4,
+          "warmAccountAccesses": 10,
+          "sloads": 30,
+          "sstores": 16,
+          "pageLoads": 9,
+          "pageWrites": 8,
+          "stateGrowth": 9,
+          "ethSlotColdLoads": 16,
+          "freshSlotsEth": 9,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 5
+          },
+          "ecrecover": 5,
+          "ethStorage": "226200",
+          "monadStorage": "252000",
+          "ethMem": "381",
+          "monadMem": "62",
+          "deltaStorage": "25800",
+          "deltaAccounts": "30000",
+          "deltaPrecompiles": "15000",
+          "deltaMemory": "-319",
+          "revertedFrames": 0,
+          "frames": 6
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "391347",
+        "minLimit": "388879",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "join (+ 3009 deposit only)",
+      "table": true,
+      "hash": "0x60d925f48230b513c46555b0f19160e3c570f89b33fea13b99a7bc41d02c1bd4",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "184414",
+      "ethEstimate": "187462",
+      "model": {
+        "intrinsic": "29088",
+        "floor7623": "41220",
+        "ethPreRefund": "184414",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "184414",
+        "monadExec": "219405",
+        "monadMinLimit": "222891",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 2716",
+        "acc": {
+          "coldAccounts": 2,
+          "warmAccountAccesses": 4,
+          "sloads": 26,
+          "sstores": 12,
+          "pageLoads": 6,
+          "pageWrites": 5,
+          "stateGrowth": 4,
+          "ethSlotColdLoads": 14,
+          "freshSlotsEth": 4,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 3
+          },
+          "ecrecover": 3,
+          "ethStorage": "122600",
+          "monadStorage": "133800",
+          "ethMem": "249",
+          "monadMem": "40",
+          "deltaStorage": "11200",
+          "deltaAccounts": "15000",
+          "deltaPrecompiles": "9000",
+          "deltaMemory": "-209",
+          "revertedFrames": 0,
+          "frames": 2
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "225224",
+        "minLimit": "222891",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "contribute (3009)",
+      "table": true,
+      "hash": "0x74675a2515f7d4a40a1aa8aa538090588d3a60c65b802c065eba8b4e0e7beab9",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "111405",
+      "ethEstimate": "113500",
+      "model": {
+        "intrinsic": "23996",
+        "floor7623": "28490",
+        "ethPreRefund": "111405",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "111405",
+        "monadExec": "148282",
+        "monadMinLimit": "150844",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1550",
+        "acc": {
+          "coldAccounts": 2,
+          "warmAccountAccesses": 2,
+          "sloads": 17,
+          "sstores": 6,
+          "pageLoads": 5,
+          "pageWrites": 4,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 9,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "68500",
+          "monadStorage": "87500",
+          "ethMem": "147",
+          "monadMem": "24",
+          "deltaStorage": "19000",
+          "deltaAccounts": "15000",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-123",
+          "revertedFrames": 0,
+          "frames": 2
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "151799",
+        "minLimit": "150844",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "contribute user1",
+      "table": false,
+      "hash": "0x3505a8d2a5b4bbcdda171e6ec157d3f23d708d8d0657b84037ea8a524c84c086",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "113614",
+      "ethEstimate": "115744"
+    },
+    {
+      "label": "propose PAY, instant (executes; 4-way split)",
+      "table": true,
+      "hash": "0x30709e0547a6aeeef9530cc02f3086604b0cdb4842d6e94d4013e48dd6250489",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "235222",
+      "ethEstimate": "238421",
+      "model": {
+        "intrinsic": "28912",
+        "floor7623": "40780",
+        "ethPreRefund": "235222",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "235222",
+        "monadExec": "260426",
+        "monadMinLimit": "265060",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 8803",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 2,
+          "sloads": 60,
+          "sstores": 18,
+          "pageLoads": 7,
+          "pageWrites": 6,
+          "stateGrowth": 4,
+          "ethSlotColdLoads": 18,
+          "freshSlotsEth": 4,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "148600",
+          "monadStorage": "148600",
+          "ethMem": "351",
+          "monadMem": "55",
+          "deltaStorage": "0",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-296",
+          "revertedFrames": 0,
+          "frames": 4
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "266896",
+        "minLimit": "265060",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "propose PAY, needs approval (→ Pending)",
+      "table": true,
+      "hash": "0xbededcd2a28691172e0d7a14d5fd33ec088df72fcc8a6497b67d8dfa0bf2618e",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "196942",
+      "ethEstimate": "199534",
+      "model": {
+        "intrinsic": "28900",
+        "floor7623": "40750",
+        "ethPreRefund": "196942",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "196942",
+        "monadExec": "216569",
+        "monadMinLimit": "221557",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 6222",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 1,
+          "sloads": 40,
+          "sstores": 10,
+          "pageLoads": 5,
+          "pageWrites": 3,
+          "stateGrowth": 4,
+          "ethSlotColdLoads": 17,
+          "freshSlotsEth": 4,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "127000",
+          "monadStorage": "121400",
+          "ethMem": "324",
+          "monadMem": "51",
+          "deltaStorage": "-5600",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-273",
+          "revertedFrames": 0,
+          "frames": 3
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "222343",
+        "minLimit": "221557",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "vote approve (reaches threshold → executes PAY)",
+      "table": true,
+      "hash": "0xa55bb3579be4af1bef225c5b131ca39563b3e011917396a0a4ced7f7563242f2",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "155157",
+      "ethEstimate": "158346",
+      "model": {
+        "intrinsic": "23808",
+        "floor7623": "28020",
+        "ethPreRefund": "155157",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "155157",
+        "monadExec": "175569",
+        "monadMinLimit": "178963",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 5562",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 2,
+          "sloads": 54,
+          "sstores": 17,
+          "pageLoads": 6,
+          "pageWrites": 5,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 18,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "91000",
+          "monadStorage": "86100",
+          "ethMem": "222",
+          "monadMem": "34",
+          "deltaStorage": "-4900",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-188",
+          "revertedFrames": 0,
+          "frames": 4
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "180692",
+        "minLimit": "178963",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "propose PERSONAL, instant",
+      "table": true,
+      "hash": "0x6c26cd38bc9b9e01973ba73a52952c66f0fb868912cbe6f92eb61b2dbed2df4e",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "196404",
+      "ethEstimate": "198987",
+      "model": {
+        "intrinsic": "28924",
+        "floor7623": "40810",
+        "ethPreRefund": "196404",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "196404",
+        "monadExec": "177952",
+        "monadMinLimit": "181277",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 8110",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 58,
+          "sstores": 17,
+          "pageLoads": 3,
+          "pageWrites": 3,
+          "stateGrowth": 3,
+          "ethSlotColdLoads": 15,
+          "freshSlotsEth": 3,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "119600",
+          "monadStorage": "90900",
+          "ethMem": "300",
+          "monadMem": "48",
+          "deltaStorage": "-28700",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-252",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "183113",
+        "minLimit": "181277",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "propose LINK, instant (→ ClaimEscrow.createFromPot)",
+      "table": true,
+      "hash": "0x8f53f01ad7ba5471824ad6713ef4b12c21c17b1bdf97e18733bdacceb137112c",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "320705",
+      "ethEstimate": "345477",
+      "model": {
+        "intrinsic": "28912",
+        "floor7623": "40780",
+        "ethPreRefund": "340605",
+        "ethRefundCounter": "19900",
+        "ethGasUsedModel": "320705",
+        "monadExec": "388534",
+        "monadMinLimit": "395202",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 9896",
+        "acc": {
+          "coldAccounts": 5,
+          "warmAccountAccesses": 4,
+          "sloads": 68,
+          "sstores": 25,
+          "pageLoads": 10,
+          "pageWrites": 8,
+          "stateGrowth": 8,
+          "ethSlotColdLoads": 21,
+          "freshSlotsEth": 8,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "239900",
+          "monadStorage": "247700",
+          "ethMem": "438",
+          "monadMem": "67",
+          "deltaStorage": "7800",
+          "deltaAccounts": "37500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-371",
+          "revertedFrames": 0,
+          "frames": 8
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "397037",
+        "minLimit": "395202",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "ClaimEscrow.claim (fresh recipient)",
+      "table": true,
+      "hash": "0x00dfb1c40207ed8f0bf542ee089fbe0e1dffc7d181cfa16d12126ef4cdcface3",
+      "to": "0x3BBeAf1C70FFbd3291A6EEB78C49067C1EfBEDdD",
+      "ethGasUsed": "67261",
+      "ethEstimate": "72061",
+      "model": {
+        "intrinsic": "23168",
+        "floor7623": "26420",
+        "ethPreRefund": "72061",
+        "ethRefundCounter": "4800",
+        "ethGasUsedModel": "67261",
+        "monadExec": "104413",
+        "monadMinLimit": "104413",
+        "codeDeposit": "0",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 9,
+          "sstores": 3,
+          "pageLoads": 4,
+          "pageWrites": 3,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 5,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "36700",
+          "monadStorage": "58600",
+          "ethMem": "57",
+          "monadMem": "9",
+          "deltaStorage": "21900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-48",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "105410",
+        "minLimit": "104413",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "propose user1",
+      "table": false,
+      "hash": "0x802edc9117ca92e23335c9b43aa85a4fce2dccc0c250f03d16dea139df6fdb20",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "303838",
+      "ethEstimate": "328342"
+    },
+    {
+      "label": "propose PAY (→ Pending), to be cancelled",
+      "table": false,
+      "hash": "0xde177692274cd47b843042a8958284829e687b143419b1932049fc4c4cdff5ec",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "197440",
+      "ethEstimate": "200039"
+    },
+    {
+      "label": "cancelSpend",
+      "table": true,
+      "hash": "0xe19026b0d72a80bbe2756b5c4daff11f09174c83d8984e182561df84a20a3c03",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "73611",
+      "ethEstimate": "74333",
+      "model": {
+        "intrinsic": "23692",
+        "floor7623": "27730",
+        "ethPreRefund": "73611",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "73611",
+        "monadExec": "95148",
+        "monadMinLimit": "96897",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 828",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 7,
+          "sstores": 4,
+          "pageLoads": 3,
+          "pageWrites": 3,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 5,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "39400",
+          "monadStorage": "50500",
+          "ethMem": "75",
+          "monadMem": "12",
+          "deltaStorage": "11100",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-63",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "97070",
+        "minLimit": "96897",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "PlansSend.send",
+      "table": true,
+      "hash": "0x55fa0baee4ebff5fe3d1897ecaf72729c1b6e1212fe8e0d5e7c20d9589454f51",
+      "to": "0xb0567ec024987a580795ce442bbd2aeb8f6a065b",
+      "ethGasUsed": "85275",
+      "ethEstimate": "105175",
+      "model": {
+        "intrinsic": "26408",
+        "floor7623": "34520",
+        "ethPreRefund": "105175",
+        "ethRefundCounter": "19900",
+        "ethGasUsedModel": "85275",
+        "monadExec": "145333",
+        "monadMinLimit": "145333",
+        "codeDeposit": "0",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 3,
+          "sloads": 12,
+          "sstores": 5,
+          "pageLoads": 5,
+          "pageWrites": 4,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 5,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "57100",
+          "monadStorage": "86900",
+          "ethMem": "169",
+          "monadMem": "27",
+          "deltaStorage": "29800",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-142",
+          "revertedFrames": 0,
+          "frames": 2
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "146493",
+        "minLimit": "145333",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "ClaimEscrow.createWithAuthorization (send-by-link)",
+      "table": true,
+      "hash": "0xb854c64736fddd0e840746c27462fbdc8064bf6d59881c10539ba5258d37f89b",
+      "to": "0x3BBeAf1C70FFbd3291A6EEB78C49067C1EfBEDdD",
+      "ethGasUsed": "127006",
+      "ethEstimate": "127006",
+      "model": {
+        "intrinsic": "25204",
+        "floor7623": "31510",
+        "ethPreRefund": "127006",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "127006",
+        "monadExec": "168200",
+        "monadMinLimit": "168200",
+        "codeDeposit": "0",
+        "needWhy": "gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 2,
+          "sloads": 11,
+          "sstores": 8,
+          "pageLoads": 6,
+          "pageWrites": 5,
+          "stateGrowth": 3,
+          "ethSlotColdLoads": 6,
+          "freshSlotsEth": 3,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "84100",
+          "monadStorage": "114900",
+          "ethMem": "126",
+          "monadMem": "20",
+          "deltaStorage": "30800",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-106",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "170702",
+        "minLimit": "168200",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "postKeyWraps (3 wraps)",
+      "table": true,
+      "hash": "0xaa5d0e080bca125456db53f96e70582eb70bc50d1bcea1a6986d7c0b7b143a77",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "80773",
+      "ethEstimate": "81483",
+      "model": {
+        "intrinsic": "31476",
+        "floor7623": "47190",
+        "ethPreRefund": "80773",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "80773",
+        "monadExec": "100970",
+        "monadMinLimit": "101882",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 4,
+          "sstores": 1,
+          "pageLoads": 2,
+          "pageWrites": 1,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 3,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "26400",
+          "monadStorage": "36300",
+          "ethMem": "242",
+          "monadMem": "39",
+          "deltaStorage": "9900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-203",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "101954",
+        "minLimit": "101882",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "openDispute",
+      "table": true,
+      "hash": "0x3d8333e3c42d62eab7768602d54f21b648ca83cec18cc79b6df4f2ed9be29536",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "123045",
+      "ethEstimate": "125696",
+      "model": {
+        "intrinsic": "24956",
+        "floor7623": "30890",
+        "ethPreRefund": "123045",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "123045",
+        "monadExec": "142807",
+        "monadMinLimit": "145653",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 2380",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 23,
+          "sstores": 12,
+          "pageLoads": 5,
+          "pageWrites": 4,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 11,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "79300",
+          "monadStorage": "88700",
+          "ethMem": "164",
+          "monadMem": "26",
+          "deltaStorage": "9400",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-138",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "146259",
+        "minLimit": "145653",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "voteDispute",
+      "table": true,
+      "hash": "0xebe6699589992b524ab55d2cbeb739a3579440f94d8e7e8d62819c0c6c39dfae",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "71143",
+      "ethEstimate": "72251",
+      "model": {
+        "intrinsic": "23820",
+        "floor7623": "28050",
+        "ethPreRefund": "71143",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "71143",
+        "monadExec": "93475",
+        "monadMinLimit": "94819",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 955",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 11,
+          "sstores": 3,
+          "pageLoads": 3,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 6,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "36100",
+          "monadStorage": "48000",
+          "ethMem": "81",
+          "monadMem": "13",
+          "deltaStorage": "11900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-68",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "95384",
+        "minLimit": "94819",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "voteDispute user3",
+      "table": false,
+      "hash": "0x23dc3e9825348e6ad88941b81661cab6ce890d540db51b1a99f3d24b583dc507",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "73401",
+      "ethEstimate": "74533"
+    },
+    {
+      "label": "finalizeDispute (every eligible voter voted; Keep)",
+      "table": true,
+      "hash": "0xeca6530de3bdd7b2020b0dee5c132bd10ea9c81ca9a1e4ea8a0130bf3329030c",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "78341",
+      "ethEstimate": "80362",
+      "model": {
+        "intrinsic": "21204",
+        "floor7623": "21510",
+        "ethPreRefund": "78341",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "78341",
+        "monadExec": "90141",
+        "monadMinLimit": "92230",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 2891",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 0,
+          "sloads": 21,
+          "sstores": 6,
+          "pageLoads": 4,
+          "pageWrites": 3,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 11,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "38700",
+          "monadStorage": "43100",
+          "ethMem": "119",
+          "monadMem": "19",
+          "deltaStorage": "4400",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-100",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "92966",
+        "minLimit": "92230",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "openDispute user2",
+      "table": false,
+      "hash": "0x7be48b3cc03d9818f208a7ccb25a98f1834493db6b6aae615d75f80b9c05b7bb",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "125254",
+      "ethEstimate": "127941"
+    },
+    {
+      "label": "resolveDispute (SpenderCovers)",
+      "table": true,
+      "hash": "0xb8d509974c14365d8b476794cc37f9fe50747f40445c34fc05c66639ced93532",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "126668",
+      "ethEstimate": "129390",
+      "model": {
+        "intrinsic": "24520",
+        "floor7623": "29800",
+        "ethPreRefund": "126668",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "126668",
+        "monadExec": "127293",
+        "monadMinLimit": "129906",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 4831",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 36,
+          "sstores": 14,
+          "pageLoads": 4,
+          "pageWrites": 4,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 11,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "74900",
+          "monadStorage": "65200",
+          "ethMem": "209",
+          "monadMem": "34",
+          "deltaStorage": "-9700",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-175",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "130560",
+        "minLimit": "129906",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "openDispute user1",
+      "table": false,
+      "hash": "0x4a6934e21603c042580d4c3b5643bcba5e16f374cf2181fb235be1597c06276d",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "123033",
+      "ethEstimate": "125684"
+    },
+    {
+      "label": "freeze",
+      "table": true,
+      "hash": "0x272f78dce78e55d69cf8ed1bba117e2726a842b0753078658ca06b3aa18cf2e4",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "94666",
+      "ethEstimate": "95724",
+      "model": {
+        "intrinsic": "23564",
+        "floor7623": "27410",
+        "ethPreRefund": "94666",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "94666",
+        "monadExec": "102108",
+        "monadMinLimit": "103962",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 968",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 12,
+          "sstores": 4,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 8,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "60200",
+          "monadStorage": "57200",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "-3000",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "104086",
+        "minLimit": "103962",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "voteUnfreeze",
+      "table": true,
+      "hash": "0x02a5e5cda165477097bdf5fedc236ce591615950580e388ad9c5556a2fe0f385",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "64596",
+      "ethEstimate": "65177",
+      "model": {
+        "intrinsic": "23540",
+        "floor7623": "27350",
+        "ethPreRefund": "64596",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "64596",
+        "monadExec": "82938",
+        "monadMinLimit": "83692",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 7,
+          "sstores": 2,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 4,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "31600",
+          "monadStorage": "39500",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "7900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "83850",
+        "minLimit": "83692",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "voteUnfreeze user1",
+      "table": false,
+      "hash": "0xfbdcba342cbe17d649e6cff0dea3f14ad48e08e47ddb60c3647f04db821b53bd",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "66841",
+      "ethEstimate": "67458"
+    },
+    {
+      "label": "voteUnfreeze (majority → lifts freeze)",
+      "table": true,
+      "hash": "0x2d7b6d623f0494c3fd8782f828e96ad43cabc7232e274329eb001384d3305ff1",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "73131",
+      "ethEstimate": "73848",
+      "model": {
+        "intrinsic": "23528",
+        "floor7623": "27320",
+        "ethPreRefund": "73131",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "73131",
+        "monadExec": "84673",
+        "monadMinLimit": "86527",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1035",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 9,
+          "sstores": 3,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 6,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "38700",
+          "monadStorage": "39800",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "1100",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "87432",
+        "minLimit": "86527",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "proposeRules (+1 allowlist add)",
+      "table": true,
+      "hash": "0xdc261aa44a342a42ddc2421c0add0bbe7e84960911fbd60338515f014284dfe4",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "205277",
+      "ethEstimate": "208033",
+      "model": {
+        "intrinsic": "26872",
+        "floor7623": "35680",
+        "ethPreRefund": "205277",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "205277",
+        "monadExec": "212247",
+        "monadMinLimit": "214996",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 21,
+          "sstores": 17,
+          "pageLoads": 4,
+          "pageWrites": 4,
+          "stateGrowth": 6,
+          "ethSlotColdLoads": 10,
+          "freshSlotsEth": 6,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "152300",
+          "monadStorage": "149000",
+          "ethMem": "274",
+          "monadMem": "44",
+          "deltaStorage": "-3300",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-230",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "215099",
+        "minLimit": "214996",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "voteRules",
+      "table": true,
+      "hash": "0x66ff760d8d5108418b87b5ff02cf0f6d58ef9f0b0ed80f4b3a523f3aa4b640d3",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "69201",
+      "ethEstimate": "72025",
+      "model": {
+        "intrinsic": "23808",
+        "floor7623": "28020",
+        "ethPreRefund": "69201",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "69201",
+        "monadExec": "93533",
+        "monadMinLimit": "96624",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 986",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 9,
+          "sstores": 3,
+          "pageLoads": 3,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 5,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "33900",
+          "monadStorage": "47800",
+          "ethMem": "81",
+          "monadMem": "13",
+          "deltaStorage": "13900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-68",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "97354",
+        "minLimit": "96624",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "voteRules (approves → timelock)",
+      "table": true,
+      "hash": "0x90a7e175f1f672f2d49654ba4d5a84cffff800b100cea6914838526e38c18449",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "75325",
+      "ethEstimate": "76860",
+      "model": {
+        "intrinsic": "23820",
+        "floor7623": "28050",
+        "ethPreRefund": "75325",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "75325",
+        "monadExec": "95657",
+        "monadMinLimit": "97396",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1091",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 12,
+          "sstores": 4,
+          "pageLoads": 3,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 7,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "38300",
+          "monadStorage": "48200",
+          "ethMem": "81",
+          "monadMem": "13",
+          "deltaStorage": "9900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-68",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "97583",
+        "minLimit": "97396",
+        "logDataMismatch": true
+      }
+    },
+    {
+      "label": "rotateInvite",
+      "table": true,
+      "hash": "0x50396a6622392775bcc9081380b81ace295e8cf6597f8c8145be7efbaf71abc4",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "65910",
+      "ethEstimate": "66506",
+      "model": {
+        "intrinsic": "23932",
+        "floor7623": "28330",
+        "ethPreRefund": "65910",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "65910",
+        "monadExec": "84247",
+        "monadMinLimit": "85015",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 5,
+          "sstores": 2,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 4,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "31400",
+          "monadStorage": "39300",
+          "ethMem": "75",
+          "monadMem": "12",
+          "deltaStorage": "7900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-63",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "85164",
+        "minLimit": "85015",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "exit (positive net → payout)",
+      "table": true,
+      "hash": "0xbe308a5855a6fdae3ff6ea97ab97397b60377174108bf0ed3bc50246ca338405",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "104710",
+      "ethEstimate": "105928",
+      "model": {
+        "intrinsic": "23540",
+        "floor7623": "27350",
+        "ethPreRefund": "104710",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "104710",
+        "monadExec": "144408",
+        "monadMinLimit": "147318",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1975",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 2,
+          "sloads": 19,
+          "sstores": 6,
+          "pageLoads": 5,
+          "pageWrites": 4,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 10,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "56400",
+          "monadStorage": "70700",
+          "ethMem": "120",
+          "monadMem": "18",
+          "deltaStorage": "14300",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-102",
+          "revertedFrames": 0,
+          "frames": 4
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "147878",
+        "minLimit": "147318",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "ack",
+      "table": true,
+      "hash": "0xb6c088bf132685a7731588f6897ffd216e41e5c476ba23ce95249e2f0ec4849b",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "65739",
+      "ethEstimate": "66338",
+      "model": {
+        "intrinsic": "23552",
+        "floor7623": "27380",
+        "ethPreRefund": "65739",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "65739",
+        "monadExec": "84081",
+        "monadMinLimit": "84853",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 6,
+          "sstores": 2,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 4,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "31500",
+          "monadStorage": "39400",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "7900",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "84998",
+        "minLimit": "84853",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "ack (nonce shares a used bitmap word)",
+      "table": true,
+      "hash": "0x72994fa9fc193c8a469d7e406b4f474ad377e472c81c47862b20b5034b32eb1f",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "50872",
+      "ethEstimate": "51235",
+      "model": {
+        "intrinsic": "23552",
+        "floor7623": "27380",
+        "ethPreRefund": "50872",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "50872",
+        "monadExec": "67314",
+        "monadMinLimit": "67819",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 7,
+          "sstores": 2,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 5,
+          "freshSlotsEth": 0,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "16500",
+          "monadStorage": "22500",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "6000",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "68164",
+        "minLimit": "67819",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "createPot settle-3",
+      "table": false,
+      "hash": "0x5e94901a12923f7dbacf84994a358f2d1dd76defaf3bab0bb8e5b3a287be6108",
+      "to": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+      "ethGasUsed": "397431",
+      "ethEstimate": "400800"
+    },
+    {
+      "label": "join user1",
+      "table": false,
+      "hash": "0x6a92df4e9b9f72c82f0bb5e029be3118b61e8208a9ef2f348dd9d1f94503fdcb",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "167627",
+      "ethEstimate": "171244"
+    },
+    {
+      "label": "join user2",
+      "table": false,
+      "hash": "0x8f374208debde11b13beffab6566fefde724131ea5c89e5a3b1c00f59cab5348",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "107875",
+      "ethEstimate": "110137"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0x995d1b56ef0bc2f8db7ac3fa8072b43c0749a626d13cd0353f451d6f8bbe0fc4",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "223472",
+      "ethEstimate": "226493"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0x041e794feac42df7ffe3a1c315984629188c4954c12bba13239289726f3d3cc8",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "183950",
+      "ethEstimate": "186344"
+    },
+    {
+      "label": "ack user0",
+      "table": false,
+      "hash": "0x22b0314de1065ff8f9dcbaaca68cd78d541da352683dfdd7c5a7d4310eced716",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "65727",
+      "ethEstimate": "66326"
+    },
+    {
+      "label": "ack user1",
+      "table": false,
+      "hash": "0xed5da058e6a376623b93295a09feb94934aaa22f704a128e46fb1a10423993a8",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "67972",
+      "ethEstimate": "68607"
+    },
+    {
+      "label": "ack user2",
+      "table": false,
+      "hash": "0x4e5aae360fecd6441a1cedd7754586b38a0c8cb7f4a268fae65c4933336e9242",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "70181",
+      "ethEstimate": "70851"
+    },
+    {
+      "label": "settle (3 members)",
+      "table": true,
+      "hash": "0x869320cbdf987371a5cbb62551e977a013c242fc0961d3a91b3554b81a07cb3e",
+      "to": "0x9021CE28a6722555b3e672e939a1f2fd97A37af6",
+      "ethGasUsed": "128172",
+      "ethEstimate": "134679",
+      "model": {
+        "intrinsic": "21064",
+        "floor7623": "21160",
+        "ethPreRefund": "132972",
+        "ethRefundCounter": "4800",
+        "ethGasUsedModel": "128172",
+        "monadExec": "182790",
+        "monadMinLimit": "185168",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x9021ce28a6722555b3e672e939a1f2fd97a37af6 → its gas used",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 10,
+          "sloads": 47,
+          "sstores": 10,
+          "pageLoads": 8,
+          "pageWrites": 5,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 14,
+          "freshSlotsEth": 1,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "73200",
+          "monadStorage": "100700",
+          "ethMem": "210",
+          "monadMem": "28",
+          "deltaStorage": "27500",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-182",
+          "revertedFrames": 0,
+          "frames": 13
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "185408",
+        "minLimit": "185168",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "createPot settle-6",
+      "table": false,
+      "hash": "0x6b83c2b11b9aa9188801661dc888978c59b06df4d6ae1beb555b9cc2b5afeccd",
+      "to": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+      "ethGasUsed": "397419",
+      "ethEstimate": "400788"
+    },
+    {
+      "label": "join user1",
+      "table": false,
+      "hash": "0x1f62287fd33722111f233bef3c454249aa4866d02e2dd26c730e469da6649eca",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "150539",
+      "ethEstimate": "153329"
+    },
+    {
+      "label": "join user2",
+      "table": false,
+      "hash": "0x0d5c4f94f9519ab0eadcc54eceb517e7cf4a692943cb9b1530fcab8e945f61ea",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "182157",
+      "ethEstimate": "185169"
+    },
+    {
+      "label": "join user3",
+      "table": false,
+      "hash": "0x0c9d23fe99dfd73c0dca68dc8f7421d54956255ccea94ef027b6912cf720da9e",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "172117",
+      "ethEstimate": "175805"
+    },
+    {
+      "label": "join user4",
+      "table": false,
+      "hash": "0x1ff707f713a510a2b137bedce350107024b46df83be056b87cdc8cd35a3172cc",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "186623",
+      "ethEstimate": "189706"
+    },
+    {
+      "label": "join user5",
+      "table": false,
+      "hash": "0xcf32fd9901c38c8093e4bdf732125fc0ba61a50de1a746029716a460a51dab41",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "114598",
+      "ethEstimate": "116966"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0x037e20e087b61596a9cf08bb18b1732028e00c399aa40ca02e2d48208f0b6185",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "258264",
+      "ethEstimate": "261812"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0xe1f3b5f2040f3ac7d3560fc4c604e10387d79a6702e38611da88fc723d61a805",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "218742",
+      "ethEstimate": "221663"
+    },
+    {
+      "label": "propose user2",
+      "table": false,
+      "hash": "0x4600a0120c45e4e08547ecc608b18412fb09e06c2325f85f189db4bdd4fc902d",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "206802",
+      "ethEstimate": "209559"
+    },
+    {
+      "label": "ack user0",
+      "table": false,
+      "hash": "0x02e8fa452ff22fd30d93b3ac3d9b5ed8aac4745b44592a4dcc21aaa5fc564f3c",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "65751",
+      "ethEstimate": "66350"
+    },
+    {
+      "label": "ack user1",
+      "table": false,
+      "hash": "0x191de3ef8302c352d0b1a770a326d762923f894d09115c0d287cf186560a1a5b",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "67972",
+      "ethEstimate": "68607"
+    },
+    {
+      "label": "ack user2",
+      "table": false,
+      "hash": "0x9c37c208bf8c15d726f2740bc8320a12da2b5a0903b050b851fd7b372df061ae",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "70193",
+      "ethEstimate": "70863"
+    },
+    {
+      "label": "ack user3",
+      "table": false,
+      "hash": "0x3347587893dcd4ce5c2d6a6c346ffa693fcaa063bbc9d4ace7c56dafff53ef76",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "72450",
+      "ethEstimate": "73155"
+    },
+    {
+      "label": "ack user4",
+      "table": false,
+      "hash": "0xf539fb9a0bdefb03ee76ba8d7c3ffb21a971f89bc79e81ec5319865837b4b6ad",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "74683",
+      "ethEstimate": "75424"
+    },
+    {
+      "label": "ack user5",
+      "table": false,
+      "hash": "0xa6e13611161bbd58a8538eea6f379072a1410c62413b2887a8fd55893d15d5a3",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "76904",
+      "ethEstimate": "77680"
+    },
+    {
+      "label": "settle (6 members)",
+      "table": true,
+      "hash": "0x0581605088a29ebafd73642daa752e18271a6067f9da84b8f435b2ae142b7b0d",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "219323",
+      "ethEstimate": "222400",
+      "model": {
+        "intrinsic": "21064",
+        "floor7623": "21160",
+        "ethPreRefund": "219323",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "219323",
+        "monadExec": "273720",
+        "monadMinLimit": "277542",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x3bfba7183d7108ac17ccc7a9b094ad16dbb3423e → its gas used",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 17,
+          "sloads": 91,
+          "sstores": 22,
+          "pageLoads": 12,
+          "pageWrites": 9,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 22,
+          "freshSlotsEth": 2,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "134300",
+          "monadStorage": "166500",
+          "ethMem": "351",
+          "monadMem": "48",
+          "deltaStorage": "32200",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-303",
+          "revertedFrames": 0,
+          "frames": 20
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "280401",
+        "minLimit": "277542",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "createPot settle-12",
+      "table": false,
+      "hash": "0x11b72fa05f636e454361035455c25b46ee00573c7ba29a8bc39894ba53353649",
+      "to": "0x0f45571b1eaab2cd4c4a6eeac13d939eea4bdd08",
+      "ethGasUsed": "397455",
+      "ethEstimate": "400824"
+    },
+    {
+      "label": "join user1",
+      "table": false,
+      "hash": "0x410c01a383f59088080420bd8df5de5e1f12d2bd0896bc3b90021e3ff10b4dfb",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "150539",
+      "ethEstimate": "153329"
+    },
+    {
+      "label": "join user2",
+      "table": false,
+      "hash": "0xb7fe6ec60835cb6473c6532fb580b6221c3af36499758519915e1a33cc8582e8",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "182133",
+      "ethEstimate": "185145"
+    },
+    {
+      "label": "join user3",
+      "table": false,
+      "hash": "0xc75eed97dae1ccab1e812a45028525052ea2e85599145f093cf101741d722807",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "154993",
+      "ethEstimate": "157854"
+    },
+    {
+      "label": "join user4",
+      "table": false,
+      "hash": "0xf3d37a1d8aed1e1f4b2621ff6321c9c2e0eba61aa6e1a8ef9665f901a0bad83a",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "186635",
+      "ethEstimate": "189718"
+    },
+    {
+      "label": "join user5",
+      "table": false,
+      "hash": "0x20c2d6779340e8bdc262cdab514b6cf1eab73b6e158c9ae6cd6aac6c9d0f04aa",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "176571",
+      "ethEstimate": "180330"
+    },
+    {
+      "label": "join user6",
+      "table": false,
+      "hash": "0x0af162107c3e8eaeaa2cdab5a706bd2d180f3dd5ca46a1f61a7c2d46e5d5c5d2",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "191113",
+      "ethEstimate": "194267"
+    },
+    {
+      "label": "join user7",
+      "table": false,
+      "hash": "0x622c34d3d542bdc49766b400867b1b22d3a72438f432a2d1d5b5e089ba39e3ec",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "181049",
+      "ethEstimate": "184879"
+    },
+    {
+      "label": "join user8",
+      "table": false,
+      "hash": "0x75a12c87c4e520a8c72c69c15fb6d3114dc8ac45f7beda25d0de4fa49ac84b4b",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "195555",
+      "ethEstimate": "198780"
+    },
+    {
+      "label": "join user9",
+      "table": false,
+      "hash": "0xfd770bab35bfce581bde54970a86cfea4a5cbae84236d97dcc5977791b347034",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "185455",
+      "ethEstimate": "189356"
+    },
+    {
+      "label": "join user10",
+      "table": false,
+      "hash": "0x3a54ac9d470b2acf5d3962523a8e101e099739547adbc83ad30a96afa7f421ed",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "200021",
+      "ethEstimate": "203317"
+    },
+    {
+      "label": "join user11",
+      "table": false,
+      "hash": "0x3707e50dd9ccdc61eaed39717ddb98833be56e9816afe8db5ef609b0217451e2",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "127996",
+      "ethEstimate": "130577"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0x2d90ebdc859f486be1a5406bdedf4b61bc9994c97588bf2ea2af4d39ee668e10",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "356811",
+      "ethEstimate": "361874"
+    },
+    {
+      "label": "propose user0",
+      "table": false,
+      "hash": "0x4a84bc2ec12f243bca3fb025aef75d9ae25da6cff1e675897996be6e4e992e23",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "317277",
+      "ethEstimate": "321713"
+    },
+    {
+      "label": "propose user2",
+      "table": false,
+      "hash": "0x71f64b2cbd5e98ca5f546e0ace2ac376844904592421263f7727f8a63a7ade90",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "241606",
+      "ethEstimate": "244890"
+    },
+    {
+      "label": "ack user0",
+      "table": false,
+      "hash": "0xb8d212c985faf3b269057cb9fad66118208542424d81e666b49683e1c63c05c6",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "65739",
+      "ethEstimate": "66338"
+    },
+    {
+      "label": "ack user1",
+      "table": false,
+      "hash": "0xf6434454df316d00231a9e6024c8d0f87da03f2a50332c9da74451b1bc5f4322",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "67972",
+      "ethEstimate": "68607"
+    },
+    {
+      "label": "ack user2",
+      "table": false,
+      "hash": "0xd874157f142d2cb345b10c1662bd3ec6ce9ef36a2c9d1dfef45bdf94223b0a07",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "70193",
+      "ethEstimate": "70863"
+    },
+    {
+      "label": "ack user3",
+      "table": false,
+      "hash": "0xdb96aab80461a4e31fcd75357cdcd4bb9c94cffe6bd3fc4463903713b4a549a9",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "72450",
+      "ethEstimate": "73155"
+    },
+    {
+      "label": "ack user4",
+      "table": false,
+      "hash": "0xf6e682ae308094954324bc97bc5b1d9811f7d95ca6c5b08677bd773ff8e78774",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "74671",
+      "ethEstimate": "75412"
+    },
+    {
+      "label": "ack user5",
+      "table": false,
+      "hash": "0x7ae668fdd6797d0f7c371cee6eaabce5a66a695e71bb6921fff110219fe9ff10",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "76916",
+      "ethEstimate": "77692"
+    },
+    {
+      "label": "ack user6",
+      "table": false,
+      "hash": "0xf80644edfe5a55e0fe853d3cd09e562782572f9c6b7cf90cc386cbfb022dc329",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "79149",
+      "ethEstimate": "79961"
+    },
+    {
+      "label": "ack user7",
+      "table": false,
+      "hash": "0xc667cda61f1551b50c308c7f18c14a403a9f6f6c02eb51c0ca0d47dae3501ee0",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "81370",
+      "ethEstimate": "82217"
+    },
+    {
+      "label": "ack user8",
+      "table": false,
+      "hash": "0x28a68c46356cca413cc13a1c29d597d22c9b1ebafdb14b1dec06196c37d302e4",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "83615",
+      "ethEstimate": "84498"
+    },
+    {
+      "label": "ack user9",
+      "table": false,
+      "hash": "0x2b1e4adf430a518070585d06b47614710d0ce9a13bb3d5eae3e4fca8fe9a94d8",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "85836",
+      "ethEstimate": "86754"
+    },
+    {
+      "label": "ack user10",
+      "table": false,
+      "hash": "0x516edc1f4ee5842e706f00cf8c5a91d959d3226f5970f6a92cbf527cd6a1b8bb",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "88081",
+      "ethEstimate": "89035"
+    },
+    {
+      "label": "ack (12th member of 12: longer member scan)",
+      "table": true,
+      "hash": "0x45364ab1d50c586a100d8c4d3e1562b5a7c41de810bc19ca2bea51d0e28fa605",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "90314",
+      "ethEstimate": "91303",
+      "model": {
+        "intrinsic": "23564",
+        "floor7623": "27410",
+        "ethPreRefund": "90314",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "90314",
+        "monadExec": "86656",
+        "monadMinLimit": "87468",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x50919ea91d6cecc00f69eea69f7d6864ae6d80bb → its gas used",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 1,
+          "sloads": 17,
+          "sstores": 2,
+          "pageLoads": 2,
+          "pageWrites": 2,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 15,
+          "freshSlotsEth": 1,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "54600",
+          "monadStorage": "40500",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "-14100",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "87583",
+        "minLimit": "87468",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "settle (12 members)",
+      "table": true,
+      "hash": "0xe3068bf4bfefb86a6d96677068fd6ccd054e77966dad7648a70a8c576f9caaa7",
+      "to": "0x50919EA91d6cECC00F69eeA69f7d6864Ae6D80bb",
+      "ethGasUsed": "425769",
+      "ethEstimate": "432123",
+      "model": {
+        "intrinsic": "21064",
+        "floor7623": "21160",
+        "ethPreRefund": "425769",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "425769",
+        "monadExec": "490379",
+        "monadMinLimit": "497640",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x50919ea91d6cecc00f69eea69f7d6864ae6d80bb → its gas used",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 35,
+          "sloads": 187,
+          "sstores": 49,
+          "pageLoads": 21,
+          "pageWrites": 18,
+          "stateGrowth": 5,
+          "ethSlotColdLoads": 40,
+          "freshSlotsEth": 5,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "284300",
+          "monadStorage": "327000",
+          "ethMem": "685",
+          "monadMem": "95",
+          "deltaStorage": "42700",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-590",
+          "revertedFrames": 0,
+          "frames": 38
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "500499",
+        "minLimit": "497640",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "payDebt (after settle; 6-member pot)",
+      "table": true,
+      "hash": "0x6b428558ee4ea2edabd95ee827ab11fb49cc350ded73ce815bc3fe9bc60d1100",
+      "to": "0x3bFBa7183d7108ac17CCc7a9b094Ad16DBB3423E",
+      "ethGasUsed": "169135",
+      "ethEstimate": "171368",
+      "model": {
+        "intrinsic": "23972",
+        "floor7623": "28430",
+        "ethPreRefund": "169135",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "169135",
+        "monadExec": "205543",
+        "monadMinLimit": "208721",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x3bfba7183d7108ac17ccc7a9b094ad16dbb3423e → SSTORE gas sentry at step 4287",
+        "acc": {
+          "coldAccounts": 2,
+          "warmAccountAccesses": 5,
+          "sloads": 59,
+          "sstores": 15,
+          "pageLoads": 8,
+          "pageWrites": 7,
+          "stateGrowth": 2,
+          "ethSlotColdLoads": 17,
+          "freshSlotsEth": 2,
+          "precompileCalls": {
+            "0x0000000000000000000000000000000000000001": 1
+          },
+          "ecrecover": 1,
+          "ethStorage": "106400",
+          "monadStorage": "125000",
+          "ethMem": "228",
+          "monadMem": "36",
+          "deltaStorage": "18600",
+          "deltaAccounts": "15000",
+          "deltaPrecompiles": "3000",
+          "deltaMemory": "-192",
+          "revertedFrames": 0,
+          "frames": 5
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": false,
+        "estimate": "211142",
+        "minLimit": "208721",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "applyRules (after timelock)",
+      "table": true,
+      "hash": "0xd12726e08a3f86f39eea599580d581b51f838601353c79c7b16845eb1dbfa6bd",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "115392",
+      "ethEstimate": "116817",
+      "model": {
+        "intrinsic": "21204",
+        "floor7623": "21510",
+        "ethPreRefund": "115392",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "115392",
+        "monadExec": "108134",
+        "monadMinLimit": "110509",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 1259",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 0,
+          "sloads": 44,
+          "sstores": 16,
+          "pageLoads": 4,
+          "pageWrites": 3,
+          "stateGrowth": 1,
+          "ethSlotColdLoads": 17,
+          "freshSlotsEth": 1,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "78100",
+          "monadStorage": "63400",
+          "ethMem": "69",
+          "monadMem": "11",
+          "deltaStorage": "-14700",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-58",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": true,
+        "minLimit": "110509",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "finalizeDispute (after 48 h; no votes → Keep)",
+      "table": true,
+      "hash": "0x9dfa0037e08746b34199b920f54641ee17690791e7f434b093ae7ed34e5523f3",
+      "to": "0x7d56b55090867319fc9B08FcFf0f2770463b1ace",
+      "ethGasUsed": "78318",
+      "ethEstimate": "80338",
+      "model": {
+        "intrinsic": "21204",
+        "floor7623": "21510",
+        "ethPreRefund": "78318",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "78318",
+        "monadExec": "82118",
+        "monadMinLimit": "84080",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 2884",
+        "acc": {
+          "coldAccounts": 1,
+          "warmAccountAccesses": 0,
+          "sloads": 21,
+          "sstores": 6,
+          "pageLoads": 3,
+          "pageWrites": 3,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 11,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "38700",
+          "monadStorage": "35100",
+          "ethMem": "119",
+          "monadMem": "19",
+          "deltaStorage": "-3600",
+          "deltaAccounts": "7500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-100",
+          "revertedFrames": 0,
+          "frames": 1
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": true,
+        "minLimit": "84080",
+        "logDataMismatch": false
+      }
+    },
+    {
+      "label": "ClaimEscrow.refund (pot LINK → Pot.onEscrowRefund)",
+      "table": true,
+      "hash": "0x09c294aeadae0ee3ec4edbfa2e64552c769c9d555e8d439fc88681683313ec96",
+      "to": "0x3BBeAf1C70FFbd3291A6EEB78C49067C1EfBEDdD",
+      "ethGasUsed": "102161",
+      "ethEstimate": "102161",
+      "model": {
+        "intrinsic": "21204",
+        "floor7623": "21510",
+        "ethPreRefund": "102161",
+        "ethRefundCounter": "0",
+        "ethGasUsedModel": "102161",
+        "monadExec": "135348",
+        "monadMinLimit": "135895",
+        "codeDeposit": "0",
+        "needWhy": "63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → 63/64 rule into 0x7d56b55090867319fc9b08fcff0f2770463b1ace → SSTORE gas sentry at step 3346",
+        "acc": {
+          "coldAccounts": 3,
+          "warmAccountAccesses": 1,
+          "sloads": 27,
+          "sstores": 9,
+          "pageLoads": 6,
+          "pageWrites": 5,
+          "stateGrowth": 0,
+          "ethSlotColdLoads": 13,
+          "freshSlotsEth": 0,
+          "precompileCalls": {},
+          "ecrecover": 0,
+          "ethStorage": "54800",
+          "monadStorage": "65600",
+          "ethMem": "133",
+          "monadMem": "20",
+          "deltaStorage": "10800",
+          "deltaAccounts": "22500",
+          "deltaPrecompiles": "0",
+          "deltaMemory": "-113",
+          "revertedFrames": 0,
+          "frames": 3
+        },
+        "diag": {
+          "sloadMismatch": 0,
+          "sstoreMismatch": 0,
+          "accountMismatch": 0,
+          "memMismatch": 0,
+          "unknownPrecompile": 0,
+          "exceptionalHalts": 0,
+          "depthMismatch": 0
+        }
+      },
+      "live": {
+        "timeOverride": true,
+        "minLimit": "135895",
+        "logDataMismatch": false
+      }
+    }
+  ]
+}

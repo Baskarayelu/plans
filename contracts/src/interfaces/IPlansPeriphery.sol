@@ -61,7 +61,9 @@ interface IClaimEscrow is IPlansTypes {
     event ClaimRefunded(uint256 indexed id, address indexed to, uint256 amount);
 
     /// @notice Pot only (factory-registered pots). Pulls `amount` from msg.sender.
-    function createFromPot(address claimSigner, uint256 amount, uint64 expiry, uint256 spendId) external returns (uint256 id);
+    function createFromPot(address claimSigner, uint256 amount, uint64 expiry, uint256 spendId)
+        external
+        returns (uint256 id);
 
     /// @notice Send-by-link. Pulls AUSD from `from` with receiveWithAuthorization (to = this contract).
     /// The 3009 nonce must equal keccak256(abi.encode(claimSigner, expiry, fromCountry, salt)), which binds
