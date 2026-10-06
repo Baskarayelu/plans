@@ -16,6 +16,17 @@ Fork: Monad mainnet (chain 143) block 110981023, real AUSD `0x00000000eFE302BEAA
 - The extra on Monad comes from cold account access (10,100 instead of 2,600 for AUSD, its implementation, KeyRegistry, ClaimEscrow and the Pot implementation behind each clone), ecrecover (6,000 instead of 3,000), and fresh storage (17,000 state growth per new slot: a new nonce bitmap word, a new spend, a fresh AUSD balance or ERC-3009 authorization slot) plus the missing refunds. Reads and writes of the pot's own hot state are cheaper than on Ethereum because they all sit on storage page 0: one 8,100 page load, then 100 per access.
 - Ground truth: 44 transactions replayed on live Monad mainnet; the model's minimum gas limit matches the live minimum exactly for 44 of them.
 
+## Baseline: one relayed AUSD transfer
+
+For comparison with Plans' own actions: a single AUSD `transferWithAuthorization` to a fresh recipient, submitted by a relayer, estimated live on Monad mainnet (read-only: `eth_estimateGas` with a balance state override; nothing is sent).
+
+```sh
+node tools/ausd-relay-baseline.mjs     # prints gas, gas price and cost at the current MON price
+node tools/live-check.mjs              # summarises the 44-transaction live check below
+```
+
+Measured 6 Oct 2026: **112,910–112,946 gas** across runs, about 113,000. The spread comes from calldata: random test addresses and signatures contain different numbers of zero bytes. At 102 gwei that is 0.0115 MON, **about $0.0003** at MON $0.029 (it was $0.0004 at $0.0315 on 5 Oct).
+
 ## Main table
 
 Ethereum gas = `gasUsed` of the transaction on the anvil fork (Prague rules, after EIP-3529 refunds). Monad gas (model) = the same transaction re-priced with MONAD_TEN rules and no refunds. Min limit = the smallest gas limit with which the transaction succeeds on Monad (model: 63/64 rule replayed; live: bisected with `eth_simulateV1` on mainnet). Suggested limit = live min limit (model if no live value) + 10%, rounded up to 1,000.
