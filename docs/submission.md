@@ -8,7 +8,7 @@ Rules for editing this file:
 - Never put claim links, invite secrets or keys in this file. The repository is public. Those go into the portal's private judge field only (marked below).
 - Update this file in the same commit as any product change that makes a sentence here true or false.
 
-Last updated: 6 Oct 2026. Product state: contracts, relayer and indexer in build; nothing deployed. Portal: only the repository URL is saved; the rest is pasted once contracts are deployed and verified on mainnet and core flows are live.
+Last updated: 6 Oct 2026. Product state: contracts, relayer and indexer built and tested locally; nothing deployed. Portal: only the repository URL is saved; the rest is pasted once contracts are deployed and verified on mainnet and core flows are live.
 
 ---
 
@@ -41,7 +41,7 @@ A group money pot for trips and plans: friends in different countries join with 
 ### Description
 
 <!-- field: Description | limit: 8000 -->
-Characters: 4750 / 8000
+Characters: 4966 / 8000
 ```text
 Plans is a group money pot for trips, festivals and anything friends plan together, including friends who live in different countries. It is a native Android app on Monad.
 
@@ -60,7 +60,7 @@ Each item shows its build status. "Pending" means designed and specified, not ye
 7. Disputes, early exit and refunds (pending). Any member in a split can dispute a spend and the others vote. Exits and refunds follow fixed onchain formulas.
 8. Settle up in one tap (pending). After the end date any member taps Settle up. One transaction pays everyone what they are owed and collects from anyone who owes, through a capped allowance they agreed to when joining, across countries. No organiser, server or admin key is needed.
 
-HOW IT WORKS (design; all pending)
+HOW IT WORKS (contracts, relayer and indexer built and tested, not yet deployed; the app is pending)
 - Accounts: Mera, by Category Labs, is the entire account layer. Each person's signing key comes from their passkey's WebAuthn PRF output. There is no custody backend and no other wallet SDK.
 - Money: AUSD by Agora on Monad mainnet. Deposits and sends use AUSD's ERC-3009 signed transfers. Every other action is an EIP-712 message to the pot. A relayer pays gas, so users never hold MON. Anyone can submit these signed messages; the relayer is a convenience, not a gatekeeper.
 - Contracts: a factory that deploys one pot contract per plan, a key registry, a send router and a claim escrow. No admin keys. Unit, fuzz and invariant tests, including the invariant that members' balances always sum to the pot's balance.
@@ -74,8 +74,8 @@ WHY MONAD (measured on mainnet, 5 Oct 2026, 20:18 to 20:28 UTC)
 - eth_sendRawTransactionSync returns the receipt in the same call, so the app can show "done" without polling.
 
 STATUS (6 Oct 2026)
-Done: product specification, onchain rule set, architecture, live measurement of Monad mainnet, and simulated checks on mainnet that relayed AUSD ERC-3009 transfers and permits work.
-Pending: contracts, relayer, indexer, Android app, mainnet deployment.
+Done: specification and rule set; the five contracts with 178 passing tests (unit, fuzz, six invariants over 51,200 random calls each, and fork tests against real AUSD on Monad mainnet); gas for 44 actions checked exactly against live Monad mainnet; the relayer (78 tests); the Envio indexer (21 tests).
+Pending: mainnet deployment and verification, the Android app, the landing page and the stats page.
 Live on mainnet: nothing yet. This description is updated as each part ships, with contract addresses and transaction hashes.
 ```
 
