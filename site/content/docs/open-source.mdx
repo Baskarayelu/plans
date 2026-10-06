@@ -1,0 +1,34 @@
+---
+title: Open source and AI disclosure
+description: Licence, repository layout, third-party components, and the AI tools used to build Plans.
+---
+
+## Licence
+
+Plans is open source under the **MIT licence**: the contracts, relayer, indexer, Android app and this site. See [`LICENSE`](https://github.com/Baskarayelu/plans/blob/main/LICENSE).
+
+## Repository
+
+[github.com/Baskarayelu/plans](https://github.com/Baskarayelu/plans)
+
+| Folder | What |
+|---|---|
+| `contracts/` | Solidity contracts, Foundry tests, deploy script, gas report |
+| `relayer/` | The relayer (TypeScript, Hono, viem, SQLite) |
+| `indexer/` | The Envio HyperIndex indexer and the app's GraphQL queries |
+| `app/` | The Android app (Expo / React Native, Mera) <Pending /> |
+| `site/` | This site (Next.js, Fumadocs) |
+| `docs/` | Protocol specification, traction plan, submission text |
+
+## Built with
+
+- **Monad** and **AUSD** by Agora.
+- **Mera** by Category Labs for passkey accounts.
+- **Envio HyperIndex** for indexing.
+- **Solady** (clones, ECDSA, signature checking) and **Foundry**.
+- **viem**, **Hono**, **zod**, **@noble** cryptography.
+- This site: **Next.js**, **Tailwind CSS**, **Fumadocs**, **motion**, and components from **Aceternity UI** (the Playful template, World Map and Text Flipping Board), recoloured; **dotted-map** for the map.
+
+## AI tool disclosure
+
+As section 4.1.4 of the Monad Metropolis rules requires us to disclose: **AI coding tools (Claude Code) were used to help research, design and write this project**, including code, tests, documentation and this site. Every number on this site that describes Monad or Plans comes from a measurement or a test in the repository, and anything not live is marked pending.

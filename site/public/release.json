@@ -1,0 +1,30 @@
+{
+  "_comment": "Edited by the release owner. status: pending | live. Fill sha256 (lowercase hex) and size when the APKs are published to GitHub Releases.",
+  "status": "pending",
+  "version": null,
+  "publishedAt": null,
+  "expectedDate": "12 Oct 2026",
+  "notes": "https://github.com/Baskarayelu/plans/releases/latest",
+  "apks": [
+    {
+      "id": "mainnet",
+      "file": "plans.apk",
+      "label": "Plans",
+      "network": "Monad mainnet",
+      "description": "The real app. Real digital dollars (AUSD) on Monad mainnet.",
+      "url": "https://github.com/Baskarayelu/plans/releases/latest/download/plans.apk",
+      "sha256": null,
+      "sizeBytes": null
+    },
+    {
+      "id": "testnet",
+      "file": "plans-test.apk",
+      "label": "Plans Test",
+      "network": "Monad testnet",
+      "description": "A separate test build with free test dollars, for experimenting. Installs alongside the real app.",
+      "url": "https://github.com/Baskarayelu/plans/releases/latest/download/plans-test.apk",
+      "sha256": null,
+      "sizeBytes": null
+    }
+  ]
+}

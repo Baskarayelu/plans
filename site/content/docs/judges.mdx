@@ -1,0 +1,88 @@
+---
+title: For judges
+description: The ten-minute judge path, mainnet vs testnet, the demo accounts, and what is live.
+---
+
+<Callout type="warn" title="Status, 6 October 2026">
+  Plans is in build. Each step below stays marked <Pending /> until it works on mainnet, and this page is updated as steps go live. Claim links and the judges' plan invite are **never** published here: they are in the private judge field of the submission.
+</Callout>
+
+## What is on mainnet
+
+| | Status |
+|---|---|
+| Plans contracts on Monad mainnet (chain 143) | <Pending /> Addresses and sample transactions will be in [Contracts](/docs/contracts#addresses) and the README |
+| Money | AUSD at `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`, Agora's official Monad deployment |
+| Gas | Paid by our relayer. You never need MON. |
+| Demo funds | Deliberately small: judge claim links of $0.50 each and a judges' plan holding $2 <Pending /> |
+
+## Mainnet and testnet
+
+There are two Android builds on the [download page](/download):
+
+- **Plans** (`plans.apk`): Monad mainnet, real AUSD. This is the product being judged.
+- **Plans Test** (`plans-test.apk`): Monad testnet, with free test dollars from the relayer's faucet, for unlimited experimenting. It installs alongside the real app. <Pending />
+
+## What you need
+
+- An Android phone, Android 9 or newer (10 or newer recommended). It works the same in the US and the UK; no SIM, VPN or local account needed.
+- Signed in to a Google account, with a screen lock. Choose **Google Password Manager** if asked where to save the passkey.
+- About 10 minutes.
+
+## The judge path
+
+<Steps>
+<Step>
+### Install
+
+<Pending /> Open [plans.0xo.in/download](/download) on the phone and install the APK (its SHA-256 is on the page). Allow your browser to install unknown apps; if Play Protect warns, tap More details › Install anyway.
+</Step>
+<Step>
+### Create your account
+
+<Pending /> Tap Create account and confirm with your screen lock. Enter a name and pick a country. That one prompt is the whole sign-up.
+</Step>
+<Step>
+### Get demo dollars
+
+<Pending /> Open one of the claim links from the private judge field. Each holds $0.50 on mainnet and can be claimed once. Your balance shows $0.50 within about a second.
+</Step>
+<Step>
+### Join the judges' plan
+
+<Pending /> Open the judges' plan invite (private judge field) and tap Join. Spends up to $0.25 go through instantly; larger spends need one other member's approval.
+</Step>
+<Step>
+### Core flow
+
+<Pending /> 1. Add $0.25 with **Add money**. The pot balance updates.
+2. Pay $0.10 from the pot to Asha (Bengaluru), Food & drink, split with everyone. It goes through instantly.
+3. Try a $0.40 spend. The app shows "Needs 1 more approval". Ben (London) approves within about 10 seconds and it goes through.
+4. Open **Send**, pick Asha and send $0.05. The receipt shows dollars and rupees, with the reference rate.
+5. On Home tap **Try a settle-up**. It creates a short plan with the three demo members, adds a few spends, and lets you press **Settle up**. One transaction pays everyone. Tap **Proof** on any receipt to see the transaction on a Monad explorer.
+</Step>
+<Step>
+### Fresh-device test
+
+<Pending /> Android Settings › Apps › Plans › Storage › Clear storage. Open Plans, tap **I already use Plans**, confirm with your screen lock. Your account, plans, balances and encrypted receipts are rebuilt from your passkey alone, and the three-emoji key fingerprint under Profile matches the one before.
+</Step>
+</Steps>
+
+## The demo accounts
+
+**Ben (London), Asha (Bengaluru) and Maya (New York)** are demo members run by our relayer, so that one judge with one phone can see approvals and a multi-country settlement. The app labels them **Demo**. Every demo action is signed with that member's own key and goes through the same relay path and contract checks as yours.
+
+- They approve pending spends up to $1 after a random 3–8 s, and confirm "Looks right" once the plan has ended or a human has.
+- They are listed in [`indexer/internal-accounts.json`](https://github.com/Baskarayelu/plans/blob/main/indexer/internal-accounts.json) and **never counted** in our numbers, nor is any plan they join. See the [stats page](/stats).
+
+## If something fails
+
+- **"Passkey not supported":** make Google Password Manager your passkey provider (Android Settings › Passwords and accounts), then retry.
+- **A link opens in the browser:** tap **Open in Plans** on the page, or copy the link and paste it into Plans › Join.
+- **No test login exists:** Plans accounts are passkeys you create on your own phone.
+
+## Where to verify things
+
+- Contracts and tests: [`contracts/`](https://github.com/Baskarayelu/plans/tree/main/contracts), including fork tests against real AUSD and the [gas report](https://github.com/Baskarayelu/plans/blob/main/contracts/GAS.md) checked against live mainnet.
+- Traction, live from the indexer: [/stats](/stats).
+- Measured network numbers: [Why Monad](/docs/why-monad).

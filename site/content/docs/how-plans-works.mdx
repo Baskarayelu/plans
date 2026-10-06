@@ -1,0 +1,154 @@
+---
+title: How Plans works
+description: Pots, rules presets, approvals, budgets, disputes, freeze, leaving, and the settle-up maths with its invariant.
+---
+
+Everything on this page is enforced by the `Pot` contract, not by our servers. The full specification is [`docs/protocol.md`](https://github.com/Baskarayelu/plans/blob/main/docs/protocol.md). The contracts are built and tested; their mainnet deployment is <Pending />.
+
+## Pots
+
+Each plan is one **pot**: its own contract, deployed by `PlansFactory` as a minimal clone. A pot has members, money (AUSD), rules, proposals, disputes and a settlement. It has **no admin and is not upgradeable**: nobody, including us, can move money outside the rules.
+
+- A pot holds up to **50 members** ever admitted (exited members keep their slot, which bounds every loop).
+- A plan has a start and an end time (at most 365 days) and a **review window** after the end.
+- Members join with a signed invite. Any active member can rotate the invite, which stops old links working.
+
+## Rules presets
+
+When you create a plan you pick a preset, then change anything.
+
+| Preset | Instant up to | One approval up to | Above that | Daily cap per member | Proposal lifetime | Rule-change timelock |
+|---|---|---|---|---|---|---|
+| Easygoing | $100 | no limit | majority | none | 24 h | 1 h |
+| **Balanced** (default) | $25 | $200 | majority | $150 | 24 h | 1 h |
+| Strict | $0 | $100 | everyone | $100 | 24 h | 1 h |
+| Pilot | $0.25 | $1.00 | majority | none | 24 h | 1 h (plan lasts 48 h, no review window) |
+
+Other rules: a total cap per member, a minimum contribution before spending opens, a **payee policy** (anyone, members only, or members plus an allowlist) and a **budget per category**.
+
+## Spending and approvals
+
+A spend is one of three kinds:
+
+- **PAY**: the pot pays someone (a member being reimbursed, or a business that accepts AUSD).
+- **LINK**: the pot locks the amount in escrow behind a claim link, for someone without Plans. Unclaimed money comes back to the pot.
+- **PERSONAL**: no money moves. You paid out of pocket and the cost is shared.
+
+**Approvals required**, counting the proposer:
+
+| Amount | Approvals |
+|---|---|
+| ≤ instant limit | 1: it executes immediately |
+| ≤ one-approval limit | 2: you plus one friend |
+| above | majority (`floor(active / 2) + 1`) or everyone, as the rules say |
+
+The result is capped at the number of active members, so a solo member is never stuck. A pending spend expires after the proposal lifetime. A rejection cancels it as soon as the remaining possible approvals can no longer reach the threshold.
+
+### Why a spend can be blocked
+
+Every proposal is checked in this order, and the app shows the reason before you sign:
+
+| Code | Reason |
+|---|---|
+| 1 | Not an active member |
+| 2 | Plan not open (before start, after end, or settled) |
+| 3 | Spending is paused (frozen) |
+| 4 | Not every member has paid the minimum contribution yet |
+| 5 | Payee not allowed by the payee policy (PAY only) |
+| 6 | Over the category budget |
+| 7 | Over your daily cap (UTC day) |
+| 8 | Over your total cap |
+| 9 | Not enough money in the pot |
+| 10 | Invalid split |
+| 11 | Malformed request |
+
+Caps and budgets are checked at proposal time and again at execution.
+
+## Budgets
+
+There are eight categories, each with an optional budget: Stay, Travel, Getting around, Food & drink, Tickets & activities, Groceries, Shopping, Other. A spend that would take a category over its budget is stopped before any money moves (reason 6). Budget usage counts only when a spend executes.
+
+## Disputes
+
+Any member included in a spend's split can **dispute** it: wrong amount, wrong split, or not a group cost. One open dispute per spend.
+
+- The person who made the spend can resolve it at once: **Resplit** (a new split of the same amount) or **Spender covers** (the whole cost moves to them).
+- Otherwise the other members vote. After **48 hours**, or as soon as every eligible member has voted, a strict majority for *spender covers* reassigns the cost; anything else keeps it as it was.
+
+A dispute only changes who bears a cost. Money never moves, so the [invariant](#the-invariant) holds.
+
+## Pause (freeze)
+
+Something looks wrong? **Any active member can pause all spending for 24 hours**, at most once per 24 hours per member. A majority of members can vote to lift the pause early.
+
+## Changing the rules
+
+Any member can propose new rules (including allowlist changes). A change needs a **majority**, then waits out the **timelock** of the rules in force before anyone can apply it. Applying a change never alters spends already proposed.
+
+## Leaving early
+
+A member can **leave** at any time unless they have a spend waiting for approval or are part of an open dispute. If they are owed money (positive net), they are paid it from the pot; if they owe, it is collected as at settlement and any rest is recorded as a debt. Shares already assigned to them stay.
+
+## Ending a plan
+
+Members confirm the plan's summary with **Looks right** (an *ack*). Acks reset whenever something changes the ledger (a spend, dispute, join, exit or rule change).
+
+Anyone can call `settle()` once there are no pending proposals or open disputes and either:
+
+- the end time plus the review window has passed, or
+- every active member has acked (this is how a plan ends early).
+
+## Settle-up maths
+
+### The ledger
+
+Each member has four running totals: contributed, personal spends paid, share of costs, withdrawn. Their **net** position is
+
+```text
+net(m) = contributed + personalPaid − share − withdrawn
+```
+
+| Event | Ledger change |
+|---|---|
+| Add money (or a safety-net pull) | `contributed += amount` |
+| PAY or LINK spend executes | the pot sends `amount` out; each split member `share += their part` |
+| PERSONAL spend executes | proposer `personalPaid += amount`; each split member `share += their part` |
+| Payout (leave, settle, debt distribution) | `withdrawn += amount` |
+| Unclaimed LINK money returns | that spend's shares are reversed exactly |
+
+**Shares** are `part_i = amount × w_i / Σw` for every member after the first, and the first member takes the rounding remainder, so parts always sum to the amount exactly.
+
+### The invariant
+
+<Callout title="Invariant I1">
+  `Σ net(m)` over all members, active and exited, **equals** the pot's AUSD balance. The contract and the indexer both maintain it, and the contract test suite checks it as a fuzzed invariant (51,200 random calls per invariant).
+</Callout>
+
+### Settlement, step by step
+
+1. For each member with `net < 0`, the pot pulls `min(−net, safety-net allowance, their balance)`. Each pull counts as a contribution.
+2. Let `C` be the sum of positive nets and `B` the pot balance.
+3. If `B ≥ C`, every creditor is paid their net.
+4. Otherwise each creditor gets `net × B / C`, rounded down, and keeps the rest as a claim. Every remaining negative net is recorded as a debt.
+5. The pot is marked settled. Spending stops for good.
+
+A payout that fails is skipped and stays as that member's claim, so one recipient can never block settlement. A debt can be paid later with `payDebt`, and is immediately shared out to the members still owed.
+
+### Worked example
+
+Four friends each add **$30**: the pot holds $120.
+
+- Dinner, **$40**, paid from the pot (PAY), split four ways: each `share += 10`.
+- Maya pays a **$20** taxi herself (PERSONAL), split four ways: Maya `personalPaid += 20`, each `share += 5`.
+
+| | contributed | personalPaid | share | net |
+|---|---:|---:|---:|---:|
+| Maya | 30 | 20 | 15 | **35** |
+| Asha | 30 | 0 | 15 | **15** |
+| Ben | 30 | 0 | 15 | **15** |
+| Sam | 30 | 0 | 15 | **15** |
+| **Σ** | | | | **80** |
+
+The pot holds $120 − $40 = **$80**, equal to Σ net. At settlement nobody owes, `B = C = 80`, and one transaction pays Maya $35 and the others $15 each.
+
+If Ben had added only **$5**, his net would be −10 and the pot would hold $55 (= 35 + 15 + 15 − 10). Settlement first pulls $10 through Ben's safety net, if he allowed at least that much, and then pays everyone in full. If he had allowed only $4, the pot pulls $4, pays the three creditors pro rata from the $59 it holds, and records Ben's remaining $6 as a debt.

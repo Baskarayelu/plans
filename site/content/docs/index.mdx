@@ -1,0 +1,32 @@
+---
+title: Introduction
+description: Plans is a group money pot for trips and plans, for friends who live in different countries.
+---
+
+Plans is a shared pot for trips, festivals, house shares and anything friends plan together, including friends who live in different countries. It is a native Android app on Monad.
+
+- **Join with one fingerprint.** An invite link opens the app and a passkey creates the account. No seed phrase, no password, no gas token.
+- **One pot in digital dollars.** Members add AUSD from wherever they live and see the same balance in their own currency.
+- **Rules the group sets, enforced by the pot contract.** Instant spends below a limit, approvals above it, budgets per category, caps per person, a pause any member can press, and timelocked rule changes.
+- **Settle up in one tap.** One transaction pays everyone what they are owed and collects from anyone who owes, across countries.
+
+<Callout title="Status, 6 October 2026">
+  The specification is done and Monad mainnet and AUSD were measured live. The five contracts (178 passing tests), the relayer (78 tests) and the indexer (21 tests) are built and tested locally. **Nothing is deployed to mainnet yet**, and the Android app is in build. Every page in these docs marks what is not live as <Pending />.
+</Callout>
+
+## Why it exists
+
+A group plan usually runs on one person's card and a spreadsheet. One friend pays the villa deposit, another buys the festival tickets, and weeks later the group is still working out who owes whom, in three currencies. A shared bank account needs everyone to bank in the same country. A crypto wallet needs everyone to manage seed phrases and gas. Neither works for a group chat of friends.
+
+## Where to start
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started" description="Install the app, create an account, join a plan and add money." />
+  <Card title="How Plans works" href="/docs/how-plans-works" description="Pots, rules, approvals, disputes and the settle-up maths." />
+  <Card title="Why Monad" href="/docs/why-monad" description="Measured block times, finality and gas, and what they buy." />
+  <Card title="For judges" href="/docs/judges" description="The judge path, mainnet vs testnet, and the demo accounts." />
+</Cards>
+
+## In one paragraph, for builders
+
+Each plan is its own immutable `Pot` contract, deployed as an ERC-1167 clone by `PlansFactory`. Members never send transactions: they sign EIP-712 messages (and AUSD ERC-3009 authorisations for money in), which anyone can submit; our relayer does so and pays the gas. Accounts are passkeys through Mera, with a second PRF namespace (`plans.keys.v1`) for end-to-end encryption of receipts and names. An Envio HyperIndex indexer turns the events into balances, the who-owes-whom graph and public traction stats. See [Architecture](/docs/architecture).

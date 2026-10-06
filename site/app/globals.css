@@ -1,0 +1,253 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* ───────────── Plans tokens (light / dark). Dark = `.dark` on <html> (next-themes, follows system). ───────────── */
+:root {
+  --bg: #f4f6f1;
+  --surface: #ffffff;
+  --surface-2: #eaefe7;
+  --ink: #10231b;
+  --muted: #5a6b62;
+  --line: #d9e0d5;
+  --accent: #f5b83d;
+  --on-accent: #10231b;
+  --pos: #1f7a55;
+  --neg: #b8432f;
+  --info: #2b5f8a;
+  --dot: rgba(16, 35, 27, 0.16);
+  --mapdot: rgba(16, 35, 27, 0.3);
+  --flap: #e3e9df;
+  --flap-ink: #10231b;
+  --flap-edge: #c9d2c4;
+  --shadow: 0 1px 0 rgba(16, 35, 27, 0.04), 0 10px 30px -12px rgba(16, 35, 27, 0.22);
+  --chart: #1f7a55; /* single-series chart hue; ≥3:1 on surface (validated) */
+  color-scheme: light;
+
+  /* Fumadocs (docs + search dialog) themed with the same tokens */
+  --color-fd-background: var(--bg);
+  --color-fd-foreground: var(--ink);
+  --color-fd-muted: var(--surface-2);
+  --color-fd-muted-foreground: var(--muted);
+  --color-fd-popover: var(--surface);
+  --color-fd-popover-foreground: var(--ink);
+  --color-fd-card: var(--surface);
+  --color-fd-card-foreground: var(--ink);
+  --color-fd-border: var(--line);
+  --color-fd-primary: var(--pos);
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: var(--surface-2);
+  --color-fd-secondary-foreground: var(--ink);
+  --color-fd-accent: color-mix(in srgb, var(--accent) 22%, transparent);
+  --color-fd-accent-foreground: var(--ink);
+  --color-fd-ring: var(--accent);
+  --color-fd-info: var(--info);
+  --color-fd-success: var(--pos);
+  --color-fd-error: var(--neg);
+  --color-fd-warning: #a8701a;
+  --color-fd-idea: #a8701a;
+}
+
+.dark {
+  --bg: #0c1511;
+  --surface: #14201a;
+  --surface-2: #1b2a22;
+  --ink: #e8f0ea;
+  --muted: #93a69a;
+  --line: #26362d;
+  --accent: #f5b83d;
+  --on-accent: #10231b;
+  --pos: #4cc38a;
+  --neg: #ff7a66;
+  --info: #7fb2de;
+  --dot: rgba(232, 240, 234, 0.1);
+  --mapdot: rgba(232, 240, 234, 0.26);
+  --flap: #16231c;
+  --flap-ink: #f2f6f3;
+  --flap-edge: #050906;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  --chart: #3da674; /* dark: in band, ≥3:1 on #14201A (validated) */
+  color-scheme: dark;
+
+  --color-fd-background: var(--bg);
+  --color-fd-foreground: var(--ink);
+  --color-fd-muted: var(--surface-2);
+  --color-fd-muted-foreground: var(--muted);
+  --color-fd-popover: var(--surface);
+  --color-fd-popover-foreground: var(--ink);
+  --color-fd-card: var(--surface);
+  --color-fd-card-foreground: var(--ink);
+  --color-fd-border: var(--line);
+  --color-fd-primary: var(--pos);
+  --color-fd-primary-foreground: #0c1511;
+  --color-fd-secondary: var(--surface-2);
+  --color-fd-secondary-foreground: var(--ink);
+  --color-fd-accent: color-mix(in srgb, var(--accent) 16%, transparent);
+  --color-fd-accent-foreground: var(--ink);
+  --color-fd-ring: var(--accent);
+  --color-fd-info: var(--info);
+  --color-fd-success: var(--pos);
+  --color-fd-error: var(--neg);
+  --color-fd-warning: var(--accent);
+  --color-fd-idea: var(--accent);
+}
+
+.dark #nd-sidebar {
+  --color-fd-muted: var(--surface-2);
+  --color-fd-secondary: var(--surface-2);
+  --color-fd-muted-foreground: var(--muted);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-info: var(--info);
+  --color-flap: var(--flap);
+  --color-flap-ink: var(--flap-ink);
+  --color-flap-edge: var(--flap-edge);
+  --color-chart: var(--chart);
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-bricolage), var(--font-figtree), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --shadow-card: var(--shadow);
+  --animate-bob: bob 7s ease-in-out infinite;
+  --animate-word: word 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  @keyframes word {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+      filter: blur(6px);
+    }
+  }
+  --animate-ring: ring 2.4s ease-out infinite;
+  --animate-live: live 1.6s ease-in-out infinite;
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes ring {
+    0% {
+      opacity: 0.9;
+      transform: scale(0.85);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(1.3);
+    }
+  }
+  @keyframes live {
+    50% {
+      opacity: 0.25;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility dots-bg {
+  background-image: radial-gradient(circle, var(--dot) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* Wristband logo mark */
+@utility band {
+  background: repeating-linear-gradient(90deg, var(--accent) 0 6px, var(--ink) 6px 8px);
+}
+
+/* Highlighter under a word */
+@utility hl {
+  background: linear-gradient(transparent 62%, var(--accent) 62% 92%, transparent 92%);
+  padding-inline: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Ticket-stub perforation */
+@utility perf {
+  height: 14px;
+  position: relative;
+  background:
+    radial-gradient(circle at 0 50%, var(--bg) 7px, transparent 7.5px),
+    radial-gradient(circle at 100% 50%, var(--bg) 7px, transparent 7.5px);
+  &::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    border-top: 1.5px dashed var(--line);
+  }
+}
+
+/* Docs: Plans typography */
+#nd-page h1,
+.prose :where(h2, h3):not(:where([class~="not-prose"] *)) {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+.prose :where(code):not(:where([class~="not-prose"] *)) {
+  font-family: var(--font-mono);
+}
+.prose :where(table):not(:where([class~="not-prose"] *)) {
+  font-size: 0.875rem;
+}
+
+/* Motion lives on the landing page only. Everywhere else (download, links, stats, docs, search dialog)
+   animations and transitions are reduced to an instant change, and everywhere when the user asks for it. */
+body:not(:has([data-landing])) *,
+body:not(:has([data-landing])) *::before,
+body:not(:has([data-landing])) *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

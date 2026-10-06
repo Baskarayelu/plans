@@ -1,0 +1,165 @@
+---
+title: Contracts reference
+description: The five Plans contracts, their EIP-712 types, events, reason codes, constants and addresses.
+---
+
+Source: [`contracts/`](https://github.com/Baskarayelu/plans/tree/main/contracts). Behaviour is specified in [`docs/protocol.md`](https://github.com/Baskarayelu/plans/blob/main/docs/protocol.md); the interfaces in `contracts/src/interfaces/` define the exact functions, events and types. Toolchain: Foundry 1.5, solc 0.8.28, `via_ir`, optimizer 200 runs, EVM `prague`.
+
+All contracts are **immutable and hold no privileged roles**. Token: AUSD, 6 decimals; its EIP-712 domain is `"Agora Dollar"`, version `"1"`.
+
+## Addresses
+
+<Callout type="warn" title="Pending">
+  Not deployed yet. Addresses, deploy blocks and verified-source links will be listed here when the contracts are live on Monad mainnet and testnet.
+</Callout>
+
+| Contract | Monad mainnet (143) | Monad testnet (10143) |
+|---|---|---|
+| AUSD (Agora) | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+| `PlansFactory` | <Pending /> | <Pending /> |
+| `Pot` implementation | <Pending /> | <Pending /> |
+| `ClaimEscrow` | <Pending /> | <Pending /> |
+| `KeyRegistry` | <Pending /> | <Pending /> |
+| `PlansSend` | <Pending /> | <Pending /> |
+
+Deployment uses the canonical CREATE2 deployer `0x4e59b44847b379578588920cA78FbF26c0B4956C` with fixed salts (`keccak256("plans.v1.KeyRegistry")`, `"plans.v1.PlansSend"`, `"plans.v1.PlansFactory"`). The factory's constructor creates `ClaimEscrow` (nonce 1) and the `Pot` implementation (nonce 2). Addresses depend on the salts, the exact bytecode and the AUSD address, not on the deployer account.
+
+## The contracts
+
+| Contract | Role |
+|---|---|
+| `PlansFactory` | Deploys one `Pot` clone per plan (Solady `LibClone`, ERC-1167, CREATE2 with salt `keccak256(abi.encode(creator, params.salt))`) from the creator's signed `CreatePot`, and registers it. `predictPot(creator, salt)` gives the address in advance; `isPot(pot)` tells real pots apart. |
+| `Pot` | One plan: members, deposits (ERC-3009), rules, proposals and votes, disputes, freeze, rule changes and settlement. No admin, not upgradeable. Runtime ≈ 29 KB (Monad allows 128 KB). |
+| `ClaimEscrow` | AUSD locked against a one-time claim key, for pot LINK spends and send-by-link. Claimable until expiry inclusive, refundable only after it. |
+| `KeyRegistry` | Account → X25519 public key, set with the account's EIP-712 signature. |
+| `PlansSend` | Person-to-person AUSD send with an onchain receipt. The ERC-3009 nonce commits to the receipt fields. |
+
+## Signatures
+
+- Every member action is an EIP-712 message; **anyone may submit it**.
+- `deadline` is a unix timestamp after which the action reverts.
+- Nonces are **unordered**: each `(member, nonce)` can be used once. Apps use random 256-bit nonces. Used nonces are a bitmap (256 per storage word).
+- Signatures are checked with `ecrecover` first, then ERC-1271, so EOA, EIP-7702 and ERC-1271 signers all work.
+- Deposits use AUSD `receiveWithAuthorization` (bytes-signature variant) with `to` = the calling contract, so a third party can't front-run them. The safety net uses AUSD `permit`.
+
+### EIP-712 domains
+
+| Contract | Domain |
+|---|---|
+| `Pot` | `{ name: "Plans Pot", version: "1", chainId, verifyingContract: pot }` |
+| `PlansFactory` | `{ name: "Plans Factory", version: "1" }` |
+| `KeyRegistry` | `{ name: "Plans Keys", version: "1" }` |
+| `ClaimEscrow` | `{ name: "Plans Claims", version: "1" }` |
+
+### Type strings
+
+```solidity
+// Pot
+Invite(address member)                       // signed by the invite key
+Join(address member,bytes2 country,uint256 safetyNet,uint256 nonce,uint256 deadline)
+Propose(address proposer,uint8 kind,address payee,uint256 amount,uint8 category,bytes32 splitHash,bytes32 receiptHash,bytes32 memoHash,uint256 nonce,uint256 deadline)
+Vote(address member,uint256 id,bool approve,uint256 nonce,uint256 deadline)
+CancelSpend(address member,uint256 id,uint256 nonce,uint256 deadline)
+OpenDispute(address member,uint256 spendId,uint8 reason,bytes32 memoHash,uint256 nonce,uint256 deadline)
+ResolveDispute(address member,uint256 disputeId,uint8 outcome,bytes32 splitHash,uint256 nonce,uint256 deadline)
+DisputeVote(address member,uint256 disputeId,bool spenderCovers,uint256 nonce,uint256 deadline)
+Freeze(address member,uint256 nonce,uint256 deadline)
+UnfreezeVote(address member,uint256 nonce,uint256 deadline)
+ProposeRules(address member,bytes32 rulesHash,bytes32 allowlistHash,uint256 nonce,uint256 deadline)
+VoteRules(address member,uint256 id,bool approve,uint256 nonce,uint256 deadline)
+Exit(address member,uint256 nonce,uint256 deadline)
+Ack(address member,uint256 nonce,uint256 deadline)
+RotateInvite(address member,address newSigner,uint256 nonce,uint256 deadline)
+PostKeyWraps(address member,bytes32 wrapsHash,uint256 nonce,uint256 deadline)
+
+// PlansFactory
+CreatePot(address creator,bytes32 paramsHash,uint256 nonce,uint256 deadline)
+
+// KeyRegistry (no nonce: a registration must have a later deadline than the current one)
+RegisterKey(address account,bytes32 pubKey,uint256 deadline)
+
+// ClaimEscrow (signed by the one-time claim key)
+Claim(uint256 id,address recipient,bytes2 toCountry)
+```
+
+Hashes: `splitHash = keccak256(abi.encode(split.members, split.weights))`, `rulesHash = keccak256(abi.encode(rules))`, `allowlistHash = keccak256(abi.encode(allowAdd, allowRemove))`, `wrapsHash = keccak256(abi.encode(wraps))`, `memoHash = keccak256(memo)`, `paramsHash = keccak256(abi.encode(params))`.
+
+## Events
+
+### Pot
+
+| Event | Meaning |
+|---|---|
+| `RulesSet(version, rules)` | Rules at creation (version 0) and on every applied change |
+| `AllowlistChanged(payee, allowed)` | Payee allowlist edit |
+| `MemberJoined(member, country, safetyNet, memberIndex)` | A member joined |
+| `InviteRotated(by, newSigner)` | Old invite links stop working |
+| `KeyWrapped(member, by, wrap)` | Group key sealed to a member |
+| `Contributed(member, amount)` | Money in |
+| `SpendProposed(id, proposer, kind, payee, amount, category, splitMembers, splitWeights, receiptHash, memo, approvalsRequired, expiresAt)` | A spend was proposed (also emitted for instant spends) |
+| `Voted(id, member, approve)` | A vote on a spend |
+| `SpendApproved(id)` | Threshold met but not executable yet; anyone may `execute` |
+| `SpendExecuted(id, amount, members, shares, claimId)` | Executed, with the exact per-member shares |
+| `SpendCancelled(id, reason)` | 0 withdrawn, 1 rejected, 2 expired |
+| `DisputeOpened(disputeId, spendId, by, reason, memo)` | 0 wrong amount, 1 wrong split, 2 not a group cost |
+| `DisputeVoted(disputeId, member, spenderCovers)` | A dispute vote |
+| `DisputeResolved(disputeId, outcome, members, shares)` | Keep, Resplit or SpenderCovers, with the new assignment |
+| `Frozen(by, until)` / `Unfrozen(lastVoter)` | Pause and early lift |
+| `RuleChangeProposed` / `RuleChangeVoted` / `RuleChangeApproved(id, eta)` / `RuleChangeApplied(id, rulesVersion)` | Rule changes |
+| `Acked(member, ackEpoch)` / `AcksReset(newAckEpoch)` | "Looks right" confirmations |
+| `Pulled(member, amount)` | Collected through the safety-net allowance |
+| `Payout(member, amount)` | Exit, settlement or debt distribution |
+| `DebtRecorded(member, amount)` / `DebtPaid(member, amount)` | Debts after settlement or exit |
+| `MemberExited(member, netAtExit, paidOut, pulledIn)` | A member left |
+| `Settled(by, paidOut, pulledIn, unpaidClaims)` | The plan settled |
+| `EscrowRefunded(spendId, amount)` | A LINK spend's unclaimed money came back |
+
+### Periphery
+
+| Contract | Event |
+|---|---|
+| `PlansFactory` | `PotCreated(pot, creator, startTime, endTime, reviewWindow, meta, inviteKeyWrap)` |
+| `KeyRegistry` | `KeyRegistered(account, pubKey)` |
+| `ClaimEscrow` | `ClaimCreated(id, source, claimSigner, amount, expiry, sourceSpendId, fromCountry)`, `Claimed(id, recipient, toCountry)`, `ClaimRefunded(id, to, amount)` |
+| `PlansSend` | `Sent(from, to, amount, fromCountry, toCountry, fromCurrency, toCurrency, fxRateE8, fxTimestamp, memoHash)` |
+
+## Reason codes
+
+`previewSpend` returns these, and reverts carry them as `SpendBlocked(uint8 reason)`:
+
+| Code | Check |
+|---|---|
+| 1 | Not an active member |
+| 2 | Plan not open: before `startTime`, after `endTime`, or settled |
+| 3 | Frozen |
+| 4 | Minimum contribution not met by every active member (only if `minContribution > 0`) |
+| 5 | Payee not allowed by the payee policy (PAY only). The pot itself and the ClaimEscrow are never allowed PAY payees |
+| 6 | Over the category budget |
+| 7 | Over the member daily cap (UTC day bucket) |
+| 8 | Over the member total cap |
+| 9 | Not enough money in the pot (PAY, LINK) |
+| 10 | Invalid split |
+| 11 | Malformed request: zero amount or over 96 bits, category over 7, or a PAY/LINK spend with a zero payee |
+
+## Constants and enums
+
+| Name | Value |
+|---|---|
+| `MAX_MEMBERS` | 50 (members ever admitted) |
+| `DISPUTE_PERIOD` | 48 hours |
+| `FREEZE_DURATION` | 24 hours |
+| LINK expiry | 7 days, capped at `endTime + reviewWindow` |
+| Max memo / meta / key-wrap bytes | 512 |
+| Max plan duration | 365 days |
+
+`SpendKind`: `PAY`, `LINK`, `PERSONAL`. `HighTier`: `MAJORITY`, `ALL`. `PayeePolicy`: `ANYONE`, `MEMBERS_ONLY`, `MEMBERS_AND_ALLOWLIST`. `DisputeOutcome`: `None`, `Keep`, `Resplit`, `SpenderCovers`. Categories 0–7: Stay, Travel, Getting around, Food & drink, Tickets & activities, Groceries, Shopping, Other.
+
+## Build and test
+
+```shell
+forge build
+forge test                                     # everything, including fork tests against real AUSD
+SKIP_FORK_TESTS=true forge test                # never touch the network
+```
+
+A local anvil must be started with `--code-size-limit 131072` (the `Pot` runtime is over 24 KB).

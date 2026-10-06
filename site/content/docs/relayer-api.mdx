@@ -1,0 +1,104 @@
+---
+title: Relayer API
+description: Submit signed Plans actions, read health, get a signed FX reference, faucet, push registration and the demo endpoints.
+---
+
+The relayer submits members' signed actions to Monad and pays the gas, so users never hold MON. It is a convenience, not a gatekeeper: every action is an EIP-712 message or an ERC-3009 authorisation that anyone can submit, and the contracts enforce the rules. It also watches chain events for push notifications, serves a signed FX reference, runs the testnet faucet, runs the demo members, and settles plans nobody settled (long-stop).
+
+<Callout type="warn" title="Pending">
+  Built and tested (78 tests); the public deployment and its base URL are pending.
+</Callout>
+
+All bodies are JSON. Errors are always `{"error": {"code", "message", ...}}` with a 4xx or 5xx status.
+
+## `POST /v1/relay`
+
+```json
+{ "action": "propose", "params": { "pot": "0x…", "proposer": "0x…", "kind": "PAY", "payee": "0x…",
+  "amount": "400000", "category": 3, "split": { "members": ["0x…","0x…"], "weights": [1,1] },
+  "memo": "0x…", "receiptHash": "0x…", "nonce": "…", "deadline": 1760000000, "sig": "0x…" } }
+```
+
+Params mirror the Solidity arguments one for one. Integers may be decimal strings, numbers or 0x-hex; bytes are 0x-hex; `bytes2`/`bytes3` country and currency fields also accept ISO codes (`"GB"`, `"GBP"`); enums accept names (`PAY`, `MAJORITY`, `MEMBERS_ONLY`, `RESPLIT` …). Optional `deposit`, `safetyNet` and `keyReg` default to absent.
+
+| Target | Actions |
+|---|---|
+| `PlansFactory` | `createPot` |
+| `Pot` (only if `factory.isPot(pot)`) | `join`, `contribute`, `propose`, `vote`, `cancelSpend`, `execute`, `expire`, `openDispute`, `resolveDispute`, `voteDispute`, `finalizeDispute`, `freeze`, `voteUnfreeze`, `proposeRules`, `voteRules`, `applyRules`, `exit`, `ack`, `settle`, `payDebt`, `rotateInvite`, `postKeyWraps` |
+| `KeyRegistry` | `registerKey` |
+| `PlansSend` | `send` |
+| `ClaimEscrow` | `claimCreate` (calls `createWithAuthorization`), `claim`, `claimRefund` |
+
+**Pipeline:** validate with zod → check the target allowlist → simulate (`eth_call`, then `estimateGas`) from the sending lane → gas limit = estimate × 1.10 + 10,000, capped per action → send with `eth_sendRawTransactionSync` (EIP-7966), falling back to `eth_sendRawTransaction` and polling.
+
+**Success (200):**
+
+```json
+{ "action": "vote", "txHash": "0x…", "blockNumber": "123", "status": "success", "gasUsed": "84211",
+  "gasLimit": "102632", "latencyMs": 412, "totalMs": 590, "lane": 1, "sync": true,
+  "events": [{ "address": "0x…", "name": "Voted", "logIndex": 0, "args": { "id": "4", "member": "0x…", "approve": true } }] }
+```
+
+`status: "reverted"` (still HTTP 200) means the transaction was included but failed because state changed after simulation.
+
+| Status | Meaning |
+|---|---|
+| 400 | `INVALID_PARAMS`, with `issues: [{ path, message }]` |
+| 403 | `TARGET_NOT_ALLOWED` |
+| 413 | Body too large |
+| 422 | Simulation reverted, decoded: e.g. `{ "code": "OVER_CATEGORY_BUDGET", "reason": 6, "error": "SpendBlocked", "message": "This would go over the plan's budget for this category." }`; also `EXPIRED`, `GAS_CAP_EXCEEDED` |
+| 429 | Rate limited, with `retry-after` |
+| 502 / 503 | RPC or relayer funding problem |
+
+Every `SpendBlocked` reason (1–11, see [reason codes](/docs/contracts#reason-codes)) has its own code and message.
+
+## `GET /v1/health`
+
+Chain ID (and the expected one), latest block, whether `eth_sendRawTransactionSync` is supported; for each lane its address, nonce, queue, MON balance and low-balance flag; contract addresses; listener cursor and websocket state; push, faucet, demo and long-stop status. Returns **503** when the RPC is down, the chain ID is wrong, or every lane is below its minimum balance.
+
+## `GET /v1/fx?from=GBP&to=USD`
+
+A reference rate from ECB rates (frankfurter.app), cached for 10 minutes, with AUSD treated as USD. Signed with EIP-191 by the lane-0 key over:
+
+```text
+Plans FX reference
+Pair: GBP/USD
+RateE8: 132250000
+Timestamp: 1791270666
+Date: 2026-10-05
+Source: ECB reference rates via frankfurter.app
+```
+
+`rateE8` and `timestamp` go into `PlansSend.SendMeta`. See [Sending across borders](/docs/sending#the-reference-exchange-rate).
+
+## `POST /v1/faucet` (testnet only)
+
+Body `{ "address": "0x…" }`. Sends 25 test AUSD. One request per address and three per IP per UTC day. Always 404 on mainnet.
+
+## `POST /v1/push/register`
+
+```json
+{ "address": "0x…", "expoPushToken": "ExponentPushToken[…]", "deadline": 1760000000, "signature": "0x…" }
+```
+
+`signature` is EIP-191 by `address` over `Plans push notifications\nAddress: <checksummed>\nToken: <token>\nDeadline: <deadline>`; the deadline must be in the future and at most 24 h ahead. Smart accounts are verified through ERC-1271/6492. Notifications carry no memos (they are encrypted to the group). Demo accounts never receive pushes.
+
+| Event | Who is notified |
+|---|---|
+| `SpendProposed` needing approval | The other active members ("Approval needed") |
+| `SpendExecuted` | Active members except the proposer |
+| `Contributed` | The other active members |
+| `Settled` | Every member, including those who left |
+| `Payout` | The member paid |
+| `Sent` | The recipient |
+| `Claimed` | The link's creator |
+
+## Demo endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/demo/accounts` | Demo members (name, city, country, address) and demo pots. The indexer and stats page exclude them. |
+| `POST /v1/demo/try-settle-up` | Starts a short "Try a settle-up" plan with Maya, Ben and Asha for a judge. Capped at $0.30 of demo deposits; 3 runs per judge and 10 per IP per UTC day. |
+| `GET /v1/demo/try-settle-up/:pot` | Run status: `{ stage, step, stepIndex, totalSteps, lastError }` |
+
+In any plan with a demo member, a pending spend up to $1 gets a demo approval after a random 3–8 s, and demo members ack once the plan has ended or a human has acked. Every demo action is signed with that member's own key and goes through the same relay path as the app.

@@ -1,0 +1,13 @@
+/node_modules
+/.next/
+/out/
+/.source
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+.env*
+!.env.example
+.DS_Store
+AGENTS.md
+CLAUDE.md
+screenshots/*.tmp

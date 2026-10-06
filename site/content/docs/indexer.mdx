@@ -1,0 +1,107 @@
+---
+title: Indexer and data
+description: The Envio HyperIndex schema, derived entities, metric definitions and the GraphQL queries the app and stats page use.
+---
+
+An **Envio HyperIndex** indexer turns Plans events on Monad into everything the app reads: plans, member ledgers, live balances, budget bars, the settle-up graph, the activity feed, a fresh-device rebuild and the public traction stats. The app keeps no database of its own.
+
+<Callout type="warn" title="Pending">
+  Built and tested (21 tests, queries validated against a local Hasura). The Envio Cloud deployment and its GraphQL URL are pending. When it is live, this site's [stats page](/stats) reads from it.
+</Callout>
+
+- `envio@3.12.1`, TypeScript handlers, Vitest tests.
+- Monad mainnet `143` and testnet `10143`, both native **HyperSync** networks.
+- `PlansFactory`, `KeyRegistry`, `ClaimEscrow` and `PlansSend` have static addresses; every `Pot` is registered dynamically from `PotCreated`.
+- Entities are per chain: **filter every query by `chainId`**. Addresses are lowercase. Amounts are AUSD base units (6 decimals).
+
+## Schema
+
+32 entities and 13 enums, linked with `@derivedFrom`. Two layers:
+
+1. **Raw and lifecycle entities**, one per onchain object or event: `Account`, `Pot`, `Member`, `RulesVersion`, `AllowlistEntry`, `Contribution`, `Spend`, `SpendShare`, `Vote`, `Dispute`, `DisputeVote`, `Freeze`, `RuleChange`, `RuleChangeVote`, `KeyWrap`, `Ack`, `Payout`, `Pull`, `Debt`, `PotSettlement`, `Claim`, `Send`, `Activity`.
+2. **Derived entities**, maintained by the handlers:
+
+| Entity | What it holds | Drives |
+|---|---|---|
+| `MemberBalance` | Each member's live `net`, what they owe and are owed, `settledUp` | "You're owed £18" on every plan |
+| `CategorySpend` | Spend against each category budget | Budget bars and the warning before a spend |
+| `SettlementEdge` | The minimal who-owes-whom graph | The Settle up preview |
+| `Corridor`, `PotCorridor`, `CorridorFlow` | Volume and count by country pair, with an audit trail | Cross-border stats |
+| `PotDaily` | A daily series per plan | Plan summary |
+| `DailyStats`, `GlobalStats` | Traction, excluding internal accounts and demo plans | [/stats](/stats) |
+
+### The ledger
+
+The indexer mirrors the contract: `net = contributed + personalPaid − share − withdrawn`, and tracks each pot's balance independently. The tests assert **Σ net == balance** after every scenario.
+
+### The settle-up graph
+
+Recomputed after every change to any member's net, with a deterministic greedy min-cash-flow: the largest debtor pays the largest creditor `min(debt, credit)`, ties broken by address. Leftover credit is owed by the pot's own balance (`PotToMember`). Tested on 2,000 random pots: the edges balance exactly, every member is on one side only, there are at most (debtors + creditors − 1) member-to-member edges, and the output doesn't depend on input order.
+
+### Corridors
+
+A corridor is an ordered country pair such as `GB-IN`. Sources: direct sends, send-by-link claims, a plan's LINK claims, settlement pulls and debt payments (split across the debtor's settle-up edges). A `Payout` alone isn't attributed, because the pot holds pooled money; the cross-member part of a settlement is counted once, on the pull or debt-payment side. Flows with an unknown country aren't attributed; domestic pairs are kept with `isCrossBorder = false`.
+
+## Internal accounts and demo plans
+
+[`indexer/internal-accounts.json`](https://github.com/Baskarayelu/plans/blob/main/indexer/internal-accounts.json) lists the demo members (Ben, Asha, Maya) and team accounts (treasury, deployer, test phones). A **demo plan** is one created by an internal account or joined by any demo member. If a demo member joins a plan after it was counted, everything that plan contributed to the stats is **withdrawn**.
+
+## Metric definitions
+
+All metrics are per chain and exclude internal accounts and demo plans. They match [`docs/traction.md`](https://github.com/Baskarayelu/plans/blob/main/docs/traction.md) and the [stats page](/stats).
+
+| Metric | Field | Definition |
+|---|---|---|
+| Users (headline) | `users` | Non-internal accounts that joined a counted plan, or sent or claimed a non-internal send |
+| Accounts | `accounts` | Distinct non-internal addresses with `KeyRegistered` |
+| Plans created | `potsCreated` | `PotCreated`, counted plans only |
+| Funded plans | `fundedPots` | Counted plans with at least one `Contributed` |
+| Members per plan | `medianMembersPerPot` | Active members at the end, or now for open plans; median |
+| Countries per plan | `medianCountriesPerPot` | Distinct member country codes; median |
+| Time to first funded action | `Account.timeToFirstFundedAction` | First `MemberJoined` (in a counted plan) to first `Contributed`, `Sent` or `Claimed`; median, seconds |
+| Spends | `spends` | `SpendExecuted` |
+| Approvals | `approvals` | `Voted` with approve = true |
+| Settlements, settled volume | `settlements`, `settledVolume` | `Settled`, and its payouts |
+| Cross-border volume | `crossBorderVolume`, `Corridor.volume` | AUSD between different country codes, by pair |
+
+## Queries
+
+The full set is in [`indexer/queries/`](https://github.com/Baskarayelu/plans/tree/main/indexer/queries); `node queries/run.mjs <endpoint>` checks them against a live endpoint.
+
+```graphql title="Plans for an address (myPlans.graphql)"
+query MyPlans($account: String!, $chainId: Int!) {
+  Member(where: { account_id: { _eq: $account }, chainId: { _eq: $chainId } }, order_by: { joinedAt: desc }) {
+    id status net contributed share debt
+    pot { id meta status startTime endTime balance memberCount activeMemberCount countries frozenUntil isDemo }
+  }
+  Account(where: { id: { _eq: $account }, chainId: { _eq: $chainId } }) {
+    id key country isUser keyWraps(order_by: { timestamp: desc }) { pot_id by_id wrap timestamp }
+  }
+}
+```
+
+```graphql title="Public stats (stats.graphql, abridged; this site's /stats runs the full query)"
+query Stats($chainId: Int!) {
+  GlobalStats(where: { id: { _eq: "global" }, chainId: { _eq: $chainId } }) {
+    users accounts potsCreated fundedPots medianMembersPerPot medianCountriesPerPot
+    spends approvals settlements settledVolume crossBorderVolume updatedAt
+  }
+  DailyStats(where: { chainId: { _eq: $chainId } }, order_by: { day: asc }) { date newUsers spends settledVolume }
+  Corridor(where: { chainId: { _eq: $chainId }, isCrossBorder: { _eq: true }, count: { _gt: 0 } },
+           order_by: { volume: desc }) { fromCountry toCountry volume count }
+  Account(where: { chainId: { _eq: $chainId }, ttffaCounted: { _eq: true } },
+          order_by: { timeToFirstFundedAction: asc }) { timeToFirstFundedAction }
+}
+```
+
+## Run it locally
+
+```bash
+cd indexer
+pnpm install
+pnpm codegen
+pnpm test              # no network, no Docker
+cp .env.example .env   # ENVIO_API_TOKEN and, once deployed, the contract addresses
+pnpm dev               # Postgres + Hasura in Docker; GraphQL at http://localhost:8080/v1/graphql
+node queries/run.mjs
+```

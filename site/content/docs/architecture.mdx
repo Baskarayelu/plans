@@ -1,0 +1,43 @@
+---
+title: Architecture
+description: Contracts, relayer, indexer and app, and how a signed tap becomes a settled payment.
+---
+
+<ArchitectureDiagram />
+
+## Components and status
+
+| Part | What it is | Status |
+|---|---|---|
+| Contracts | `PlansFactory`, `Pot`, `ClaimEscrow`, `KeyRegistry`, `PlansSend`. Solidity 0.8.28, Foundry. 178 tests: unit, fuzz, six invariants, fork tests against real AUSD | Built and tested. Mainnet deployment <Pending /> |
+| Relayer | TypeScript on Node 24: Hono, viem, zod, SQLite (`node:sqlite`). 78 tests | Built and tested. Railway deployment <Pending /> |
+| Indexer | Envio HyperIndex 3.12.1, Monad mainnet and testnet via HyperSync. 21 tests | Built and tested. Envio Cloud deployment <Pending /> |
+| Android app | Expo / React Native, Mera, viem | In build <Pending /> |
+| Site | This Next.js site: landing, download, link fallbacks, live stats, docs | Built; live stats <Pending /> until the indexer is deployed |
+
+## Principles
+
+- **The contracts are the authority.** Every rule (limits, approvals, budgets, disputes, settlement) is enforced onchain. No admin keys, no upgrades.
+- **Users sign, anyone submits.** Every member action is an EIP-712 message or an AUSD ERC-3009 authorisation. The relayer submits them and pays gas, but it can't forge an action or change what was signed, and if it refused to submit one, anyone else could. Nonces are unordered random 256-bit values, so several actions can be in flight at once.
+- **No database of record.** The app's history and every derived number come from the indexer; secrets stay on the phone.
+
+## A spend, end to end
+
+1. Asha types $36 for dinner, Food & drink, split three ways. The app checks `previewSpend` and shows "Goes through now".
+2. Her phone signs a `Propose` message (EIP-712, domain `Plans Pot`, the pot's address) inside the open Mera signing session: no extra prompt.
+3. The relayer validates the body, checks the target is a real pot (`factory.isPot`), simulates, sets the gas limit and sends with `eth_sendRawTransactionSync`.
+4. The pot runs every check. Under the instant limit, the spend executes inside `propose`: AUSD goes to the payee and `SpendExecuted` carries the exact shares.
+5. Other members' phones see the log over the Monad websocket within about a second; the relayer sends a push. The indexer updates balances, the budget bar and the who-owes-whom graph.
+
+## Joining, in one transaction
+
+A new member's single fingerprint produces: the passkey (account), a `Join` signature, the invite proof from the link's key, and optionally an ERC-3009 deposit, an ERC-2612 safety-net permit and a `KeyRegistry` registration. `Pot.join` processes all of them in **one** transaction. A permit that was already used (say after a replay) never makes `join` revert.
+
+## Deployment
+
+| Part | Where |
+|---|---|
+| Contracts | Monad mainnet (143) and testnet (10143), CREATE2 with fixed salts, verified on MonadVision (Sourcify) and Monadscan |
+| Relayer | Railway, one replica, SQLite on a volume |
+| Indexer | Envio Cloud (hosted HyperIndex), GraphQL endpoint |
+| Site | Vercel, project `plans-0xo`, `plans.0xo.in` |

@@ -1,0 +1,50 @@
+---
+title: Privacy and keys
+description: Passkeys, Mera, the two PRF namespaces, plans.keys.v1, group keys and the fingerprint emoji.
+---
+
+Plans has no passwords, seed phrases or custody backend. One **passkey** gives each person two independent keys: one that signs, and one that encrypts. This page describes the design; the app implementing it is <Pending />.
+
+## Passkeys
+
+A Plans account is a discoverable **WebAuthn passkey** for `plans.0xo.in`, created with your screen lock and saved in **Google Password Manager**, which syncs it to your other Android phones. The site serves [`/.well-known/assetlinks.json`](/.well-known/assetlinks.json), which tells Android that the app `in.oxo.plans` may use credentials for this domain and open its links.
+
+## Mera: the whole account layer
+
+Mera, by Category Labs, is the only account layer: no other wallet SDK, no injected wallet, no custody server.
+
+- **Create:** `createPasskeyWithPrfOutput` makes the passkey through Android's Credential Manager. Its **PRF** output (the WebAuthn pseudo-random function extension) under Mera's default salt derives the account's secp256k1 key with Mera's documented recipe.
+- **Restore:** `getPasskeyPrfOutput` with no stored credential opens the system passkey picker and returns the same PRF output, so the same account is rebuilt on any phone. The app always tries this before offering to create.
+- **Signing sessions:** one fingerprint per app launch opens a Mera signing session; `toViemAccount` then signs every EIP-712 action and AUSD authorisation without further prompts. The session key lives in memory only and ends when the app is in the background for long.
+
+## Two PRF namespaces
+
+The same passkey is asked for two different PRF outputs, using two different salts:
+
+| Namespace | Salt | Derives | Used for |
+|---|---|---|---|
+| Account | Mera's default salt | secp256k1 key | Signing every action (EIP-712 messages, ERC-3009 authorisations). Never encrypts. |
+| `plans.keys.v1` | `SHA-256("plans.keys.v1")` | HKDF → X25519 key pair, and a second HKDF branch → local cache key | Encryption. **Never signs a transaction.** |
+
+Because PRF outputs are deterministic per passkey and salt, a new phone signed in with the same passkey re-derives both keys. Nothing is transferred between devices and nothing is stored on our servers.
+
+<Callout type="warn" title="Being verified: one ceremony, two outputs">
+  The design asks the authenticator for **both** salts in one ceremony (WebAuthn PRF `first` and `second` inputs), so joining a plan stays at one fingerprint. This is being verified on real phones and passkey providers. If a provider returns only one output, the app asks for a second fingerprint the first time encrypted content is opened on that phone.
+</Callout>
+
+## Group keys
+
+- Your X25519 **public** key is registered onchain in `KeyRegistry` (usually inside the same transaction as joining). A registration only replaces an older one, never the reverse.
+- Each plan has a random **group key**. It is sealed to every member's X25519 key; members publish these wraps with `postKeyWraps` (events only, nothing stored).
+- An invite link carries an **invite key**; the group key is also sealed to it, so someone who joins can read the plan straight away until a member re-wraps the key for them.
+- Encrypted with the group key: the plan's **name, emoji and cover**, **spend notes**, **receipt photos** and **member names**. A spend records only `receiptHash`, a hash of its encrypted receipt.
+
+Encryption uses `@noble` X25519 and XChaCha20-Poly1305 (React Native's Hermes engine has no WebCrypto). The second HKDF branch encrypts the app's on-device cache, so a copied phone backup reveals nothing.
+
+## The fingerprint emoji
+
+Your encryption key is shown as **three emoji** derived from your X25519 public key, under Profile. They are the same on every phone where you sign in with the same passkey, which makes "it's really me on my new phone" checkable at a glance, and lets two friends compare keys in person.
+
+## What is public
+
+Being honest about what the chain sees: amounts, timings, the addresses involved, and the **country codes** members choose (used for the cross-border numbers) are public onchain. Names, notes, receipts and plan names are not: they are ciphertext to everyone outside the group, including us.

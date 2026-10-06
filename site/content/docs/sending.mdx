@@ -1,0 +1,59 @@
+---
+title: Sending across borders
+description: Send AUSD to a person in another country, send money as a claim link, and how the reference exchange rate works.
+---
+
+Plans moves **AUSD**, Agora's digital dollar on Monad (`0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` on mainnet). People see amounts in their own currency next to the dollar amount. The flows below are built in the contracts and relayer; in the app they are <Pending />.
+
+## Send
+
+The **Send** tab moves AUSD directly between two people.
+
+1. Scan a friend's **Plans code** (`plans.0xo.in/p/…`, shown under Profile › My Plans code) or pick a member of one of your plans.
+2. Type an amount in your own currency. The app shows what they get in theirs.
+3. Confirm. Your phone signs an AUSD **ERC-3009** `receiveWithAuthorization`; the relayer submits it to `PlansSend`, which forwards the money and emits a `Sent` receipt.
+
+The receipt is onchain: sender and receiver countries and currencies, the reference rate (`fxRateE8`, 8 decimals) and its timestamp, and a hash of the note. The 3009 nonce **must equal** `keccak256(abi.encode(meta))`, so the signature binds the recipient and every receipt field; nobody can submit it with different ones.
+
+Neither side holds MON: the relayer pays the gas. On mainnet a relayed AUSD transfer was estimated at 112,910 gas, about **$0.0004** at the time we measured.
+
+## Send by link (claim links)
+
+To pay someone who has no account yet, in any country:
+
+1. Your phone generates a one-time **claim key** and signs an ERC-3009 authorisation that moves the money into `ClaimEscrow`. The 3009 nonce equals `keccak256(abi.encode(claimSigner, expiry, fromCountry, salt))`, which binds the claim terms to your signature.
+2. You share the link: `plans.0xo.in/c/<id>#<claim secret>`.
+3. Your friend opens it, creates a passkey with one prompt and claims. The claim key signs `Claim(id, recipient, toCountry)`, so only the link holder can direct the money, and only once.
+4. If nobody claims it before expiry, anyone can trigger the refund and the money returns to you. The app uses a 7-day expiry.
+
+<Callout title="The secret never reaches a server">
+  The claim secret lives after the `#`. Browsers never send URL fragments in requests or referrers, and the fallback page on plans.0xo.in reads it only in your browser to hand it to the app. Treat a claim link like cash: whoever holds it can claim it.
+</Callout>
+
+A plan can pay out the same way: a **LINK** spend locks the amount in `ClaimEscrow` behind a link. Its expiry is the earlier of 7 days and the plan's end plus its review window, so every link is resolved before settlement normally opens. Unclaimed money flows back into the pot and the spend's shares are reversed exactly.
+
+## The reference exchange rate
+
+AUSD is treated as USD. To show your own currency, the app asks the relayer for a reference rate:
+
+```http
+GET /v1/fx?from=GBP&to=USD
+```
+
+```json
+{ "from": "GBP", "to": "USD", "rate": "1.3225", "rateE8": "132250000", "timestamp": 1791270666,
+  "date": "2026-10-05", "source": "ECB reference rates via frankfurter.app",
+  "signer": "0x…", "message": "…", "signature": "0x…" }
+```
+
+- The rate comes from the **European Central Bank reference rates** (via frankfurter.app) and is cached for 10 minutes.
+- It is **signed** (EIP-191) by the relayer's lane-0 key, so the app can check `recoverMessageAddress(message, signature) == signer` against `/v1/health`.
+- `rateE8` and `timestamp` go straight into the `Sent` receipt.
+
+<Callout type="warn" title="A reference, not a conversion">
+  Plans never converts currencies. The money that moves is always AUSD. The rate is there so both people see a fair figure in their own currency, and so the receipt records what that figure was. Getting local currency in and out of AUSD needs an exchange or, later, an on-ramp partner.
+</Callout>
+
+## Cross-border, measured
+
+Every flow is attributed to a country pair (`GB-IN`, `US-GB` …) by the [indexer](/docs/indexer#corridors): direct sends, claimed links, a plan's link spends, and the part of a settlement where a member who owes pays members who are owed. The public [stats page](/stats) shows cross-border volume by pair.

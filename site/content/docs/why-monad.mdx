@@ -1,0 +1,55 @@
+---
+title: Why Monad
+description: Measured block times, finality and gas on Monad mainnet, and what they let Plans do.
+---
+
+A shared pot only feels shared if every phone sees a spend before the spender puts theirs down, and if sponsoring every tap costs almost nothing. We measured Monad mainnet rather than quoting it.
+
+## Measured on mainnet
+
+Measured on **5 October 2026, 20:18 to 20:28 UTC**, against Monad mainnet (chain 143).
+
+| What | Median | Detail |
+|---|---|---|
+| Time between blocks | **301 ms** | 196 blocks, websocket timing |
+| Time to finality | **583 ms** | 650 ms at p95, 93 blocks |
+| A relayed AUSD transfer | **≈ $0.0004** | estimated 112,910 gas at 102 gwei, MON at $0.031 |
+
+What that buys: a spend reaches every member's phone within about a second, and settlement is final before the phones stop buzzing. At these prices the relayer can sponsor **every** action, including approvals and votes; sponsoring a whole six-person trip costs about three cents.
+
+## Gas, measured against the live chain
+
+Every Plans action was run on an anvil fork of mainnet with the real AUSD, re-priced with Monad's rules, then replayed read-only on **live mainnet** (`eth_simulateV1`) to find the smallest gas limit that works. The model matched the live minimum exactly for all 44 transactions. Highlights (full table: [`contracts/GAS.md`](https://github.com/Baskarayelu/plans/blob/main/contracts/GAS.md)):
+
+| Action | Min gas limit (live) | Suggested limit | ≈ cost at 102 gwei, MON $0.031 |
+|---|---:|---:|---:|
+| createPot (+ deposit, permit, key) | 573,196 | 631,000 | $0.0020 |
+| join (+ deposit, permit, key) | 388,879 | 428,000 | $0.0014 |
+| contribute (ERC-3009) | 150,844 | 166,000 | $0.0005 |
+| propose PAY, instant, 4-way split | 265,060 | 292,000 | $0.0009 |
+| vote approve (reaches threshold, executes) | 178,963 | 197,000 | $0.0006 |
+| PlansSend.send | 145,333 | 160,000 | $0.0005 |
+| ClaimEscrow.claim | 104,413 | 115,000 | $0.0004 |
+| settle, 3 members | 185,168 | 204,000 | $0.0006 |
+| settle, 6 members | 277,542 | 306,000 | $0.0010 |
+| settle, 12 members | 497,640 | 548,000 | $0.0017 |
+
+Costs are illustrative: gas price and the MON price move.
+
+### Charged on the gas limit
+
+Monad charges the **gas limit**, not gas used, and gives **no refunds**. So the number that matters is the limit the relayer sets. The relayer uses `estimate × 1.10 + 10,000`, capped per action, rather than the usual generous margin.
+
+Monad gas for Plans actions is a median **1.21×** Ethereum's (from 0.91× to 1.70×). The difference comes from cold account access (10,100 instead of 2,600), `ecrecover` (6,000 instead of 3,000), and 17,000 gas of state growth for each fresh storage slot, with no refunds. The `Pot` is laid out for Monad's storage pages: all its hot state (schedule, rules, member list with nets, bitmaps) sits on **storage page 0**, so one 8,100-gas page load covers the whole pot and every further read costs 100. Members are found by scanning that page instead of a mapping lookup, and signatures try `ecrecover` before ERC-1271 to skip a 10,100-gas cold account access for ordinary keys.
+
+Monad's 128 KB contract size limit also matters: the `Pot` runtime is about 29 KB, above Ethereum's 24 KB limit.
+
+## Receipts in the same call
+
+The relayer sends with **`eth_sendRawTransactionSync`** (EIP-7966), which returns the receipt in the same call. The app can say "Done" and show the onchain proof without polling. If the RPC times out the relayer waits for the receipt, and if the method is missing it falls back to `eth_sendRawTransaction` and polls.
+
+Monad's reserve-balance rule caps how much gas one sender can commit over three blocks, so the relayer spreads work across **three nonce lanes** (three funded keys), each serialising its own sends.
+
+## Parallel execution, stated honestly
+
+Monad executes transactions in parallel and re-executes those that conflict. Plans is laid out to suit that: **each plan is a separate contract with its own storage**, so groups spending and settling at the same time don't write to each other's state. Transactions still share some state (AUSD balances of the same people, a relayer lane's nonce), and we have **not** load-tested Plans at scale on Monad. This is a design property, not a measured throughput claim.

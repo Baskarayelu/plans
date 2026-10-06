@@ -1,0 +1,68 @@
+---
+title: Getting started
+description: Install the Android beta, create your account, join a plan and add money.
+---
+
+<Callout type="warn" title="Pending">
+  The Android beta opens on 12 October 2026. Until then these steps describe the app being built. Each will be confirmed against the released APK.
+</Callout>
+
+## What you need
+
+- An Android phone with **Android 9 or newer** (10 or newer recommended). iPhone comes later.
+- The phone **signed in to a Google account**, with a **screen lock** (PIN, fingerprint or face).
+- **Google Password Manager** as the passkey provider. Plans needs the WebAuthn PRF extension, which some other password managers do not support. If Android asks where to save the passkey, choose Google Password Manager.
+
+No SIM, VPN or local bank account is needed.
+
+## Install
+
+<Pending /> <Steps>
+<Step>
+### Download
+
+On the phone, open [plans.0xo.in/download](/download) and download `plans.apk`. The page shows the file's SHA-256 so you can check it.
+</Step>
+<Step>
+### Allow the install
+
+Open the file. The first time, Android asks you to allow your browser to install unknown apps: tap **Settings**, allow it, then go back and tap **Install**.
+</Step>
+<Step>
+### Play Protect
+
+Plans isn't in the Play Store yet. If Google Play Protect says the developer is unrecognised, tap **More details**, then **Install anyway**.
+</Step>
+</Steps>
+
+There is also a separate test build, `plans-test.apk`, that runs on Monad testnet with free test dollars. It installs alongside the real app. See [For judges](/docs/judges#mainnet-and-testnet).
+
+## Create your account
+
+<Pending /> Open Plans, tap **Create account** and confirm with your screen lock. Enter a name and pick your country. That one prompt is the whole sign-up: the passkey it creates *is* your account.
+
+- On a new phone, or after clearing the app's data, tap **I already use Plans** and confirm with the same passkey. Your account, plans, balances and encrypted receipts come back. Nothing is stored on our servers.
+- The app always tries to restore before offering to create, so you never get a second account by accident.
+
+## Join a plan
+
+<Pending /> Tap the invite link someone shared in your group chat (`plans.0xo.in/j/…`). It opens Plans and shows the plan: its name, dates, who's in, and the rules in plain words. Tap **Join with fingerprint**.
+
+If you are new, that single fingerprint creates your account *and* joins the plan, in one onchain transaction. Optional extras ride along in the same transaction: a first deposit, your safety-net allowance and your encryption key.
+
+<Callout title="The link opened in the browser?">
+  The page has an **Open in Plans** button. You can also copy the link and paste it into Plans › Join. The secret part of an invite (after `#`) never leaves your phone: browsers do not send URL fragments to servers.
+</Callout>
+
+## Add money
+
+<Pending /> Plans has no card or bank top-up in the beta. You can get digital dollars (AUSD) in two ways:
+
+1. **A friend sends you a link.** Organisers often send each member a small claim link (`plans.0xo.in/c/…`). Open it and confirm with your fingerprint.
+2. **From an exchange.** Send AUSD on Monad to your Plans address (Profile).
+
+Then open the plan and tap **Add money**. Type an amount in your own currency; the app shows the digital-dollar amount and the reference rate.
+
+## The safety net
+
+When you join you choose a small **safety net**: an allowance the pot may collect from your Plans balance at settle-up if you owe the group money. It is an ERC-2612 permit, capped at the amount you choose. Anything you owe above it is recorded as a debt you can pay later. See [Settle-up maths](/docs/how-plans-works#settle-up-maths).

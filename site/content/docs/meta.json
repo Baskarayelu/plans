@@ -1,0 +1,20 @@
+{
+  "title": "Plans docs",
+  "pages": [
+    "index",
+    "---Using Plans---",
+    "getting-started",
+    "how-plans-works",
+    "sending",
+    "privacy-and-keys",
+    "---Technology---",
+    "why-monad",
+    "architecture",
+    "contracts",
+    "relayer-api",
+    "indexer",
+    "---Hackathon---",
+    "judges",
+    "open-source"
+  ]
+}
