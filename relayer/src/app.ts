@@ -21,7 +21,7 @@ import type { Relayer } from "./relay.js";
 import type { Store } from "./store.js";
 
 export interface AppServices {
-  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & { blobs?: Config["blobs"] };
+  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & { blobs?: Config["blobs"]; indexerGraphqlUrl?: string | null };
   client: PublicClient;
   pool: LanePool;
   relayer: Relayer;
@@ -126,6 +126,11 @@ export function createApp(s: AppServices) {
   });
 
   app.get("/", (c) => c.json({ service: "plans-relayer", version: s.version ?? "0.1.0", docs: "/v1/health" }));
+
+  /** Runtime endpoints for the app, so a new indexer URL needs no app rebuild. Public, no secrets. */
+  app.get("/v1/config", (c) =>
+    c.json({ chainId: s.cfg.chainId, graphqlUrl: s.cfg.indexerGraphqlUrl ?? null }, 200, { "Cache-Control": "public, max-age=60" }),
+  );
 
   app.get("/v1/health", async (c) => {
     let chainId: number | null = null;

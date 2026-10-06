@@ -140,6 +140,7 @@ const envSchema = z.object({
   CREATE_POT_PER_IP_PER_DAY: int(30),
 
   FX_URL: z.string().optional().default("https://api.frankfurter.app/latest"),
+  INDEXER_GRAPHQL_URL: z.string().url().optional(),
   FX_CACHE_MS: int(10 * 60 * 1000),
   FX_SIGNER_KEY: optKey,
 
@@ -255,6 +256,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       createPotPerIpPerDay: e.CREATE_POT_PER_IP_PER_DAY,
     },
     fx: { url: e.FX_URL, cacheMs: e.FX_CACHE_MS, signerKey: e.FX_SIGNER_KEY },
+    indexerGraphqlUrl: e.INDEXER_GRAPHQL_URL ?? null,
     faucet: {
       enabled: faucetEnabled,
       address: faucetAddress,

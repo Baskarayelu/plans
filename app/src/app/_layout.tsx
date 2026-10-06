@@ -15,6 +15,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { applyEndpointOverrides } from "../config";
+import { getRuntimeConfig } from "../lib/api/relayer";
 import { loadIdentity } from "../lib/identity/session";
 import { queryClient } from "../lib/state/data";
 import { storage } from "../lib/state/storage";
@@ -55,6 +56,15 @@ export default function RootLayout() {
     void (async () => {
       const prefs = await storage.loadPrefs();
       if (prefs.endpoints) applyEndpointOverrides(prefs.endpoints);
+      // Endpoints set by hand in Diagnostics win; otherwise take the indexer URL the relayer publishes.
+      if (!prefs.endpoints?.graphqlUrl) {
+        void getRuntimeConfig().then((rc) => {
+          if (rc?.graphqlUrl) {
+            applyEndpointOverrides({ graphqlUrl: rc.graphqlUrl });
+            void queryClient.invalidateQueries();
+          }
+        });
+      }
       await loadIdentity();
       setReady(true);
     })();

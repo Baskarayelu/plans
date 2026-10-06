@@ -254,3 +254,13 @@ export function friendlyError(e: unknown): { title: string; message: string; cod
 }
 
 export { NetworkError };
+
+/** Runtime endpoints published by the relayer (GET /v1/config), so a new indexer URL needs no app rebuild. */
+export async function getRuntimeConfig(): Promise<{ chainId: number; graphqlUrl: string | null } | null> {
+  try {
+    const r = await fetchJson<{ chainId: number; graphqlUrl: string | null }>(`${config.relayerUrl}/v1/config`, { timeoutMs: 4_000 });
+    return r.status === 200 && r.body?.chainId === config.chainId ? r.body : null;
+  } catch {
+    return null;
+  }
+}
