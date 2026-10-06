@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Button, BtnTag, Card, Chip } from "@/components/ui/primitives";
-import { BETA_DATE, DOWNLOAD_PATH } from "@/lib/site";
+import { DOWNLOAD_PATH, RELEASE_TAG } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const HEADLINE: Array<{ w: string; hl?: boolean }> = [
@@ -180,7 +180,7 @@ export function Hero() {
 
         <div className="flex flex-wrap justify-center gap-3">
           <Button href={DOWNLOAD_PATH}>
-            Get the Android app <BtnTag>Beta · {BETA_DATE}</BtnTag>
+            Get the Android app <BtnTag>{RELEASE_TAG}</BtnTag>
           </Button>
           <Button href="#how" variant="ghost">
             See how it works

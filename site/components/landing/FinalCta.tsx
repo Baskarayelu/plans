@@ -1,7 +1,7 @@
 // PRO BLOCK SLOT: "CTA Sections" (Aceternity UI Pro). Replace the panel with the Pro CTA; keep id "get",
 // the copy below, and the primary button pointing at DOWNLOAD_PATH (/download).
 import { Button, BtnTag } from "@/components/ui/primitives";
-import { BETA_DATE, DOWNLOAD_PATH } from "@/lib/site";
+import { DOWNLOAD_PATH, RELEASE_LIVE, RELEASE_TAG } from "@/lib/site";
 
 export function FinalCta() {
   return (
@@ -14,10 +14,12 @@ export function FinalCta() {
           Start a plan before the group chat goes quiet
         </h2>
         <p className="m-0 max-w-[540px] text-lg text-[color-mix(in_srgb,var(--bg)_72%,transparent)]">
-          The Android beta opens on 12 October. Download the app, start a plan and drop the link in your chat.
+          {RELEASE_LIVE
+            ? "Download the test version, start a plan and drop the link in your chat."
+            : "The Android test version is being prepared. It will be on the download page when it's published."}
         </p>
         <Button href={DOWNLOAD_PATH}>
-          Download for Android <BtnTag>Beta · {BETA_DATE}</BtnTag>
+          Download for Android <BtnTag>{RELEASE_TAG}</BtnTag>
         </Button>
         <span className="font-mono text-xs leading-snug font-medium text-[color-mix(in_srgb,var(--bg)_60%,transparent)]">
           Android 9 or newer · free for groups · open source (MIT)

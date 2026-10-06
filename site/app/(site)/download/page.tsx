@@ -136,7 +136,7 @@ export default function DownloadPage() {
           </>
         ) : (
           <>
-            <b>First release pending.</b> The beta opens on {release.expectedDate}. The download buttons and SHA-256
+            <b>First release pending.</b> The download buttons and SHA-256
             fingerprints appear here when it is published.
           </>
         )}
