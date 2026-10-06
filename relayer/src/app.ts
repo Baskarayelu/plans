@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import type { PublicClient } from "viem";
 import { z } from "zod";
 import { prepareAction, ValidationError, zAddress, zBytes32 } from "./actions.js";
+import { normaliseHash, type BlobStore } from "./blobs.js";
 import type { Config } from "./config.js";
 import type { DemoService } from "./demo/demo.js";
 import { RelayError } from "./errors.js";
@@ -20,7 +21,7 @@ import type { Relayer } from "./relay.js";
 import type { Store } from "./store.js";
 
 export interface AppServices {
-  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push">;
+  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & { blobs?: Config["blobs"] };
   client: PublicClient;
   pool: LanePool;
   relayer: Relayer;
@@ -31,6 +32,7 @@ export interface AppServices {
   faucet?: Faucet;
   demo?: DemoService;
   longStop?: LongStop;
+  blobs?: BlobStore;
   version?: string;
 }
 
@@ -44,6 +46,12 @@ const trySettleUpSchema = z.object({
   inviteSecret: zBytes32.optional(),
   memos: z.array(hexBlob(512)).max(3).optional(),
 });
+
+/** Strict base64url (standard base64 alphabet and padding tolerated). */
+export function decodeBase64Url(data: string): Uint8Array {
+  if (!/^[A-Za-z0-9_\-+/]*={0,2}$/.test(data)) throw new RelayError(400, "INVALID_BASE64", "data must be base64url.");
+  return new Uint8Array(Buffer.from(data.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""), "base64url"));
+}
 
 export function clientIp(c: Context, trustProxy: boolean): string {
   if (trustProxy) {
@@ -71,24 +79,29 @@ export function createApp(s: AppServices) {
   const app = new Hono();
   const ipLimiter = new RateLimiter(s.cfg.http.ipPerMin, 60_000);
   const addrLimiter = new RateLimiter(s.cfg.http.addressPerMin, 60_000);
+  const blobPutLimiter = new RateLimiter(s.cfg.blobs?.putPerIpPerHour ?? 60, 3_600_000);
+  const blobMax = s.cfg.blobs?.maxBytes ?? 2 * 1024 * 1024;
   let lastBalanceRefresh = 0;
 
   app.use(
     "*",
     cors({
       origin: s.cfg.http.corsOrigins,
-      allowMethods: ["GET", "POST", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
       allowHeaders: ["content-type"],
       maxAge: 600,
     }),
   );
-  app.use(
-    "/v1/*",
-    bodyLimit({
-      maxSize: s.cfg.http.bodyLimit,
-      onError: (c) => c.json({ error: { code: "BODY_TOO_LARGE", message: `Request body is larger than ${s.cfg.http.bodyLimit} bytes.` } }, 413),
-    }),
-  );
+  const jsonLimit = bodyLimit({
+    maxSize: s.cfg.http.bodyLimit,
+    onError: (c) => c.json({ error: { code: "BODY_TOO_LARGE", message: `Request body is larger than ${s.cfg.http.bodyLimit} bytes.` } }, 413),
+  });
+  // JSON uploads carry base64url, ~4/3 the size of the bytes; the decoded size is checked again in BlobStore.put.
+  const blobLimit = bodyLimit({
+    maxSize: Math.ceil((blobMax * 4) / 3) + 4096,
+    onError: (c) => c.json({ error: { code: "BLOB_TOO_LARGE", message: `Blobs are limited to ${blobMax} bytes.` } }, 413),
+  });
+  app.use("/v1/*", (c, next) => (c.req.path.startsWith("/v1/blobs/") ? blobLimit(c, next) : jsonLimit(c, next)));
   app.use("/v1/*", async (c, next) => {
     if (c.req.method === "POST") {
       const ip = clientIp(c, s.cfg.http.trustProxy);
@@ -145,6 +158,7 @@ export function createApp(s: AppServices) {
         faucet: { enabled: !!s.faucet?.enabled },
         demo: { enabled: !!s.demo?.enabled },
         longStop: s.longStop ? { lastRunAt: s.longStop.lastRunAt, settled: s.longStop.settledCount } : null,
+        blobs: s.blobs ? { usedBytes: s.blobs.usedBytes, capBytes: s.blobs.opts.diskCapBytes } : null,
         time: Math.floor(Date.now() / 1000),
       },
       ok ? 200 : 503,
@@ -188,6 +202,69 @@ export function createApp(s: AppServices) {
     const p = await verifyPushRegistration(s.client, await readJson(c));
     s.store.addPushToken(p.address, p.expoPushToken);
     return c.json({ ok: true, address: p.address });
+  });
+
+  app.get("/v1/tx/:hash", (c) => {
+    const hash = c.req.param("hash");
+    if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) throw new RelayError(400, "INVALID_HASH", "Expected a 0x-prefixed 32-byte transaction hash.");
+    const t = s.store.getTx(hash);
+    if (!t) throw new RelayError(404, "NOT_FOUND", "This relayer didn't send that transaction.");
+    return c.json({
+      txHash: t.txHash,
+      action: t.action,
+      latencyMs: t.latencyMs,
+      totalMs: t.totalMs,
+      blockNumber: t.blockNumber,
+      status: t.status,
+      submittedAt: t.submittedAt,
+    });
+  });
+
+  app.put("/v1/blobs/:sha256", async (c) => {
+    if (!s.blobs) throw new RelayError(404, "BLOBS_DISABLED", "Blob storage isn't enabled on this relayer.");
+    const hash = normaliseHash(c.req.param("sha256"));
+    const ct = (c.req.header("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (ct !== "application/octet-stream" && ct !== "application/json") {
+      throw new RelayError(415, "UNSUPPORTED_MEDIA_TYPE", 'Upload the ciphertext as application/octet-stream, or as application/json {"data": "<base64url>"}.');
+    }
+    let bytes: Uint8Array;
+    if (ct === "application/json") {
+      const { data } = z.object({ data: z.string() }).parse(await readJson(c));
+      bytes = decodeBase64Url(data);
+    } else {
+      bytes = new Uint8Array(await c.req.arrayBuffer());
+    }
+    // Re-uploads of an existing blob are still verified (in put) but don't count against the limit.
+    if (!s.blobs.has(hash)) {
+      const r = blobPutLimiter.take(`blob:${clientIp(c, s.cfg.http.trustProxy)}`);
+      if (!r.ok) {
+        c.header("retry-after", String(Math.ceil(r.retryAfterMs / 1000)));
+        throw new RelayError(429, "RATE_LIMITED", "Too many uploads from this network. Please try again later.", { retryAfterMs: r.retryAfterMs });
+      }
+    }
+    const out = await s.blobs.put(hash, bytes);
+    return c.json(out, out.created ? 201 : 200);
+  });
+
+  app.get("/v1/blobs/:sha256", async (c) => {
+    if (!s.blobs) throw new RelayError(404, "BLOBS_DISABLED", "Blob storage isn't enabled on this relayer.");
+    const hash = normaliseHash(c.req.param("sha256"));
+    const wantsJson = (c.req.header("accept") ?? "").toLowerCase().includes("application/json");
+    // The JSON and raw representations differ, so the ETag does too.
+    const etag = wantsJson ? `"${hash}.json"` : `"${hash}"`;
+    const cacheHeaders = { etag, "cache-control": "public, max-age=31536000, immutable", vary: "Accept" };
+    if (c.req.header("if-none-match") === etag) return c.body(null, 304, cacheHeaders);
+    const bytes = await s.blobs.get(hash);
+    if (!bytes) throw new RelayError(404, "NOT_FOUND", "No blob with that id.");
+    if (wantsJson) return c.json({ data: Buffer.from(bytes).toString("base64url") }, 200, cacheHeaders);
+    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+      vary: "Accept",
+      "content-type": "application/octet-stream",
+      "content-length": String(bytes.byteLength),
+      "cache-control": "public, max-age=31536000, immutable",
+      etag,
+      "x-content-type-options": "nosniff",
+    });
   });
 
   app.get("/v1/demo/accounts", (c) => {

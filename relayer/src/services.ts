@@ -2,6 +2,7 @@
 import { join } from "node:path";
 import { privateKeyToAccount } from "viem/accounts";
 import { createApp, type AppServices } from "./app.js";
+import { BlobStore } from "./blobs.js";
 import { makePublicClient, makeWsClient } from "./chain.js";
 import type { Config } from "./config.js";
 import { DemoService } from "./demo/demo.js";
@@ -22,7 +23,7 @@ export interface Services extends AppServices {
   app: ReturnType<typeof createApp>;
 }
 
-export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetch; dbPath?: string } = {}): Promise<Services> {
+export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetch; dbPath?: string; blobDir?: string } = {}): Promise<Services> {
   setLogLevel(cfg.logLevel);
   const client = makePublicClient(cfg);
   const ws = cfg.listener.enabled ? makeWsClient(cfg) : undefined;
@@ -60,6 +61,7 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
     ? new Listener(client, ws, store, relayer.contracts, { startBlock: cfg.listener.startBlock, chunk: cfg.listener.chunk, pollMs: cfg.listener.pollMs })
     : undefined;
   const longStop = new LongStop(store, relayer, client, cfg.longStop);
+  const blobs = new BlobStore({ dir: opts.blobDir ?? cfg.blobs.dir, maxBytes: cfg.blobs.maxBytes, diskCapBytes: cfg.blobs.diskCapBytes });
 
   if (listener) {
     listener.on(push.handle);
@@ -80,6 +82,7 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
     faucet,
     demo,
     longStop,
+    blobs,
     version: "0.1.0",
     app: undefined as never,
     async start() {

@@ -4,6 +4,9 @@
  * push dispatch, demo approvals/acks, "Try a settle-up", and the long-stop job.
  * Skips (with a message) if the contracts haven't been built yet.
  */
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as pathJoin } from "node:path";
 import { getAddress, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -39,6 +42,7 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
   let anvil: Awaited<ReturnType<typeof startAnvil>>;
   let d: Awaited<ReturnType<typeof deployAll>>;
   let s: Services;
+  let blobDir: string;
   const pushes: { to: string; title: string; body: string }[] = [];
   const alice = privateKeyToAccount(generatePrivateKey());
   const bob = privateKeyToAccount(generatePrivateKey());
@@ -203,7 +207,8 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
       }
       return new Response(JSON.stringify({ base: "GBP", date: "2026-10-05", rates: { USD: 1.34, INR: 118.9 } }));
     });
-    s = await buildServices(cfg, { fetchImpl: fetchImpl as never, dbPath: ":memory:" });
+    blobDir = mkdtempSync(pathJoin(tmpdir(), "plans-it-blobs-"));
+    s = await buildServices(cfg, { fetchImpl: fetchImpl as never, dbPath: ":memory:", blobDir });
     await s.start();
     await waitFor(() => s.listener!.caughtUp, "listener catch-up");
   }, 120_000);
@@ -211,6 +216,7 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
   afterAll(async () => {
     await s?.stop();
     anvil?.stop();
+    if (blobDir) rmSync(blobDir, { recursive: true, force: true });
   });
 
   it("reports health with lanes, contracts and the sync send method", async () => {
@@ -245,6 +251,16 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
     // tight gas limits: limit is estimate + ~10%, so gasUsed is close to it
     expect(BigInt(created.body.gasLimit)).toBeLessThan((BigInt(created.body.gasUsed) * 14n) / 10n);
     expect(await balance(pot)).toBe(USD(2));
+    const tx = await s.app.request(`/v1/tx/${created.body.txHash}`);
+    expect(tx.status).toBe(200);
+    expect(await tx.json()).toMatchObject({
+      txHash: created.body.txHash,
+      action: "createPot",
+      latencyMs: created.body.latencyMs,
+      totalMs: created.body.totalMs,
+      blockNumber: created.body.blockNumber,
+      status: "success",
+    });
 
     const joined = await join(pot, bob, invite, "IN", USD(1));
     expect(joined.status, JSON.stringify(joined.body)).toBe(200);

@@ -6,7 +6,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 
 export interface PotRow {
   address: Address;
@@ -59,6 +59,19 @@ export interface DemoRunRow {
   meta: string | null; // JSON: app-supplied memos etc.
 }
 
+export interface TxRow {
+  txHash: Hex;
+  action: string;
+  latencyMs: number; // submission → receipt
+  totalMs: number; // request received → receipt (includes validation and simulation)
+  blockNumber: string;
+  status: "success" | "reverted";
+  submittedAt: number; // unix ms when the signed tx was handed to the RPC
+  lane: number;
+  gasUsed: string;
+  sync: boolean;
+}
+
 type Row = Record<string, unknown>;
 
 const SCHEMA = `
@@ -86,6 +99,11 @@ CREATE TABLE IF NOT EXISTS claims (
 CREATE TABLE IF NOT EXISTS push_tokens (address TEXT NOT NULL, token TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (address, token));
 CREATE INDEX IF NOT EXISTS push_by_token ON push_tokens(token);
 CREATE TABLE IF NOT EXISTS counters (key TEXT PRIMARY KEY, day INTEGER NOT NULL, count INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS txs (
+  hash TEXT PRIMARY KEY, action TEXT NOT NULL, latency_ms INTEGER NOT NULL, total_ms INTEGER NOT NULL,
+  block_number TEXT NOT NULL, status TEXT NOT NULL, submitted_at INTEGER NOT NULL, lane INTEGER NOT NULL,
+  gas_used TEXT NOT NULL, sync INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS demo_runs (
   pot TEXT PRIMARY KEY, judge TEXT NOT NULL, invite_secret TEXT NOT NULL, stage TEXT NOT NULL, step INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, end_time INTEGER NOT NULL, last_error TEXT, meta TEXT
@@ -305,6 +323,32 @@ export class Store {
   refundDaily(key: string, now = Date.now()) {
     const day = Math.floor(now / 86_400_000);
     this.db.prepare("UPDATE counters SET count = MAX(count - 1, 0) WHERE key = ? AND day = ?").run(key, day);
+  }
+
+  // ───── sent transactions ─────
+  insertTx(t: TxRow) {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO txs(hash, action, latency_ms, total_ms, block_number, status, submitted_at, lane, gas_used, sync)
+         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(t.txHash.toLowerCase(), t.action, t.latencyMs, t.totalMs, t.blockNumber, t.status, t.submittedAt, t.lane, t.gasUsed, t.sync ? 1 : 0);
+  }
+  getTx(hash: string): TxRow | undefined {
+    const r = this.db.prepare("SELECT * FROM txs WHERE hash = ?").get(hash.toLowerCase()) as Row | undefined;
+    if (!r) return undefined;
+    return {
+      txHash: String(r.hash) as Hex,
+      action: String(r.action),
+      latencyMs: Number(r.latency_ms),
+      totalMs: Number(r.total_ms),
+      blockNumber: String(r.block_number),
+      status: String(r.status) as TxRow["status"],
+      submittedAt: Number(r.submitted_at),
+      lane: Number(r.lane),
+      gasUsed: String(r.gas_used),
+      sync: Number(r.sync) === 1,
+    };
   }
 
   // ───── demo runs ─────

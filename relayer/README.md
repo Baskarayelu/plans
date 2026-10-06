@@ -89,6 +89,46 @@ Returns:
 
 The status is 503 when the RPC is down, the chain ID is wrong, or every lane is below `LANE_MIN_BALANCE_WEI`.
 
+### `GET /v1/tx/:hash`
+
+Timing for any transaction this relayer sent: relayed actions, demo actions, faucet and long-stop. A row is stored in SQLite at send time and kept forever. The receiving phone uses it to show "Settled in 0.6 s".
+
+```json
+{ "txHash": "0x…", "action": "send", "latencyMs": 412, "totalMs": 598, "blockNumber": "123",
+  "status": "success", "submittedAt": 1760000000123 }
+```
+
+| Field | Meaning |
+|---|---|
+| `latencyMs` | From handing the signed transaction to the RPC until the receipt |
+| `totalMs` | From the relay request arriving until the receipt (includes validation and simulation) |
+| `submittedAt` | Unix milliseconds when the transaction was sent |
+
+Returns 404 `NOT_FOUND` for hashes this relayer didn't send, and 400 for a malformed hash.
+
+### Encrypted blobs: `PUT /v1/blobs/:sha256`, `GET /v1/blobs/:sha256`
+
+A content-addressed store for receipt photos. The app encrypts with the group key and uploads only ciphertext; the server never sees keys. `:sha256` is the lowercase hex sha256 of the ciphertext bytes (a `0x` prefix is accepted).
+
+**Upload.** `PUT` accepts either form:
+
+- `Content-Type: application/json` with body `{"data": "<base64url ciphertext>"}`. Standard base64 and padding are tolerated.
+- `Content-Type: application/octet-stream` with the raw bytes.
+
+The server decodes the body, recomputes sha256 over the decoded bytes, and stores the file at `<BLOB_DIR>/<aa>/<bb>/<sha256>` with an atomic write.
+
+| Status | Meaning |
+|---|---|
+| 201 | Stored: `{ "sha256", "size", "created": true }` |
+| 200 | Already stored, and the body still matched: `created: false` |
+| 400 | `HASH_MISMATCH`, `INVALID_HASH`, `INVALID_BASE64`, `EMPTY_BODY` or missing `data` |
+| 413 | Over 2 MB of decoded bytes (`BLOB_MAX_BYTES`). JSON request bodies may be up to about 2.8 MB. |
+| 415 | Any other content type |
+| 429 | Over 60 new uploads per IP per hour (re-uploads of existing blobs don't count) |
+| 507 | `STORAGE_FULL`: the disk cap (`BLOB_DISK_CAP_BYTES`, default 2 GB) is reached |
+
+**Download.** `GET` returns `{"data": "<base64url, unpadded>"}` when the `Accept` header includes `application/json`, which is what the app sends. Otherwise it returns the raw bytes as `application/octet-stream`. Both carry `Cache-Control: public, max-age=31536000, immutable`, `Vary: Accept` and an ETag (which differs between the two forms), and `If-None-Match` gives 304. Unknown ids return 404.
+
 ### `GET /v1/fx?from=GBP&to=USD`
 
 Returns a reference rate from ECB rates (frankfurter.app), cached for 10 minutes. AUSD is treated as USD.
@@ -237,7 +277,7 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 ## Deploy on Railway
 
 1. Create a service from this directory (root `relayer/`). `railway.json` builds the `Dockerfile` (node:24-slim).
-2. Add a **volume** mounted at `/data`. The SQLite state lives there: push tokens, daily quotas, the listener cursor and demo runs.
+2. Add a **volume** mounted at `/data`. The SQLite state lives there (push tokens, daily quotas, the listener cursor, demo runs and sent-transaction timings), and so do the encrypted blobs in `/data/blobs`. Size the volume for `BLOB_DISK_CAP_BYTES` (2 GB by default) plus some headroom.
 3. Keep it at **one replica**. Nonce lanes and SQLite are single-writer.
 4. Set the variables from `.env.example`. At minimum:
    - `CHAIN_ID`
@@ -268,7 +308,8 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 | `src/faucet.ts` | Testnet faucet |
 | `src/demo/` | Demo members (`policy.ts` is the pure decision logic) |
 | `src/longstop.ts` | Long-stop settlement |
-| `src/store.ts` | SQLite state |
+| `src/store.ts` | SQLite state, including sent-transaction timings |
+| `src/blobs.ts` | Encrypted blob store |
 | `src/app.ts` | Hono routes, CORS, body limit and rate limits |
 | `src/services.ts` | Wiring |
 | `src/index.ts` | Server entrypoint |

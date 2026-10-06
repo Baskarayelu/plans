@@ -168,6 +168,7 @@ export class Relayer {
     const estimate = await this.simulate(to, data, lane.address);
     const gas = gasLimitFor(action, estimate, this.gas);
     const res = await this.pool.submit(lane, { to, data, gas });
+    const submittedAt = Date.now() - res.latencyMs; // when the signed tx went to the RPC (after any lane queueing)
     const { receipt } = res;
     try {
       this.onReceipt?.(receipt.logs as Log[], receipt);
@@ -187,6 +188,22 @@ export class Relayer {
       sync: res.sync,
       events: decodeReceiptLogs(receipt.logs as Log[]),
     };
+    try {
+      this.store?.insertTx({
+        txHash: res.txHash,
+        action,
+        latencyMs: res.latencyMs,
+        totalMs: out.totalMs,
+        blockNumber: out.blockNumber,
+        status: receipt.status,
+        submittedAt,
+        lane: res.lane,
+        gasUsed: out.gasUsed,
+        sync: res.sync,
+      });
+    } catch (e) {
+      log.warn("tx record failed", { txHash: res.txHash, error: shortErr(e) });
+    }
     if (receipt.status !== "success") {
       out.error = { code: "REVERTED_ONCHAIN", message: "The transaction was included but failed: the plan changed since it was checked." };
     }

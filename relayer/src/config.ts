@@ -168,6 +168,11 @@ const envSchema = z.object({
   DEMO_PER_IP_PER_DAY: int(10),
   DEMO_TICK_MS: int(1000),
 
+  BLOB_DIR: z.string().optional(),
+  BLOB_MAX_BYTES: int(2 * 1024 * 1024),
+  BLOB_DISK_CAP_BYTES: int(2 * 1024 * 1024 * 1024),
+  BLOB_PUT_PER_IP_PER_HOUR: int(60),
+
   LONGSTOP_ENABLED: bool(true),
   LONGSTOP_INTERVAL_MS: int(60 * 60 * 1000),
   LONGSTOP_GRACE_DAYS: int(30),
@@ -271,6 +276,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       perJudgePerDay: e.DEMO_PER_JUDGE_PER_DAY,
       perIpPerDay: e.DEMO_PER_IP_PER_DAY,
       tickMs: e.DEMO_TICK_MS,
+    },
+    blobs: {
+      dir: e.BLOB_DIR || `${e.DATA_DIR.replace(/\/$/, "")}/blobs`,
+      maxBytes: e.BLOB_MAX_BYTES,
+      diskCapBytes: e.BLOB_DISK_CAP_BYTES,
+      putPerIpPerHour: e.BLOB_PUT_PER_IP_PER_HOUR,
     },
     longStop: { enabled: e.LONGSTOP_ENABLED, intervalMs: e.LONGSTOP_INTERVAL_MS, graceDays: e.LONGSTOP_GRACE_DAYS },
   };
