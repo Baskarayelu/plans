@@ -230,9 +230,9 @@ Sending AUSD to another person or across borders:
 **Demo video (required, up to 2 minutes): pending.** You will send the brief. The app must provide this exact path on mainnet, uninterrupted, between two members in different countries:
 
 1. **Phone B ("Sam, New York"), fresh install:** Create account, one fingerprint, country United States. Home shows $0.00. *(passkey onboarding)*
-2. **Phone A ("Leah, London"), funded beforehand by claim link:** home shows "$3.00 · £2.2x", with the caption "Digital dollars (AUSD)". *(AUSD balance)*
+2. **Phone A ("Leah, London"), funded beforehand by claim link:** open the Send tab. It shows the balance "$3.00 · £2.2x" with the caption "Digital dollars (AUSD)". *(AUSD balance)*
 3. **Phone B:** Profile, then "My Plans code".
-4. **Phone A:** Send, scan Sam's code, enter £1.00. The app shows "Sam gets $1.3x". Confirm.
+4. **Phone A:** on the Send tab, scan Sam's code, enter £1.00. The app shows "Sam gets $1.3x". Confirm.
 5. **Phone B buzzes** "+$1.3x from Leah, London" within about a second. Its balance updates. The receipt shows both currencies, the reference rate, "Settled in 0.x s" and a Proof link to the mainnet transaction. *(completed send and receive, settled instantly)*
 6. **Optional:** Sam sends $0.50 back and Leah's phone receives it.
 
