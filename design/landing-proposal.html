@@ -1,0 +1,647 @@
+<title>Plans Landing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Aceternity "Playful" structure (dotted hero panel with tilted floating cards, section headers with badges, world map),
+   recoloured to the Plans wristband palette: marigold on deep pine. */
+:root {
+  --bg: #F4F6F1;
+  --surface: #FFFFFF;
+  --surface-2: #EAEFE7;
+  --ink: #10231B;
+  --muted: #5A6B62;
+  --line: #D9E0D5;
+  --accent: #F5B83D;
+  --on-accent: #10231B;
+  --pos: #1F7A55;
+  --neg: #B8432F;
+  --info: #2B5F8A;
+  --dot: rgba(16, 35, 27, 0.16);
+  --mapdot: rgba(16, 35, 27, 0.30);
+  --flap: #E3E9DF;
+  --flap-ink: #10231B;
+  --flap-edge: #C9D2C4;
+  --shadow: 0 1px 0 rgba(16, 35, 27, .04), 0 10px 30px -12px rgba(16, 35, 27, .22);
+  --display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1511; --surface: #14201A; --surface-2: #1B2A22; --ink: #E8F0EA; --muted: #93A69A; --line: #26362D;
+    --accent: #F5B83D; --on-accent: #10231B; --pos: #4CC38A; --neg: #FF7A66; --info: #7FB2DE;
+    --dot: rgba(232, 240, 234, 0.10); --mapdot: rgba(232, 240, 234, 0.26);
+    --flap: #16231C; --flap-ink: #F2F6F3; --flap-edge: #050906;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 14px 34px -14px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1511; --surface: #14201A; --surface-2: #1B2A22; --ink: #E8F0EA; --muted: #93A69A; --line: #26362D;
+  --accent: #F5B83D; --on-accent: #10231B; --pos: #4CC38A; --neg: #FF7A66; --info: #7FB2DE;
+  --dot: rgba(232, 240, 234, 0.10); --mapdot: rgba(232, 240, 234, 0.26);
+  --flap: #16231C; --flap-ink: #F2F6F3; --flap-edge: #050906;
+  --shadow: 0 1px 0 rgba(0,0,0,.3), 0 14px 34px -14px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; margin: 0; padding-inline: 16px; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1180px; margin-inline: auto; }
+.mono { font-family: var(--mono); }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* review strip (proposal only) */
+.review { max-width: 1180px; margin: 12px auto 0; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; }
+.review b { color: var(--ink); font-weight: 600; }
+.review label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.slot { display: none; position: absolute; top: 10px; right: 10px; z-index: 30; font: 500 11px/1.2 var(--mono); letter-spacing: .02em; background: var(--surface); color: var(--info); border: 1px dashed var(--info); padding: 4px 8px; border-radius: 6px; }
+body.notes .slot { display: inline-block; }
+
+/* nav */
+nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; margin-top: 12px; }
+nav.top .bar { max-width: 1180px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px 10px 16px; background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 18px; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font: 800 22px/1 var(--display); letter-spacing: -.02em; text-decoration: none; }
+.logo .band { width: 26px; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, var(--ink) 6px 8px); }
+nav.top ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-weight: 500; font-size: 15px; }
+nav.top ul a { text-decoration: none; color: var(--muted); }
+nav.top ul a:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 600 16px/1 var(--body); text-decoration: none; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: inset 0 -2px 0 rgba(16,35,27,.18); }
+.btn-primary:hover { filter: brightness(1.04); }
+.btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
+.btn small { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 999px; background: rgba(16,35,27,.12); }
+nav.top .btn { min-height: 40px; padding: 0 16px; font-size: 14px; }
+@media (max-width: 860px) { nav.top ul { display: none; } }
+
+/* hero (Playful hero panel, recoloured) */
+.hero { position: relative; max-width: 1180px; margin: 20px auto 0; border: 1px solid var(--line); border-radius: 35px; overflow: hidden; background: var(--surface); padding-block: 96px 120px; padding-inline: 20px; isolation: isolate; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -2; background-image: radial-gradient(circle, var(--dot) 1px, transparent 1px); background-size: 12px 12px; }
+.hero-inner { position: relative; z-index: 5; max-width: 760px; margin-inline: auto; text-align: center; display: grid; gap: 26px; justify-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.pill .flags { display: inline-flex; }
+.pill .flags span { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); font-size: 13px; margin-left: -6px; }
+.pill .flags span:first-child { margin-left: 0; }
+h1 { font: 800 clamp(40px, 6.4vw, 76px)/1.0 var(--display); letter-spacing: -.035em; margin: 0; text-wrap: balance; }
+h1 .w { display: inline-block; opacity: 1; transform: none; }
+.js h1 .w { opacity: 0; transform: translateY(18px); filter: blur(6px); animation: word .7s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes word { to { opacity: 1; transform: none; filter: blur(0); } }
+h1 .hl { background: linear-gradient(transparent 62%, var(--accent) 62% 92%, transparent 92%); padding-inline: .06em; }
+.lede { font-size: clamp(17px, 2vw, 20px); color: var(--muted); max-width: 600px; margin: 0; text-wrap: pretty; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.fineprint { font: 500 12px/1.4 var(--mono); color: var(--muted); }
+
+.float { position: absolute; z-index: 1; pointer-events: none; }
+.float > div { animation: bob 7s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.f1 { top: 64px; left: 4%; rotate: -12deg; } .f1 > div { animation-delay: -1s; }
+.f2 { top: 70px; right: 5%; rotate: 9deg; } .f2 > div { animation-delay: -3s; }
+.f3 { bottom: -18px; left: 7%; rotate: 8deg; } .f3 > div { animation-delay: -2s; }
+.f4 { bottom: 26px; right: 4%; rotate: -10deg; } .f4 > div { animation-delay: -4.5s; }
+.f5 { bottom: 150px; left: 1%; rotate: 16deg; } .f5 > div { animation-delay: -5.5s; }
+@media (max-width: 1080px) { .f5 { display: none; } .f1 { left: -40px; } .f2 { right: -60px; } }
+@media (max-width: 760px) { .float { opacity: .55; scale: .72; } .f1 { top: 10px; left: -70px; } .f2 { top: 6px; right: -120px; } .f3 { left: -60px; bottom: -60px; } .f4 { right: -110px; bottom: -40px; } .hero { padding-block: 80px 110px; } }
+
+/* ticket-stub receipt */
+.stub { width: 236px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.stub .top { padding: 14px 16px 12px; display: grid; gap: 6px; }
+.stub .row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.stub .amt { font: 800 26px/1 var(--display); letter-spacing: -.02em; }
+.stub .sub { font: 500 12px/1.3 var(--mono); color: var(--muted); }
+.stub .perf { height: 14px; position: relative; background:
+   radial-gradient(circle at 0 50%, var(--bg) 7px, transparent 7.5px),
+   radial-gradient(circle at 100% 50%, var(--bg) 7px, transparent 7.5px); }
+.stub .perf::after { content: ""; position: absolute; left: 14px; right: 14px; top: 50%; border-top: 1.5px dashed var(--line); }
+.stub .bot { padding: 8px 16px 14px; font: 500 11.5px/1.5 var(--mono); color: var(--muted); }
+.stub .bot b { color: var(--pos); font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--body); padding: 6px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.chip.pos { color: var(--pos); } .chip.neg { color: var(--neg); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; }
+.approve { width: 250px; display: grid; gap: 10px; }
+.approve .who { display: flex; gap: 10px; align-items: center; font-weight: 600; font-size: 14px; }
+.av { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font: 700 14px/1 var(--display); color: var(--on-accent); background: var(--accent); flex: none; }
+.av.b { background: #9ED3B8; } .av.c { background: #F2A28F; } .av.d { background: #A9C7E8; }
+.approve .acts { display: flex; gap: 8px; }
+.approve .acts span { flex: 1; text-align: center; padding: 9px 0; border-radius: 999px; font-weight: 600; font-size: 13px; border: 1px solid var(--line); }
+.approve .acts span.y { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.fx { font: 600 15px/1 var(--mono); display: grid; gap: 8px; width: 208px; }
+.fx .line { display: flex; justify-content: space-between; } .fx .line span:last-child { color: var(--muted); font-weight: 500; }
+.fp { display: inline-flex; gap: 10px; align-items: center; font-weight: 600; font-size: 13px; }
+.fp .emo { font-size: 18px; letter-spacing: 2px; padding: 6px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+
+/* sections */
+section { max-width: 1180px; margin-inline: auto; padding-block: 104px 0; }
+.shead { display: grid; gap: 14px; justify-items: center; text-align: center; margin-bottom: 44px; }
+.badge { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 7px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+h2 { font: 800 clamp(32px, 4.4vw, 52px)/1.04 var(--display); letter-spacing: -.03em; margin: 0; text-wrap: balance; max-width: 820px; }
+.shead p { color: var(--muted); font-size: 18px; margin: 0; max-width: 620px; text-wrap: pretty; }
+
+/* split-flap departure board */
+.board-wrap { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: clamp(14px, 3vw, 34px); box-shadow: var(--shadow); }
+.board-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.board-head .live { color: var(--pos); display: inline-flex; gap: 8px; align-items: center; }
+.board-head .live::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.board { display: grid; grid-template-columns: repeat(22, minmax(0, 1fr)); gap: clamp(2px, .45vw, 5px); }
+.cell { position: relative; aspect-ratio: 3 / 5; border-radius: 3px; background: var(--flap); border: 1px solid var(--flap-edge); overflow: hidden; perspective: 300px; }
+.cell span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 clamp(7px, 1.9vw, 22px)/1 var(--mono); color: var(--flap-ink); }
+.cell::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--flap-edge); opacity: .8; }
+.cell.flip span { animation: flap .11s ease-in; }
+@keyframes flap { 0% { transform: rotateX(70deg); opacity: .4; } 100% { transform: none; opacity: 1; } }
+.cell.ac { background: var(--accent); } .cell.ac span { color: var(--on-accent); }
+.cell.lab span { color: var(--muted); }
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 960px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .steps { grid-template-columns: minmax(0, 1fr); } }
+.step { position: relative; display: grid; gap: 12px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; min-width: 0; }
+.step .n { font: 600 13px/1 var(--mono); color: var(--muted); }
+.step h3 { font: 700 22px/1.15 var(--display); letter-spacing: -.02em; margin: 0; }
+.step p { margin: 0; color: var(--muted); font-size: 15px; }
+.step .demo { margin-top: 6px; min-height: 92px; display: grid; place-items: center; background: var(--surface-2); border-radius: 14px; padding: 12px; }
+.finger { width: 56px; height: 56px; border-radius: 999px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); position: relative; }
+.finger::after { content: ""; position: absolute; inset: -6px; border-radius: 999px; border: 2px solid var(--accent); opacity: 0; animation: ring 2.4s ease-out infinite; }
+@keyframes ring { 0% { opacity: .9; transform: scale(.85); } 70%,100% { opacity: 0; transform: scale(1.3); } }
+
+/* bento */
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+.bx { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 12px; align-content: start; min-width: 0; overflow: hidden; }
+.bx h3 { font: 700 22px/1.15 var(--display); letter-spacing: -.02em; margin: 0; }
+.bx p { margin: 0; color: var(--muted); font-size: 15px; max-width: 46ch; }
+.b1 { grid-column: span 3; } .b2 { grid-column: span 3; } .b3 { grid-column: span 2; } .b4 { grid-column: span 2; } .b5 { grid-column: span 2; }
+@media (max-width: 900px) { .bento { grid-template-columns: minmax(0, 1fr); } .b1, .b2, .b3, .b4, .b5 { grid-column: auto; } }
+.tiers { display: grid; gap: 8px; margin-top: 6px; }
+.tier { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: center; font-size: 14px; }
+.tier .amt { font: 600 14px/1 var(--mono); }
+.tier .bar { height: 30px; border-radius: 10px; background: var(--surface-2); display: flex; align-items: center; padding-inline: 12px; font-weight: 600; font-size: 13px; }
+.tier .bar.go { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.tier .bar.one { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.tier .bar.maj { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
+.budgets { display: grid; gap: 12px; margin-top: 6px; }
+.bud { display: grid; gap: 6px; font-size: 14px; }
+.bud .t { display: flex; justify-content: space-between; } .bud .t span:last-child { font-family: var(--mono); color: var(--muted); font-size: 13px; }
+.bud .track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bud .fill { height: 100%; border-radius: 999px; background: var(--pos); width: var(--w); transform-origin: left; }
+.js .bud .fill { animation: grow 1.4s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes grow { from { transform: scaleX(0); } }
+.bud.over .fill { background: var(--neg); }
+.blocked { font: 600 13px/1.4 var(--body); color: var(--neg); background: color-mix(in srgb, var(--neg) 10%, transparent); border-radius: 12px; padding: 10px 12px; }
+.pause { display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; width: fit-content; }
+.pause i { width: 12px; height: 14px; border-inline: 4px solid var(--ink); }
+
+/* map */
+.mapbox { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; }
+.mapbox svg { display: block; width: 100%; height: auto; }
+.mapdots circle { fill: var(--mapdot); }
+.arc { fill: none; stroke: var(--accent); stroke-width: .45; stroke-linecap: round; stroke-dasharray: 120; stroke-dashoffset: 0; }
+.js .arc { stroke-dashoffset: 120; animation: draw 2.4s cubic-bezier(.3,.6,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.city circle.core { fill: var(--accent); }
+.city circle.halo { fill: var(--accent); opacity: .35; transform-box: fill-box; transform-origin: center; animation: halo 2s ease-out infinite; }
+@keyframes halo { 0% { transform: scale(.6); opacity: .6; } 100% { transform: scale(2.6); opacity: 0; } }
+.city text { font: 600 2.1px var(--mono); fill: var(--ink); }
+.map-note { position: absolute; left: 20px; bottom: 20px; display: grid; gap: 10px; }
+@media (max-width: 760px) { .map-note { position: static; padding: 16px; } }
+.split2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+@media (max-width: 900px) { .split2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.stat { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: grid; gap: 8px; }
+.stat .big { font: 800 clamp(44px, 6vw, 64px)/1 var(--display); letter-spacing: -.04em; }
+.stat .big small { font-size: .42em; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
+.stat p { margin: 0; color: var(--muted); font-size: 15px; }
+.stat .src { font: 500 11.5px/1.4 var(--mono); color: var(--muted); }
+.live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; position: relative; }
+.live-grid div { padding: 22px; border-left: 1px solid var(--line); display: grid; gap: 6px; }
+.live-grid div:first-child { border-left: 0; }
+.live-grid .v { font: 800 36px/1 var(--display); color: var(--muted); }
+.live-grid .k { font-size: 14px; color: var(--muted); }
+@media (max-width: 760px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-grid div:nth-child(3) { border-left: 0; } .live-grid div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+
+/* privacy */
+.priv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+@media (max-width: 900px) { .priv { grid-template-columns: minmax(0, 1fr); } }
+.phones { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.mini { width: 180px; border-radius: 26px; border: 1px solid var(--line); background: var(--bg); padding: 16px 14px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+.mini .lbl { font: 500 11px/1.3 var(--mono); color: var(--muted); }
+
+/* faq */
+.faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+@media (max-width: 760px) { .faq { grid-template-columns: minmax(0, 1fr); } }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+summary { cursor: pointer; font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::after { content: "+"; font: 500 20px/1 var(--mono); color: var(--muted); }
+details[open] summary::after { content: "–"; }
+details p { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+
+/* final cta + footer */
+.final { position: relative; text-align: center; display: grid; gap: 20px; justify-items: center; background: var(--ink); color: var(--bg); border-radius: 35px; padding-block: 72px; padding-inline: 20px; overflow: hidden; }
+.final h2 { color: var(--bg); }
+.final p { color: color-mix(in srgb, var(--bg) 72%, transparent); margin: 0; font-size: 18px; max-width: 540px; }
+.final .fineprint { color: color-mix(in srgb, var(--bg) 60%, transparent); }
+footer { max-width: 1180px; margin: 0 auto; padding-block: 40px 56px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 14px; }
+footer ul { display: flex; flex-wrap: wrap; gap: 18px; list-style: none; padding: 0; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .js h1 .w { opacity: 1; transform: none; filter: none; }
+  .js .arc { stroke-dashoffset: 0; }
+}
+</style>
+
+<div class="review" role="note">
+  <span><b>Landing page proposal</b> · design gate, not the live site. Motion is running. Built on the Aceternity “Playful” template, recoloured.</span>
+  <label for="notes"><input type="checkbox" id="notes"> Show review notes</label>
+</div>
+
+<nav class="top" aria-label="Main">
+  <div class="bar">
+    <a class="logo" href="#top"><span class="band" aria-hidden="true"></span>plans</a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#rules">Group rules</a></li>
+      <li><a href="#borders">Across borders</a></li>
+      <li><a href="#numbers">Numbers</a></li>
+      <li><a href="#faq">Questions</a></li>
+    </ul>
+    <a class="btn btn-primary" href="#get">Get the Android app</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <span class="slot">Base: Playful template hero (dotted panel, tilted cards, word reveal)</span>
+  <div class="float f1" aria-hidden="true"><div>
+    <div class="stub">
+      <div class="top">
+        <div class="row"><span class="sub">Dinner at Taberna</span><span class="chip">🍽 Food</span></div>
+        <div class="amt tnum">$36.00</div>
+        <div class="sub tnum">£26.72 · split 3 ways</div>
+      </div>
+      <div class="perf"></div>
+      <div class="bot">Paid from the Lisbon pot<br><b>Settled in 0.6 s</b></div>
+    </div>
+  </div></div>
+  <div class="float f2" aria-hidden="true"><div>
+    <div class="card approve">
+      <div class="who"><span class="av b">A</span><span>Asha wants <span class="tnum">$250</span> for the boat trip</span></div>
+      <div class="acts"><span>Not now</span><span class="y">Approve</span></div>
+    </div>
+  </div></div>
+  <div class="float f3" aria-hidden="true"><div>
+    <div class="card fx">
+      <div class="line tnum"><span>£1.50</span><span>you send</span></div>
+      <div class="line tnum"><span>$2.02</span><span>Sam gets</span></div>
+      <div class="line"><span style="font-size:11px;font-weight:500;color:var(--muted)">1 GBP = 1.3472 USD · ECB 14:05</span></div>
+    </div>
+  </div></div>
+  <div class="float f4" aria-hidden="true"><div>
+    <div class="card" style="display:grid;gap:10px;width:220px">
+      <div style="font:700 15px/1.2 var(--display)">Settled up 🎉</div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Maya · London</span><span class="chip pos">+£8.20</span></div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Sam · New York</span><span class="chip pos">+$10.40</span></div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Asha · Bengaluru</span><span class="chip neg">−₹350</span></div>
+    </div>
+  </div></div>
+  <div class="float f5" aria-hidden="true"><div>
+    <div class="card fp"><span>Your key</span><span class="emo">🦊🌵🎈</span></div>
+  </div></div>
+
+  <div class="hero-inner">
+    <span class="pill"><span class="flags" aria-hidden="true"><span>🇬🇧</span><span>🇺🇸</span><span>🇮🇳</span><span>🇵🇹</span></span>Friends in four countries, one pot</span>
+    <h1 id="headline">A shared pot for every plan, wherever your <span class="hl">friends</span> live.</h1>
+    <p class="lede">Join with one fingerprint. Spend from the pot under rules the group agrees on. When the plan ends, everyone is settled in one tap, in pounds, dollars or rupees.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#get">Get the Android app <small>Beta · 12 Oct</small></a>
+      <a class="btn btn-ghost" href="#how">See how it works</a>
+    </div>
+    <span class="fineprint">No bank account in common. No app password. Free for groups.</span>
+  </div>
+</header>
+
+<section aria-labelledby="board-title">
+  <div class="shead">
+    <span class="badge">Now boarding</span>
+    <h2 id="board-title">Trips, festivals, house shares. One pot each.</h2>
+  </div>
+  <div class="board-wrap">
+    <span class="slot">Aceternity component: Text Flipping Board (free), recoloured</span>
+    <div class="board-head"><span>Plans departures</span><span class="live">Live feed</span></div>
+    <div class="board" id="board" aria-label="Example plans board"></div>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-title">
+  <div class="shead">
+    <span class="badge">How it works</span>
+    <h2 id="how-title">From the group chat to settled, in four steps</h2>
+    <p>Everything happens in the app. Nobody needs a bank in the same country or anything to set up first.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <span class="n">Step 1</span>
+      <h3>Join with one fingerprint</h3>
+      <p>Tap the invite in your group chat. Your fingerprint creates your account and joins the plan.</p>
+      <div class="demo"><div class="finger" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 11a5 5 0 0 1 10 0v2a9 9 0 0 1-1 4"/><path d="M12 11v3a7 7 0 0 1-2 5"/><path d="M4 9a8 8 0 0 1 16 0"/><path d="M9 14a3 3 0 0 0 0 0v-3a3 3 0 0 1 6 0"/></svg></div></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 2</span>
+      <h3>Add money in your currency</h3>
+      <p>Type £40, $50 or ₹4,000. The pot holds digital dollars and shows everyone their own currency.</p>
+      <div class="demo"><span class="mono tnum" style="font-size:22px;font-weight:600">£40 → $53.89</span></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 3</span>
+      <h3>Spend under the group’s rules</h3>
+      <p>Small spends go straight through. Bigger ones wait for a friend’s yes. Everyone sees it live.</p>
+      <div class="demo"><span class="chip pos">Goes through now · under $25</span></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 4</span>
+      <h3>Settle up in one tap</h3>
+      <p>At the end, one tap pays back everyone who is owed and collects from anyone who owes.</p>
+      <div class="demo"><span class="chip">3 countries · 1 tap · 0.6 s</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="rules" aria-labelledby="rules-title">
+  <div class="shead">
+    <span class="badge">Group rules</span>
+    <h2 id="rules-title">Rules your group sets, kept by the pot itself</h2>
+    <p>Pick Easygoing, Balanced or Strict, then change anything. Nobody, including us, can spend outside the rules.</p>
+  </div>
+  <div class="bento">
+    <div class="bx b1">
+      <span class="slot">Pro block slot: Bento Grids / Feature Sections (needs login)</span>
+      <h3>Small things go through. Big things need a yes.</h3>
+      <p>Balanced, the default: up to $25 is instant, up to $200 needs one friend, above that the majority.</p>
+      <div class="tiers">
+        <div class="tier"><span class="amt">≤ $25</span><span class="bar go">Goes through now</span></div>
+        <div class="tier"><span class="amt">≤ $200</span><span class="bar one">One friend approves</span></div>
+        <div class="tier"><span class="amt">&gt; $200</span><span class="bar maj">Most of the group approves</span></div>
+      </div>
+    </div>
+    <div class="bx b2">
+      <h3>Budgets per category</h3>
+      <p>Set a cap for stay, food or tickets. A spend that would go over is stopped before any money moves.</p>
+      <div class="budgets">
+        <div class="bud"><div class="t"><span>Stay</span><span class="tnum">$480 of $600</span></div><div class="track"><div class="fill" style="--w:80%"></div></div></div>
+        <div class="bud"><div class="t"><span>Tickets & activities</span><span class="tnum">$150 of $400</span></div><div class="track"><div class="fill" style="--w:37.5%"></div></div></div>
+        <div class="bud over"><div class="t"><span>Food & drink</span><span class="tnum">$188 of $200</span></div><div class="track"><div class="fill" style="--w:94%"></div></div></div>
+        <div class="blocked">Over the Food & drink budget by $12. Ask the group to raise it.</div>
+      </div>
+    </div>
+    <div class="bx b3">
+      <h3>Anyone can hit pause</h3>
+      <p>Something looks wrong? Any member can stop all spending for a day while the group sorts it out.</p>
+      <span class="pause"><i aria-hidden="true"></i>Pause spending</span>
+    </div>
+    <div class="bx b4">
+      <h3>Fair disputes</h3>
+      <p>Think a split is wrong? Flag it. The friend who paid can fix it, or the rest of the group decides.</p>
+      <span class="chip">Keep · or · Spender covers</span>
+    </div>
+    <div class="bx b5">
+      <h3>Leave any time</h3>
+      <p>Going home early? Leave the plan and get back what you put in, minus your share so far.</p>
+      <span class="chip pos tnum">Your refund: $61.40</span>
+    </div>
+  </div>
+</section>
+
+<section id="borders" aria-labelledby="borders-title">
+  <div class="shead">
+    <span class="badge">Across borders</span>
+    <h2 id="borders-title">Your friends live in different countries. Your pot doesn’t mind.</h2>
+    <p>Send to a friend in another country and they see it in their own currency in under a second, with the exchange rate on the receipt.</p>
+  </div>
+  <div class="mapbox">
+    <span class="slot">Aceternity component: World Map (from the Playful template), dots theme-aware</span>
+    <svg id="map" viewBox="0 0 126 60" role="img" aria-label="Map with money moving between London, New York, Bengaluru and Lisbon">
+      <g class="mapdots" id="mapdots"></g>
+      <g id="arcs"></g>
+      <g id="cities"></g>
+    </svg>
+  </div>
+  <div class="split2">
+    <div class="bx">
+      <h3>Send to anyone, even without the app</h3>
+      <p>Send a link. Your friend opens it, confirms with their fingerprint and the money is theirs, wherever they are. If nobody claims it in 7 days, it comes back to you.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="chip">🇬🇧 → 🇺🇸 £1.50 = $2.02</span><span class="chip">🇺🇸 → 🇮🇳 $25 = ₹2,090</span><span class="chip">🇮🇳 → 🇬🇧 ₹1,000 = £8.96</span></div>
+    </div>
+    <div class="stub" style="width:auto">
+      <div class="top">
+        <div class="row"><span class="sub">Maya → Sam</span><span class="sub">London → New York</span></div>
+        <div class="amt tnum">$2.02 <span style="font-size:15px;color:var(--muted)">· £1.50</span></div>
+        <div class="sub">Digital dollars (AUSD)</div>
+      </div>
+      <div class="perf"></div>
+      <div class="bot tnum">Rate 1 GBP = 1.3472 USD · ECB 14:05 UTC<br><b>Settled in 0.6 s</b> · Network cost covered by Plans</div>
+    </div>
+  </div>
+</section>
+
+<section id="numbers" aria-labelledby="numbers-title">
+  <div class="shead">
+    <span class="badge">Why it feels instant</span>
+    <h2 id="numbers-title">Built on Monad, measured, not promised</h2>
+    <p>We measured the network on 5 October 2026. These numbers are why a spend reaches every phone before you put yours down.</p>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <span class="slot">Pro block slot: Stats Sections (needs login)</span>
+      <div class="big tnum" data-count="301">301<small>ms</small></div>
+      <p>between blocks, median</p>
+      <span class="src">196 blocks · websocket timing</span>
+    </div>
+    <div class="stat">
+      <div class="big tnum" data-count="0.58" data-dec="2">0.58<small>s</small></div>
+      <p>until a payment is final, median</p>
+      <span class="src">0.65 s at p95 · 93 blocks</span>
+    </div>
+    <div class="stat">
+      <div class="big tnum">$0.0004</div>
+      <p>to send digital dollars, paid by Plans</p>
+      <span class="src">112,910 gas · 102 gwei · MON $0.031</span>
+    </div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="live-grid" aria-label="Live usage, starts at launch">
+    <span class="slot">Live stats page: pending, reads from the Envio indexer</span>
+    <div><span class="v tnum">—</span><span class="k">Plans created</span></div>
+    <div><span class="v tnum">—</span><span class="k">People</span></div>
+    <div><span class="v tnum">—</span><span class="k">Countries</span></div>
+    <div><span class="v tnum">—</span><span class="k">Settled up</span></div>
+  </div>
+  <p class="fineprint" style="text-align:center;margin-top:12px">Live counts start when Plans launches on Monad mainnet. Demo accounts are never counted.</p>
+</section>
+
+<section aria-labelledby="priv-title">
+  <div class="shead">
+    <span class="badge">Private by default</span>
+    <h2 id="priv-title">Your receipts are for your group only</h2>
+  </div>
+  <div class="priv">
+    <div class="bx">
+      <h3>Locked with your fingerprint</h3>
+      <p>Receipt photos, notes and names are encrypted with a key that comes from your passkey. Only people in the plan can open them.</p>
+      <p>New phone? Sign in with the same passkey and everything is back, receipts included. Nothing to copy, nothing to remember.</p>
+    </div>
+    <div class="bx" style="align-content:center">
+      <div class="phones">
+        <div class="mini"><span class="lbl">Your phone</span><span class="fp"><span class="emo">🦊🌵🎈</span></span><span class="lbl">Receipts unlocked</span></div>
+        <div class="mini"><span class="lbl">Your new phone</span><span class="fp"><span class="emo">🦊🌵🎈</span></span><span class="lbl">Same key, same receipts</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-title">
+  <div class="shead">
+    <span class="badge">Questions</span>
+    <h2 id="faq-title">Good questions, short answers</h2>
+  </div>
+  <div class="faq">
+    <details open><summary>What are digital dollars?</summary><p>The pot holds AUSD, a digital dollar issued by Agora and backed one to one by cash and short-term US Treasuries. You see it as dollars, next to your own currency.</p></details>
+    <details><summary>Do I need to know anything about crypto?</summary><p>No. You use your fingerprint. There are no passwords, seed phrases or network fees to pay.</p></details>
+    <details><summary>What if someone owes money at the end?</summary><p>When you join, you choose a small safety net. At settle-up, anything you owe up to that amount is collected from your Plans balance. Anything more is shown as a debt you can pay later.</p></details>
+    <details><summary>Can the organiser run off with the money?</summary><p>No. The pot has no owner. Every spend follows the rules the group agreed, and those rules can only change with the group’s approval.</p></details>
+    <details><summary>Which phones work?</summary><p>Android 9 or newer with a screen lock, for the beta. iPhone comes later.</p></details>
+    <details><summary>How do I get money in and out?</summary><p>For the beta, a friend can send you a link, or you can receive digital dollars from an exchange. Bank and card top-ups are planned.</p></details>
+  </div>
+</section>
+
+<section id="get" aria-labelledby="get-title" style="padding-bottom:40px">
+  <div class="final">
+    <span class="slot">Pro block slot: CTA Sections (needs login)</span>
+    <h2 id="get-title">Start a plan before the group chat goes quiet</h2>
+    <p>The Android beta opens on 12 October. Download the app, start a plan and drop the link in your chat.</p>
+    <a class="btn btn-primary" href="#get">Download for Android <small>Beta · 12 Oct</small></a>
+    <span class="fineprint">Android 9 or newer · free for groups · open source (MIT)</span>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 Plans · Built for Monad Metropolis</span>
+  <ul><li><a href="#how">How it works</a></li><li><a href="#numbers">Numbers</a></li><li><a href="#faq">Questions</a></li><li><span>Docs (soon)</span></li><li><span>GitHub: Baskarayelu/plans</span></li></ul>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.documentElement.classList.add('js');
+
+  /* review notes toggle */
+  var notes = document.getElementById('notes');
+  if (notes) notes.addEventListener('change', function () { document.body.classList.toggle('notes', notes.checked); });
+
+  /* hero word reveal (Playful hero pattern) */
+  var h = document.getElementById('headline');
+  if (h && !reduce) {
+    var i = 0;
+    (function wrap(node) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+        if (n.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            var s = document.createElement('span'); s.className = 'w'; s.textContent = part;
+            s.style.animationDelay = (0.12 + i++ * 0.07) + 's'; frag.appendChild(s);
+          });
+          n.parentNode.replaceChild(frag, n);
+        } else if (n.nodeType === 1) {
+          n.classList.add('w'); n.style.animationDelay = (0.12 + i++ * 0.07) + 's';
+        }
+      });
+    })(h);
+  }
+
+  /* split-flap board (ported from Aceternity Text Flipping Board) */
+  var COLS = 22, ROWS = 6;
+  var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$£₹.,-:/·';
+  var boards = [
+    ['PLAN  LISBON 12-16 OCT', 'WHO   4 · GB US IN PT', 'POT   $1,240.00', 'MEAL  $36.00 SPLIT 3', 'BOAT  $250 APPROVED', 'DONE  SETTLED IN 0.6S'],
+    ['PLAN  GLASTONBURY CREW', 'WHO   6 · GB IE NG', 'POT   $2,310.00', 'TIX   $1,890.00 PAID', 'CAMP  $180 SPLIT 6', 'NOW   ON TRACK'],
+    ['PLAN  WEDDING IN BLR', 'WHO   9 · IN GB US AE', 'POT   $3,050.00', 'STAY  $1,400 OF $1,600', 'GIFT  ₹25,000 SENT', 'NOW   SETTLE SUNDAY']
+  ];
+  var boardEl = document.getElementById('board');
+  var cells = [];
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+    var d = document.createElement('div'); d.className = 'cell' + (c < 6 ? ' lab' : '');
+    var s = document.createElement('span'); s.textContent = ' '; d.appendChild(s);
+    boardEl.appendChild(d); cells.push({ el: d, span: s, cur: ' ', timer: null });
+  }
+  function pad(t) { t = t.toUpperCase(); return (t + ' '.repeat(COLS)).slice(0, COLS); }
+  function setCell(cell, ch, delay) {
+    clearTimeout(cell.timer);
+    if (reduce) { cell.span.textContent = ch === ' ' ? ' ' : ch; cell.cur = ch; return; }
+    if (cell.cur === ch) return;
+    var steps = ch === ' ' ? 6 + Math.floor(Math.random() * 5) : 10 + Math.floor(Math.random() * 12), k = 0;
+    function step() {
+      k++;
+      var last = k >= steps;
+      var show = last ? ch : CHARS[1 + Math.floor(Math.random() * (CHARS.length - 1))];
+      cell.el.classList.toggle('ac', !last && Math.random() < 0.12);
+      cell.span.textContent = show === ' ' ? ' ' : show;
+      cell.el.classList.remove('flip'); void cell.el.offsetWidth; cell.el.classList.add('flip');
+      if (!last) cell.timer = setTimeout(step, 55); else { cell.cur = ch; cell.el.classList.remove('ac'); }
+    }
+    cell.timer = setTimeout(step, delay);
+  }
+  var bi = 0;
+  function show(b) {
+    var lines = boards[b];
+    for (var r = 0; r < ROWS; r++) { var t = pad(lines[r] || ''); for (var c = 0; c < COLS; c++) setCell(cells[r * COLS + c], t[c], c * 30 + r * 20); }
+  }
+  show(0);
+  if (!reduce) setInterval(function () { bi = (bi + 1) % boards.length; show(bi); }, 7000);
+
+  /* world map (Aceternity World Map: dotted-map points + curved arcs) */
+  var DOTS = '8.5,0;22.5,0;23.5,0;24.5,0;25.5,0;29.5,0;32.5,0;33.5,0;34.5,0;35.5,0;36.5,0;37.5,0;45.5,0;46.5,0;47.5,0;48.5,0;49.5,0;50.5,0;51.5,0;52.5,0;53.5,0;54.5,0;72.5,0;82.5,0;86.5,0;87.5,0;88.5,0;89.5,0;90.5,0;91.5,0;92.5,0;93.5,0;94.5,0;95.5,0;96.5,0;97.5,0;98.5,0;99.5,0;100.5,0;101.5,0;102.5,0;103.5,0;104.5,0;105.5,0;106.5,0;107.5,0;108.5,0;109.5,0;110.5,0;111.5,0;112.5,0;113.5,0;114.5,0;115.5,0;116.5,0;6,0.87;7,0.87;8,0.87;9,0.87;10,0.87;11,0.87;18,0.87;23,0.87;24,0.87;25,0.87;26,0.87;27,0.87;30,0.87;33,0.87;34,0.87;35,0.87;36,0.87;37,0.87;38,0.87;39,0.87;44,0.87;45,0.87;46,0.87;47,0.87;48,0.87;49,0.87;50,0.87;51,0.87;52,0.87;53,0.87;54,0.87;71,0.87;72,0.87;73,0.87;87,0.87;88,0.87;90,0.87;91,0.87;92,0.87;93,0.87;94,0.87;95,0.87;96,0.87;97,0.87;98,0.87;99,0.87;100,0.87;101,0.87;102,0.87;103,0.87;104,0.87;105,0.87;106,0.87;107,0.87;108,0.87;109,0.87;110,0.87;111,0.87;112,0.87;113,0.87;114,0.87;115,0.87;116,0.87;117,0.87;118,0.87;119,0.87;6.5,1.73;7.5,1.73;8.5,1.73;9.5,1.73;10.5,1.73;11.5,1.73;12.5,1.73;13.5,1.73;15.5,1.73;16.5,1.73;17.5,1.73;18.5,1.73;19.5,1.73;20.5,1.73;22.5,1.73;23.5,1.73;24.5,1.73;25.5,1.73;26.5,1.73;28.5,1.73;30.5,1.73;33.5,1.73;36.5,1.73;37.5,1.73;38.5,1.73;45.5,1.73;46.5,1.73;47.5,1.73;48.5,1.73;49.5,1.73;50.5,1.73;51.5,1.73;52.5,1.73;53.5,1.73;69.5,1.73;70.5,1.73;71.5,1.73;72.5,1.73;73.5,1.73;74.5,1.73;84.5,1.73;85.5,1.73;87.5,1.73;88.5,1.73;89.5,1.73;90.5,1.73;91.5,1.73;92.5,1.73;93.5,1.73;94.5,1.73;95.5,1.73;96.5,1.73;97.5,1.73;98.5,1.73;99.5,1.73;100.5,1.73;101.5,1.73;102.5,1.73;103.5,1.73;104.5,1.73;105.5,1.73;106.5,1.73;107.5,1.73;108.5,1.73;109.5,1.73;110.5,1.73;111.5,1.73;112.5,1.73;113.5,1.73;114.5,1.73;115.5,1.73;116.5,1.73;117.5,1.73;118.5,1.73;119.5,1.73;120.5,1.73;121.5,1.73;123.5,1.73;124.5,1.73;125.5,1.73;0,2.6;5,2.6;6,2.6;7,2.6;8,2.6;9,2.6;10,2.6;11,2.6;12,2.6;13,2.6;14,2.6;15,2.6;16,2.6;17,2.6;18,2.6;19,2.6;20,2.6;21,2.6;22,2.6;25,2.6;30,2.6;31,2.6;33,2.6;34,2.6;37,2.6;38,2.6;39,2.6;45,2.6;46,2.6;47,2.6;48,2.6;49,2.6;50,2.6;51,2.6;52,2.6;53,2.6;69,2.6;70,2.6;71,2.6;72,2.6;73,2.6;74,2.6;75,2.6;76,2.6;83,2.6;85,2.6;86,2.6;88,2.6;90,2.6;91,2.6;92,2.6;93,2.6;94,2.6;95,2.6;96,2.6;97,2.6;98,2.6;99,2.6;100,2.6;101,2.6;102,2.6;103,2.6;104,2.6;105,2.6;106,2.6;107,2.6;108,2.6;109,2.6;110,2.6;111,2.6;112,2.6;113,2.6;114,2.6;115,2.6;116,2.6;117,2.6;118,2.6;119,2.6;120,2.6;121,2.6;122,2.6;123,2.6;124,2.6;125,2.6;0.5,3.46;5.5,3.46;6.5,3.46;7.5,3.46;8.5,3.46;9.5,3.46;10.5,3.46;11.5,3.46;12.5,3.46;13.5,3.46;14.5,3.46;15.5,3.46;16.5,3.46;17.5,3.46;18.5,3.46;19.5,3.46;20.5,3.46;21.5,3.46;22.5,3.46;23.5,3.46;24.5,3.46;25.5,3.46;26.5,3.46;27.5,3.46;28.5,3.46;29.5,3.46;30.5,3.46;31.5,3.46;32.5,3.46;33.5,3.46;36.5,3.46;37.5,3.46;38.5,3.46;39.5,3.46;44.5,3.46;45.5,3.46;46.5,3.46;47.5,3.46;48.5,3.46;49.5,3.46;50.5,3.46;68.5,3.46;69.5,3.46;70.5,3.46;71.5,3.46;72.5,3.46;73.5,3.46;74.5,3.46;75.5,3.46;76.5,3.46;78.5,3.46;80.5,3.46;81.5,3.46;82.5,3.46;83.5,3.46;84.5,3.46;85.5,3.46;86.5,3.46;87.5,3.46;88.5,3.46;89.5,3.46;90.5,3.46;91.5,3.46;92.5,3.46;93.5,3.46;94.5,3.46;95.5,3.46;96.5,3.46;97.5,3.46;98.5,3.46;99.5,3.46;100.5,3.46;101.5,3.46;102.5,3.46;103.5,3.46;104.5,3.46;105.5,3.46;106.5,3.46;107.5,3.46;108.5,3.46;109.5,3.46;110.5,3.46;111.5,3.46;112.5,3.46;113.5,3.46;114.5,3.46;115.5,3.46;116.5,3.46;117.5,3.46;118.5,3.46;119.5,3.46;120.5,3.46;121.5,3.46;122.5,3.46;123.5,3.46;124.5,3.46;125.5,3.46;0,4.33;1,4.33;2,4.33;6,4.33;7,4.33;8,4.33;9,4.33;10,4.33;11,4.33;12,4.33;13,4.33;14,4.33;15,4.33;16,4.33;17,4.33;18,4.33;19,4.33;20,4.33;21,4.33;22,4.33;23,4.33;24,4.33;25,4.33;26,4.33;27,4.33;28,4.33;29,4.33;30,4.33;31,4.33;32,4.33;33,4.33;38,4.33;39,4.33;40,4.33;41,4.33;45,4.33;46,4.33;47,4.33;48,4.33;49,4.33;50,4.33;68,4.33;69,4.33;70,4.33;71,4.33;72,4.33;73,4.33;74,4.33;76,4.33;77,4.33;79,4.33;80,4.33;81,4.33;82,4.33;83,4.33;84,4.33;85,4.33;86,4.33;87,4.33;88,4.33;89,4.33;90,4.33;91,4.33;92,4.33;93,4.33;94,4.33;95,4.33;96,4.33;97,4.33;98,4.33;99,4.33;100,4.33;101,4.33;102,4.33;103,4.33;104,4.33;105,4.33;106,4.33;107,4.33;108,4.33;109,4.33;110,4.33;111,4.33;112,4.33;113,4.33;114,4.33;115,4.33;116,4.33;117,4.33;118,4.33;119,4.33;120,4.33;121,4.33;122,4.33;123,4.33;124,4.33;125,4.33;0.5,5.2;1.5,5.2;2.5,5.2;4.5,5.2;5.5,5.2;6.5,5.2;7.5,5.2;8.5,5.2;9.5,5.2;10.5,5.2;11.5,5.2;12.5,5.2;13.5,5.2;14.5,5.2;15.5,5.2;16.5,5.2;17.5,5.2;18.5,5.2;19.5,5.2;20.5,5.2;21.5,5.2;22.5,5.2;23.5,5.2;24.5,5.2;25.5,5.2;26.5,5.2;27.5,5.2;28.5,5.2;29.5,5.2;30.5,5.2;31.5,5.2;32.5,5.2;37.5,5.2;38.5,5.2;40.5,5.2;44.5,5.2;45.5,5.2;46.5,5.2;47.5,5.2;48.5,5.2;55.5,5.2;56.5,5.2;57.5,5.2;67.5,5.2;68.5,5.2;69.5,5.2;70.5,5.2;72.5,5.2;73.5,5.2;74.5,5.2;77.5,5.2;78.5,5.2;79.5,5.2;80.5,5.2;81.5,5.2;82.5,5.2;83.5,5.2;84.5,5.2;85.5,5.2;86.5,5.2;87.5,5.2;88.5,5.2;89.5,5.2;90.5,5.2;91.5,5.2;92.5,5.2;93.5,5.2;94.5,5.2;95.5,5.2;96.5,5.2;97.5,5.2;98.5,5.2;99.5,5.2;100.5,5.2;101.5,5.2;102.5,5.2;103.5,5.2;104.5,5.2;105.5,5.2;106.5,5.2;107.5,5.2;108.5,5.2;109.5,5.2;110.5,5.2;111.5,5.2;112.5,5.2;113.5,5.2;114.5,5.2;115.5,5.2;116.5,5.2;117.5,5.2;118.5,5.2;119.5,5.2;120.5,5.2;121.5,5.2;122.5,5.2;123.5,5.2;124.5,5.2;125.5,5.2;2,6.06;5,6.06;7,6.06;8,6.06;9,6.06;10,6.06;11,6.06;12,6.06;13,6.06;14,6.06;15,6.06;16,6.06;17,6.06;18,6.06;19,6.06;20,6.06;21,6.06;22,6.06;23,6.06;24,6.06;25,6.06;26,6.06;27,6.06;28,6.06;29,6.06;30,6.06;31,6.06;32,6.06;33,6.06;34,6.06;36,6.06;37,6.06;38,6.06;39,6.06;45,6.06;46,6.06;47,6.06;48,6.06;56,6.06;57,6.06;67,6.06;68,6.06;69,6.06;70,6.06;72,6.06;73,6.06;74,6.06;75,6.06;76,6.06;77,6.06;78,6.06;79,6.06;80,6.06;81,6.06;82,6.06;83,6.06;84,6.06;85,6.06;86,6.06;87,6.06;88,6.06;89,6.06;90,6.06;91,6.06;92,6.06;93,6.06;94,6.06;95,6.06;96,6.06;97,6.06;98,6.06;99,6.06;100,6.06;101,6.06;102,6.06;103,6.06;104,6.06;105,6.06;106,6.06;107,6.06;108,6.06;109,6.06;110,6.06;111,6.06;112,6.06;113,6.06;114,6.06;115,6.06;116,6.06;117,6.06;118,6.06;119,6.06;120,6.06;121,6.06;122,6.06;123,6.06;124,6.06;125,6.06;6.5,6.93;7.5,6.93;8.5,6.93;9.5,6.93;10.5,6.93;11.5,6.93;12.5,6.93;13.5,6.93;14.5,6.93;15.5,6.93;16.5,6.93;17.5,6.93;18.5,6.93;19.5,6.93;20.5,6.93;21.5,6.93;22.5,6.93;23.5,6.93;24.5,6.93;25.5,6.93;26.5,6.93;27.5,6.93;28.5,6.93;29.5,6.93;30.5,6.93;34.5,6.93;38.5,6.93;39.5,6.93;45.5,6.93;46.5,6.93;47.5,6.93;66.5,6.93;67.5,6.93;68.5,6.93;69.5,6.93;71.5,6.93;72.5,6.93;73.5,6.93;74.5,6.93;75.5,6.93;76.5,6.93;77.5,6.93;78.5,6.93;79.5,6.93;80.5,6.93;81.5,6.93;82.5,6.93;83.5,6.93;84.5,6.93;85.5,6.93;86.5,6.93;87.5,6.93;88.5,6.93;89.5,6.93;90.5,6.93;91.5,6.93;92.5,6.93;93.5,6.93;94.5,6.93;95.5,6.93;96.5,6.93;97.5,6.93;98.5,6.93;99.5,6.93;100.5,6.93;101.5,6.93;102.5,6.93;103.5,6.93;104.5,6.93;105.5,6.93;106.5,6.93;107.5,6.93;108.5,6.93;109.5,6.93;110.5,6.93;111.5,6.93;112.5,6.93;113.5,6.93;114.5,6.93;115.5,6.93;116.5,6.93;117.5,6.93;118.5,6.93;119.5,6.93;120.5,6.93;121.5,6.93;122.5,6.93;123.5,6.93;124.5,6.93;125.5,6.93;5,7.79;6,7.79;7,7.79;8,7.79;9,7.79;10,7.79;11,7.79;12,7.79;13,7.79;14,7.79;15,7.79;16,7.79;17,7.79;18,7.79;19,7.79;20,7.79;21,7.79;22,7.79;23,7.79;24,7.79;25,7.79;26,7.79;27,7.79;28,7.79;29,7.79;30,7.79;35,7.79;36,7.79;37,7.79;39,7.79;46,7.79;47,7.79;65,7.79;66,7.79;67,7.79;68,7.79;69,7.79;71,7.79;72,7.79;73,7.79;74,7.79;75,7.79;76,7.79;77,7.79;78,7.79;79,7.79;80,7.79;81,7.79;82,7.79;83,7.79;84,7.79;85,7.79;86,7.79;87,7.79;88,7.79;89,7.79;90,7.79;91,7.79;92,7.79;93,7.79;94,7.79;95,7.79;96,7.79;97,7.79;98,7.79;99,7.79;100,7.79;101,7.79;102,7.79;103,7.79;104,7.79;105,7.79;106,7.79;107,7.79;108,7.79;109,7.79;110,7.79;111,7.79;112,7.79;113,7.79;114,7.79;115,7.79;116,7.79;117,7.79;118,7.79;119,7.79;120,7.79;121,7.79;122,7.79;123,7.79;124,7.79;125,7.79;5.5,8.66;6.5,8.66;7.5,8.66;8.5,8.66;9.5,8.66;10.5,8.66;11.5,8.66;12.5,8.66;13.5,8.66;14.5,8.66;15.5,8.66;16.5,8.66;17.5,8.66;18.5,8.66;19.5,8.66;20.5,8.66;21.5,8.66;22.5,8.66;23.5,8.66;24.5,8.66;25.5,8.66;26.5,8.66;27.5,8.66;28.5,8.66;29.5,8.66;36.5,8.66;37.5,8.66;46.5,8.66;47.5,8.66;65.5,8.66;66.5,8.66;67.5,8.66;68.5,8.66;71.5,8.66;72.5,8.66;73.5,8.66;74.5,8.66;75.5,8.66;76.5,8.66;77.5,8.66;78.5,8.66;79.5,8.66;80.5,8.66;81.5,8.66;82.5,8.66;83.5,8.66;84.5,8.66;85.5,8.66;86.5,8.66;87.5,8.66;88.5,8.66;89.5,8.66;90.5,8.66;91.5,8.66;92.5,8.66;93.5,8.66;94.5,8.66;95.5,8.66;96.5,8.66;97.5,8.66;98.5,8.66;99.5,8.66;100.5,8.66;101.5,8.66;102.5,8.66;103.5,8.66;104.5,8.66;105.5,8.66;106.5,8.66;107.5,8.66;108.5,8.66;109.5,8.66;110.5,8.66;111.5,8.66;112.5,8.66;113.5,8.66;114.5,8.66;115.5,8.66;116.5,8.66;117.5,8.66;119.5,8.66;121.5,8.66;122.5,8.66;123.5,8.66;6,9.53;7,9.53;8,9.53;9,9.53;10,9.53;14,9.53;15,9.53;16,9.53;17,9.53;18,9.53;19,9.53;20,9.53;21,9.53;22,9.53;23,9.53;24,9.53;25,9.53;26,9.53;27,9.53;28,9.53;29,9.53;36,9.53;37,9.53;38,9.53;65,9.53;66,9.53;67,9.53;68,9.53;69,9.53;74,9.53;75,9.53;76,9.53;77,9.53;78,9.53;79,9.53;80,9.53;81,9.53;82,9.53;83,9.53;84,9.53;85,9.53;86,9.53;87,9.53;88,9.53;89,9.53;90,9.53;91,9.53;92,9.53;93,9.53;94,9.53;95,9.53;96,9.53;97,9.53;98,9.53;99,9.53;100,9.53;101,9.53;102,9.53;103,9.53;104,9.53;105,9.53;106,9.53;107,9.53;108,9.53;109,9.53;110,9.53;111,9.53;112,9.53;113,9.53;114,9.53;115,9.53;116,9.53;117,9.53;120,9.53;121,9.53;8.5,10.39;14.5,10.39;15.5,10.39;16.5,10.39;17.5,10.39;18.5,10.39;19.5,10.39;20.5,10.39;21.5,10.39;22.5,10.39;23.5,10.39;24.5,10.39;25.5,10.39;26.5,10.39;27.5,10.39;28.5,10.39;29.5,10.39;35.5,10.39;36.5,10.39;37.5,10.39;38.5,10.39;40.5,10.39;65.5,10.39;67.5,10.39;68.5,10.39;71.5,10.39;72.5,10.39;73.5,10.39;74.5,10.39;75.5,10.39;76.5,10.39;77.5,10.39;78.5,10.39;79.5,10.39;80.5,10.39;81.5,10.39;82.5,10.39;83.5,10.39;84.5,10.39;85.5,10.39;86.5,10.39;87.5,10.39;88.5,10.39;89.5,10.39;90.5,10.39;91.5,10.39;92.5,10.39;93.5,10.39;94.5,10.39;95.5,10.39;96.5,10.39;97.5,10.39;98.5,10.39;99.5,10.39;100.5,10.39;101.5,10.39;102.5,10.39;103.5,10.39;104.5,10.39;105.5,10.39;106.5,10.39;107.5,10.39;108.5,10.39;109.5,10.39;110.5,10.39;111.5,10.39;112.5,10.39;119.5,10.39;9,11.26;16,11.26;17,11.26;18,11.26;19,11.26;20,11.26;21,11.26;22,11.26;23,11.26;24,11.26;25,11.26;26,11.26;27,11.26;28,11.26;29,11.26;30,11.26;36,11.26;37,11.26;38,11.26;39,11.26;40,11.26;41,11.26;61,11.26;62,11.26;68,11.26;71,11.26;72,11.26;73,11.26;74,11.26;75,11.26;76,11.26;77,11.26;78,11.26;79,11.26;80,11.26;81,11.26;82,11.26;83,11.26;84,11.26;85,11.26;86,11.26;87,11.26;88,11.26;89,11.26;90,11.26;91,11.26;92,11.26;93,11.26;94,11.26;95,11.26;96,11.26;97,11.26;98,11.26;99,11.26;100,11.26;101,11.26;102,11.26;103,11.26;104,11.26;105,11.26;106,11.26;107,11.26;108,11.26;109,11.26;110,11.26;111,11.26;112,11.26;119,11.26;120,11.26;16.5,12.12;17.5,12.12;18.5,12.12;19.5,12.12;20.5,12.12;21.5,12.12;22.5,12.12;23.5,12.12;24.5,12.12;25.5,12.12;26.5,12.12;27.5,12.12;28.5,12.12;29.5,12.12;30.5,12.12;31.5,12.12;36.5,12.12;37.5,12.12;38.5,12.12;39.5,12.12;40.5,12.12;61.5,12.12;66.5,12.12;67.5,12.12;70.5,12.12;71.5,12.12;72.5,12.12;73.5,12.12;74.5,12.12;75.5,12.12;76.5,12.12;77.5,12.12;78.5,12.12;79.5,12.12;80.5,12.12;81.5,12.12;82.5,12.12;83.5,12.12;84.5,12.12;85.5,12.12;86.5,12.12;87.5,12.12;88.5,12.12;89.5,12.12;90.5,12.12;91.5,12.12;92.5,12.12;93.5,12.12;94.5,12.12;95.5,12.12;96.5,12.12;97.5,12.12;98.5,12.12;99.5,12.12;100.5,12.12;101.5,12.12;102.5,12.12;103.5,12.12;104.5,12.12;105.5,12.12;106.5,12.12;107.5,12.12;108.5,12.12;109.5,12.12;110.5,12.12;118.5,12.12;119.5,12.12;18,12.99;19,12.99;20,12.99;21,12.99;22,12.99;23,12.99;24,12.99;25,12.99;26,12.99;27,12.99;28,12.99;29,12.99;30,12.99;31,12.99;32,12.99;33,12.99;34,12.99;35,12.99;36,12.99;37,12.99;38,12.99;39,12.99;40,12.99;41,12.99;42,12.99;62,12.99;69,12.99;70,12.99;71,12.99;72,12.99;73,12.99;74,12.99;75,12.99;76,12.99;77,12.99;78,12.99;79,12.99;80,12.99;81,12.99;82,12.99;83,12.99;84,12.99;85,12.99;86,12.99;87,12.99;88,12.99;89,12.99;90,12.99;91,12.99;92,12.99;93,12.99;94,12.99;95,12.99;96,12.99;97,12.99;98,12.99;99,12.99;100,12.99;101,12.99;102,12.99;103,12.99;104,12.99;105,12.99;106,12.99;107,12.99;108,12.99;109,12.99;110,12.99;118,12.99;119,12.99;16.5,13.86;18.5,13.86;19.5,13.86;20.5,13.86;21.5,13.86;22.5,13.86;23.5,13.86;24.5,13.86;25.5,13.86;26.5,13.86;27.5,13.86;28.5,13.86;29.5,13.86;30.5,13.86;31.5,13.86;32.5,13.86;33.5,13.86;35.5,13.86;36.5,13.86;37.5,13.86;38.5,13.86;39.5,13.86;40.5,13.86;41.5,13.86;42.5,13.86;60.5,13.86;61.5,13.86;62.5,13.86;65.5,13.86;66.5,13.86;67.5,13.86;68.5,13.86;69.5,13.86;70.5,13.86;71.5,13.86;72.5,13.86;73.5,13.86;74.5,13.86;75.5,13.86;76.5,13.86;77.5,13.86;78.5,13.86;79.5,13.86;80.5,13.86;81.5,13.86;82.5,13.86;83.5,13.86;84.5,13.86;85.5,13.86;86.5,13.86;87.5,13.86;88.5,13.86;89.5,13.86;90.5,13.86;91.5,13.86;92.5,13.86;93.5,13.86;94.5,13.86;95.5,13.86;96.5,13.86;97.5,13.86;98.5,13.86;99.5,13.86;100.5,13.86;101.5,13.86;102.5,13.86;103.5,13.86;104.5,13.86;105.5,13.86;106.5,13.86;107.5,13.86;108.5,13.86;109.5,13.86;110.5,13.86;111.5,13.86;112.5,13.86;118.5,13.86;18,14.72;19,14.72;20,14.72;21,14.72;22,14.72;23,14.72;24,14.72;25,14.72;26,14.72;27,14.72;28,14.72;29,14.72;30,14.72;31,14.72;32,14.72;33,14.72;34,14.72;36,14.72;37,14.72;38,14.72;39,14.72;40,14.72;41,14.72;42,14.72;43,14.72;60,14.72;62,14.72;63,14.72;65,14.72;66,14.72;67,14.72;68,14.72;69,14.72;70,14.72;71,14.72;72,14.72;73,14.72;74,14.72;75,14.72;76,14.72;77,14.72;78,14.72;79,14.72;80,14.72;81,14.72;82,14.72;83,14.72;84,14.72;85,14.72;86,14.72;87,14.72;88,14.72;89,14.72;90,14.72;91,14.72;92,14.72;93,14.72;94,14.72;95,14.72;96,14.72;97,14.72;98,14.72;99,14.72;100,14.72;101,14.72;102,14.72;103,14.72;104,14.72;105,14.72;106,14.72;107,14.72;108,14.72;109,14.72;110,14.72;111,14.72;112,14.72;113,14.72;18.5,15.59;19.5,15.59;20.5,15.59;21.5,15.59;22.5,15.59;23.5,15.59;24.5,15.59;25.5,15.59;26.5,15.59;27.5,15.59;28.5,15.59;29.5,15.59;30.5,15.59;31.5,15.59;32.5,15.59;33.5,15.59;34.5,15.59;35.5,15.59;36.5,15.59;37.5,15.59;38.5,15.59;39.5,15.59;41.5,15.59;63.5,15.59;64.5,15.59;65.5,15.59;66.5,15.59;67.5,15.59;68.5,15.59;69.5,15.59;70.5,15.59;71.5,15.59;72.5,15.59;73.5,15.59;74.5,15.59;75.5,15.59;76.5,15.59;77.5,15.59;78.5,15.59;79.5,15.59;80.5,15.59;81.5,15.59;82.5,15.59;83.5,15.59;84.5,15.59;85.5,15.59;86.5,15.59;87.5,15.59;88.5,15.59;89.5,15.59;90.5,15.59;91.5,15.59;92.5,15.59;93.5,15.59;94.5,15.59;95.5,15.59;96.5,15.59;97.5,15.59;98.5,15.59;99.5,15.59;100.5,15.59;101.5,15.59;102.5,15.59;103.5,15.59;104.5,15.59;105.5,15.59;106.5,15.59;107.5,15.59;108.5,15.59;109.5,15.59;110.5,15.59;111.5,15.59;113.5,15.59;20,16.45;21,16.45;22,16.45;23,16.45;24,16.45;25,16.45;26,16.45;27,16.45;28,16.45;29,16.45;30,16.45;31,16.45;32,16.45;33,16.45;34,16.45;35,16.45;36,16.45;37,16.45;38,16.45;40,16.45;43,16.45;44,16.45;62,16.45;63,16.45;64,16.45;65,16.45;66,16.45;67,16.45;68,16.45;69,16.45;70,16.45;71,16.45;72,16.45;73,16.45;74,16.45;75,16.45;76,16.45;77,16.45;78,16.45;79,16.45;80,16.45;81,16.45;82,16.45;83,16.45;84,16.45;85,16.45;86,16.45;87,16.45;88,16.45;89,16.45;90,16.45;91,16.45;92,16.45;93,16.45;94,16.45;95,16.45;96,16.45;97,16.45;98,16.45;99,16.45;100,16.45;101,16.45;102,16.45;103,16.45;104,16.45;105,16.45;106,16.45;107,16.45;108,16.45;109,16.45;110,16.45;111,16.45;112,16.45;113,16.45;19.5,17.32;20.5,17.32;21.5,17.32;22.5,17.32;23.5,17.32;24.5,17.32;25.5,17.32;26.5,17.32;27.5,17.32;28.5,17.32;29.5,17.32;30.5,17.32;31.5,17.32;32.5,17.32;33.5,17.32;34.5,17.32;35.5,17.32;36.5,17.32;37.5,17.32;38.5,17.32;39.5,17.32;43.5,17.32;62.5,17.32;63.5,17.32;64.5,17.32;65.5,17.32;66.5,17.32;67.5,17.32;68.5,17.32;69.5,17.32;70.5,17.32;71.5,17.32;72.5,17.32;73.5,17.32;74.5,17.32;75.5,17.32;77.5,17.32;78.5,17.32;79.5,17.32;80.5,17.32;81.5,17.32;82.5,17.32;83.5,17.32;84.5,17.32;85.5,17.32;86.5,17.32;87.5,17.32;88.5,17.32;89.5,17.32;90.5,17.32;91.5,17.32;92.5,17.32;93.5,17.32;94.5,17.32;95.5,17.32;96.5,17.32;97.5,17.32;98.5,17.32;99.5,17.32;100.5,17.32;101.5,17.32;102.5,17.32;103.5,17.32;104.5,17.32;105.5,17.32;106.5,17.32;107.5,17.32;108.5,17.32;109.5,17.32;110.5,17.32;111.5,17.32;20,18.19;21,18.19;22,18.19;23,18.19;24,18.19;25,18.19;26,18.19;27,18.19;28,18.19;29,18.19;30,18.19;31,18.19;32,18.19;33,18.19;34,18.19;35,18.19;36,18.19;37,18.19;38,18.19;39,18.19;41,18.19;63,18.19;64,18.19;65,18.19;66,18.19;67,18.19;68,18.19;69,18.19;70,18.19;71,18.19;72,18.19;73,18.19;75,18.19;76,18.19;77,18.19;78,18.19;79,18.19;82,18.19;83,18.19;84,18.19;85,18.19;86,18.19;87,18.19;88,18.19;89,18.19;90,18.19;91,18.19;92,18.19;93,18.19;94,18.19;95,18.19;96,18.19;97,18.19;98,18.19;99,18.19;100,18.19;101,18.19;102,18.19;103,18.19;104,18.19;105,18.19;106,18.19;107,18.19;108,18.19;109,18.19;110,18.19;111,18.19;113,18.19;19.5,19.05;20.5,19.05;21.5,19.05;22.5,19.05;23.5,19.05;24.5,19.05;25.5,19.05;26.5,19.05;27.5,19.05;28.5,19.05;29.5,19.05;30.5,19.05;31.5,19.05;32.5,19.05;33.5,19.05;34.5,19.05;35.5,19.05;36.5,19.05;37.5,19.05;60.5,19.05;62.5,19.05;63.5,19.05;64.5,19.05;67.5,19.05;69.5,19.05;70.5,19.05;71.5,19.05;72.5,19.05;77.5,19.05;78.5,19.05;79.5,19.05;81.5,19.05;82.5,19.05;83.5,19.05;84.5,19.05;85.5,19.05;86.5,19.05;87.5,19.05;88.5,19.05;89.5,19.05;90.5,19.05;91.5,19.05;92.5,19.05;93.5,19.05;94.5,19.05;95.5,19.05;96.5,19.05;97.5,19.05;98.5,19.05;99.5,19.05;100.5,19.05;101.5,19.05;102.5,19.05;103.5,19.05;104.5,19.05;105.5,19.05;106.5,19.05;107.5,19.05;108.5,19.05;109.5,19.05;113.5,19.05;20,19.92;21,19.92;22,19.92;23,19.92;24,19.92;25,19.92;26,19.92;27,19.92;28,19.92;29,19.92;30,19.92;31,19.92;32,19.92;33,19.92;34,19.92;35,19.92;36,19.92;37,19.92;38,19.92;60,19.92;61,19.92;62,19.92;63,19.92;68,19.92;70,19.92;71,19.92;72,19.92;75,19.92;78,19.92;79,19.92;80,19.92;82,19.92;83,19.92;84,19.92;85,19.92;86,19.92;87,19.92;88,19.92;89,19.92;90,19.92;91,19.92;92,19.92;93,19.92;94,19.92;95,19.92;96,19.92;97,19.92;98,19.92;99,19.92;100,19.92;101,19.92;102,19.92;103,19.92;104,19.92;105,19.92;106,19.92;107,19.92;108,19.92;19.5,20.78;20.5,20.78;21.5,20.78;22.5,20.78;23.5,20.78;24.5,20.78;25.5,20.78;26.5,20.78;27.5,20.78;28.5,20.78;29.5,20.78;30.5,20.78;31.5,20.78;32.5,20.78;33.5,20.78;34.5,20.78;35.5,20.78;36.5,20.78;60.5,20.78;61.5,20.78;62.5,20.78;68.5,20.78;70.5,20.78;72.5,20.78;73.5,20.78;74.5,20.78;75.5,20.78;76.5,20.78;77.5,20.78;78.5,20.78;79.5,20.78;82.5,20.78;83.5,20.78;84.5,20.78;85.5,20.78;86.5,20.78;87.5,20.78;88.5,20.78;89.5,20.78;90.5,20.78;91.5,20.78;92.5,20.78;93.5,20.78;94.5,20.78;95.5,20.78;96.5,20.78;97.5,20.78;98.5,20.78;99.5,20.78;100.5,20.78;101.5,20.78;102.5,20.78;103.5,20.78;104.5,20.78;107.5,20.78;112.5,20.78;20,21.65;21,21.65;22,21.65;23,21.65;24,21.65;25,21.65;26,21.65;27,21.65;28,21.65;29,21.65;30,21.65;31,21.65;32,21.65;33,21.65;34,21.65;35,21.65;36,21.65;60,21.65;61,21.65;62,21.65;68,21.65;71,21.65;73,21.65;74,21.65;75,21.65;76,21.65;77,21.65;78,21.65;79,21.65;80,21.65;82,21.65;83,21.65;84,21.65;85,21.65;86,21.65;87,21.65;88,21.65;89,21.65;90,21.65;91,21.65;92,21.65;93,21.65;94,21.65;95,21.65;96,21.65;97,21.65;98,21.65;99,21.65;100,21.65;101,21.65;102,21.65;103,21.65;104,21.65;108,21.65;112,21.65;20.5,22.52;21.5,22.52;22.5,22.52;23.5,22.52;24.5,22.52;25.5,22.52;26.5,22.52;27.5,22.52;28.5,22.52;29.5,22.52;30.5,22.52;31.5,22.52;32.5,22.52;33.5,22.52;34.5,22.52;35.5,22.52;63.5,22.52;64.5,22.52;65.5,22.52;66.5,22.52;76.5,22.52;77.5,22.52;78.5,22.52;79.5,22.52;80.5,22.52;81.5,22.52;82.5,22.52;83.5,22.52;84.5,22.52;85.5,22.52;86.5,22.52;87.5,22.52;88.5,22.52;89.5,22.52;90.5,22.52;91.5,22.52;92.5,22.52;93.5,22.52;94.5,22.52;95.5,22.52;96.5,22.52;97.5,22.52;98.5,22.52;99.5,22.52;100.5,22.52;101.5,22.52;102.5,22.52;103.5,22.52;104.5,22.52;108.5,22.52;111.5,22.52;112.5,22.52;22,23.38;23,23.38;24,23.38;25,23.38;26,23.38;27,23.38;28,23.38;29,23.38;30,23.38;31,23.38;32,23.38;33,23.38;34,23.38;35,23.38;61,23.38;62,23.38;63,23.38;64,23.38;65,23.38;66,23.38;76,23.38;77,23.38;78,23.38;79,23.38;80,23.38;81,23.38;82,23.38;83,23.38;84,23.38;85,23.38;86,23.38;87,23.38;88,23.38;89,23.38;90,23.38;91,23.38;92,23.38;93,23.38;94,23.38;95,23.38;96,23.38;97,23.38;98,23.38;99,23.38;100,23.38;101,23.38;102,23.38;103,23.38;104,23.38;105,23.38;109,23.38;110,23.38;22.5,24.25;23.5,24.25;24.5,24.25;25.5,24.25;26.5,24.25;27.5,24.25;28.5,24.25;29.5,24.25;30.5,24.25;31.5,24.25;32.5,24.25;33.5,24.25;60.5,24.25;61.5,24.25;62.5,24.25;63.5,24.25;64.5,24.25;65.5,24.25;66.5,24.25;67.5,24.25;70.5,24.25;71.5,24.25;75.5,24.25;76.5,24.25;77.5,24.25;78.5,24.25;79.5,24.25;80.5,24.25;81.5,24.25;82.5,24.25;83.5,24.25;84.5,24.25;85.5,24.25;86.5,24.25;87.5,24.25;88.5,24.25;89.5,24.25;90.5,24.25;91.5,24.25;92.5,24.25;93.5,24.25;94.5,24.25;95.5,24.25;96.5,24.25;97.5,24.25;98.5,24.25;99.5,24.25;100.5,24.25;101.5,24.25;102.5,24.25;103.5,24.25;104.5,24.25;105.5,24.25;24,25.11;25,25.11;26,25.11;27,25.11;28,25.11;29,25.11;31,25.11;33,25.11;34,25.11;60,25.11;61,25.11;62,25.11;63,25.11;64,25.11;65,25.11;66,25.11;67,25.11;68,25.11;69,25.11;70,25.11;71,25.11;72,25.11;73,25.11;74,25.11;75,25.11;76,25.11;77,25.11;78,25.11;79,25.11;81,25.11;82,25.11;83,25.11;84,25.11;85,25.11;86,25.11;87,25.11;88,25.11;89,25.11;90,25.11;91,25.11;92,25.11;93,25.11;94,25.11;95,25.11;96,25.11;97,25.11;98,25.11;99,25.11;100,25.11;101,25.11;102,25.11;103,25.11;104,25.11;105,25.11;24.5,25.98;25.5,25.98;26.5,25.98;27.5,25.98;28.5,25.98;34.5,25.98;58.5,25.98;59.5,25.98;60.5,25.98;61.5,25.98;62.5,25.98;63.5,25.98;64.5,25.98;65.5,25.98;66.5,25.98;67.5,25.98;68.5,25.98;69.5,25.98;70.5,25.98;71.5,25.98;72.5,25.98;73.5,25.98;74.5,25.98;75.5,25.98;76.5,25.98;77.5,25.98;78.5,25.98;79.5,25.98;81.5,25.98;82.5,25.98;83.5,25.98;84.5,25.98;85.5,25.98;86.5,25.98;87.5,25.98;88.5,25.98;89.5,25.98;90.5,25.98;91.5,25.98;92.5,25.98;93.5,25.98;94.5,25.98;95.5,25.98;96.5,25.98;97.5,25.98;98.5,25.98;99.5,25.98;100.5,25.98;101.5,25.98;102.5,25.98;103.5,25.98;104.5,25.98;25,26.85;26,26.85;27,26.85;28,26.85;58,26.85;59,26.85;60,26.85;61,26.85;62,26.85;63,26.85;64,26.85;65,26.85;66,26.85;67,26.85;68,26.85;69,26.85;70,26.85;71,26.85;72,26.85;73,26.85;74,26.85;75,26.85;77,26.85;78,26.85;79,26.85;80,26.85;81,26.85;85,26.85;86,26.85;87,26.85;88,26.85;89,26.85;90,26.85;91,26.85;92,26.85;93,26.85;94,26.85;95,26.85;96,26.85;97,26.85;98,26.85;99,26.85;100,26.85;101,26.85;102,26.85;103,26.85;104,26.85;26.5,27.71;27.5,27.71;28.5,27.71;34.5,27.71;57.5,27.71;58.5,27.71;59.5,27.71;60.5,27.71;61.5,27.71;62.5,27.71;63.5,27.71;64.5,27.71;65.5,27.71;66.5,27.71;67.5,27.71;68.5,27.71;69.5,27.71;70.5,27.71;71.5,27.71;72.5,27.71;73.5,27.71;74.5,27.71;75.5,27.71;77.5,27.71;78.5,27.71;79.5,27.71;80.5,27.71;81.5,27.71;82.5,27.71;83.5,27.71;87.5,27.71;88.5,27.71;89.5,27.71;90.5,27.71;91.5,27.71;92.5,27.71;93.5,27.71;94.5,27.71;95.5,27.71;96.5,27.71;97.5,27.71;98.5,27.71;99.5,27.71;100.5,27.71;101.5,27.71;102.5,27.71;103.5,27.71;105.5,27.71;8,28.58;26,28.58;27,28.58;28,28.58;32,28.58;36,28.58;58,28.58;59,28.58;60,28.58;61,28.58;62,28.58;63,28.58;64,28.58;65,28.58;66,28.58;67,28.58;68,28.58;69,28.58;70,28.58;71,28.58;72,28.58;73,28.58;74,28.58;75,28.58;76,28.58;77,28.58;78,28.58;79,28.58;80,28.58;81,28.58;82,28.58;83,28.58;88,28.58;89,28.58;90,28.58;91,28.58;92,28.58;93,28.58;96,28.58;97,28.58;98,28.58;99,28.58;100,28.58;27.5,29.44;28.5,29.44;29.5,29.44;30.5,29.44;31.5,29.44;37.5,29.44;38.5,29.44;39.5,29.44;57.5,29.44;58.5,29.44;59.5,29.44;60.5,29.44;61.5,29.44;62.5,29.44;63.5,29.44;64.5,29.44;65.5,29.44;66.5,29.44;67.5,29.44;68.5,29.44;69.5,29.44;70.5,29.44;71.5,29.44;72.5,29.44;73.5,29.44;74.5,29.44;75.5,29.44;78.5,29.44;79.5,29.44;80.5,29.44;81.5,29.44;82.5,29.44;89.5,29.44;90.5,29.44;91.5,29.44;92.5,29.44;96.5,29.44;97.5,29.44;98.5,29.44;99.5,29.44;101.5,29.44;29,30.31;30,30.31;31,30.31;58,30.31;59,30.31;60,30.31;61,30.31;62,30.31;63,30.31;64,30.31;65,30.31;66,30.31;67,30.31;68,30.31;69,30.31;70,30.31;71,30.31;72,30.31;73,30.31;74,30.31;75,30.31;76,30.31;79,30.31;80,30.31;81,30.31;89,30.31;90,30.31;91,30.31;98,30.31;99,30.31;100,30.31;101,30.31;31.5,31.18;32.5,31.18;33.5,31.18;57.5,31.18;58.5,31.18;59.5,31.18;60.5,31.18;61.5,31.18;62.5,31.18;63.5,31.18;64.5,31.18;65.5,31.18;66.5,31.18;67.5,31.18;68.5,31.18;69.5,31.18;70.5,31.18;71.5,31.18;72.5,31.18;73.5,31.18;74.5,31.18;75.5,31.18;76.5,31.18;77.5,31.18;78.5,31.18;79.5,31.18;89.5,31.18;90.5,31.18;98.5,31.18;99.5,31.18;100.5,31.18;106.5,31.18;33,32.04;58,32.04;59,32.04;60,32.04;61,32.04;62,32.04;63,32.04;64,32.04;65,32.04;66,32.04;67,32.04;68,32.04;69,32.04;70,32.04;71,32.04;72,32.04;73,32.04;74,32.04;75,32.04;76,32.04;77,32.04;78,32.04;90,32.04;91,32.04;98,32.04;100,32.04;101,32.04;106,32.04;107,32.04;35.5,32.91;36.5,32.91;37.5,32.91;38.5,32.91;39.5,32.91;40.5,32.91;41.5,32.91;58.5,32.91;59.5,32.91;60.5,32.91;61.5,32.91;62.5,32.91;63.5,32.91;64.5,32.91;65.5,32.91;66.5,32.91;67.5,32.91;68.5,32.91;69.5,32.91;70.5,32.91;71.5,32.91;72.5,32.91;73.5,32.91;74.5,32.91;75.5,32.91;76.5,32.91;77.5,32.91;78.5,32.91;79.5,32.91;80.5,32.91;90.5,32.91;91.5,32.91;104.5,32.91;36,33.77;37,33.77;38,33.77;39,33.77;40,33.77;41,33.77;42,33.77;60,33.77;61,33.77;62,33.77;63,33.77;64,33.77;65,33.77;66,33.77;67,33.77;68,33.77;69,33.77;70,33.77;71,33.77;72,33.77;73,33.77;74,33.77;75,33.77;76,33.77;77,33.77;78,33.77;79,33.77;80,33.77;104,33.77;107,33.77;36.5,34.64;37.5,34.64;38.5,34.64;39.5,34.64;40.5,34.64;41.5,34.64;42.5,34.64;43.5,34.64;44.5,34.64;66.5,34.64;67.5,34.64;68.5,34.64;69.5,34.64;70.5,34.64;71.5,34.64;72.5,34.64;73.5,34.64;74.5,34.64;75.5,34.64;76.5,34.64;77.5,34.64;78.5,34.64;79.5,34.64;97.5,34.64;98.5,34.64;103.5,34.64;36,35.51;37,35.51;38,35.51;39,35.51;40,35.51;41,35.51;42,35.51;43,35.51;44,35.51;45,35.51;67,35.51;68,35.51;69,35.51;70,35.51;71,35.51;72,35.51;73,35.51;74,35.51;75,35.51;76,35.51;77,35.51;78,35.51;98,35.51;102,35.51;103,35.51;104,35.51;108,35.51;35.5,36.37;36.5,36.37;37.5,36.37;38.5,36.37;39.5,36.37;40.5,36.37;41.5,36.37;42.5,36.37;43.5,36.37;44.5,36.37;45.5,36.37;66.5,36.37;67.5,36.37;68.5,36.37;69.5,36.37;70.5,36.37;71.5,36.37;72.5,36.37;73.5,36.37;74.5,36.37;75.5,36.37;76.5,36.37;77.5,36.37;98.5,36.37;101.5,36.37;102.5,36.37;103.5,36.37;109.5,36.37;35,37.24;36,37.24;37,37.24;38,37.24;39,37.24;40,37.24;41,37.24;42,37.24;43,37.24;44,37.24;45,37.24;46,37.24;47,37.24;48,37.24;49,37.24;67,37.24;68,37.24;69,37.24;70,37.24;71,37.24;72,37.24;73,37.24;74,37.24;75,37.24;76,37.24;77,37.24;99,37.24;100,37.24;103,37.24;105,37.24;106,37.24;110,37.24;111,37.24;112,37.24;113,37.24;35.5,38.11;36.5,38.11;37.5,38.11;38.5,38.11;39.5,38.11;40.5,38.11;41.5,38.11;42.5,38.11;43.5,38.11;44.5,38.11;45.5,38.11;46.5,38.11;47.5,38.11;48.5,38.11;49.5,38.11;50.5,38.11;67.5,38.11;68.5,38.11;69.5,38.11;70.5,38.11;71.5,38.11;72.5,38.11;73.5,38.11;74.5,38.11;75.5,38.11;76.5,38.11;112.5,38.11;113.5,38.11;114.5,38.11;115.5,38.11;117.5,38.11;36,38.97;37,38.97;38,38.97;39,38.97;40,38.97;41,38.97;42,38.97;43,38.97;44,38.97;45,38.97;46,38.97;47,38.97;48,38.97;49,38.97;50,38.97;68,38.97;69,38.97;70,38.97;71,38.97;72,38.97;73,38.97;74,38.97;75,38.97;76,38.97;103,38.97;113,38.97;115,38.97;36.5,39.84;37.5,39.84;38.5,39.84;39.5,39.84;40.5,39.84;41.5,39.84;42.5,39.84;43.5,39.84;44.5,39.84;45.5,39.84;46.5,39.84;47.5,39.84;48.5,39.84;49.5,39.84;68.5,39.84;69.5,39.84;70.5,39.84;71.5,39.84;72.5,39.84;73.5,39.84;74.5,39.84;75.5,39.84;76.5,39.84;37,40.7;38,40.7;39,40.7;40,40.7;41,40.7;42,40.7;43,40.7;44,40.7;45,40.7;46,40.7;47,40.7;48,40.7;49,40.7;68,40.7;69,40.7;70,40.7;71,40.7;72,40.7;73,40.7;74,40.7;75,40.7;76,40.7;77,40.7;109,40.7;110,40.7;111,40.7;113,40.7;37.5,41.57;38.5,41.57;39.5,41.57;40.5,41.57;41.5,41.57;42.5,41.57;43.5,41.57;44.5,41.57;45.5,41.57;46.5,41.57;47.5,41.57;48.5,41.57;67.5,41.57;68.5,41.57;69.5,41.57;70.5,41.57;71.5,41.57;72.5,41.57;73.5,41.57;74.5,41.57;75.5,41.57;76.5,41.57;79.5,41.57;80.5,41.57;107.5,41.57;108.5,41.57;109.5,41.57;110.5,41.57;113.5,41.57;38,42.44;39,42.44;40,42.44;41,42.44;42,42.44;43,42.44;44,42.44;45,42.44;46,42.44;47,42.44;48,42.44;49,42.44;68,42.44;69,42.44;70,42.44;71,42.44;72,42.44;73,42.44;74,42.44;75,42.44;76,42.44;79,42.44;80,42.44;107,42.44;108,42.44;109,42.44;110,42.44;111,42.44;112,42.44;113,42.44;114,42.44;38.5,43.3;39.5,43.3;40.5,43.3;41.5,43.3;42.5,43.3;43.5,43.3;44.5,43.3;45.5,43.3;46.5,43.3;47.5,43.3;48.5,43.3;68.5,43.3;69.5,43.3;70.5,43.3;71.5,43.3;72.5,43.3;73.5,43.3;74.5,43.3;79.5,43.3;105.5,43.3;106.5,43.3;107.5,43.3;108.5,43.3;109.5,43.3;110.5,43.3;111.5,43.3;112.5,43.3;113.5,43.3;114.5,43.3;39,44.17;40,44.17;41,44.17;42,44.17;43,44.17;44,44.17;45,44.17;46,44.17;47,44.17;48,44.17;69,44.17;70,44.17;71,44.17;72,44.17;73,44.17;74,44.17;75,44.17;79,44.17;104,44.17;105,44.17;106,44.17;107,44.17;108,44.17;109,44.17;110,44.17;111,44.17;112,44.17;113,44.17;114,44.17;115,44.17;38.5,45.03;39.5,45.03;40.5,45.03;41.5,45.03;42.5,45.03;43.5,45.03;44.5,45.03;45.5,45.03;68.5,45.03;69.5,45.03;70.5,45.03;71.5,45.03;72.5,45.03;73.5,45.03;74.5,45.03;78.5,45.03;79.5,45.03;103.5,45.03;104.5,45.03;105.5,45.03;106.5,45.03;107.5,45.03;108.5,45.03;109.5,45.03;110.5,45.03;111.5,45.03;112.5,45.03;113.5,45.03;114.5,45.03;115.5,45.03;116.5,45.03;39,45.9;40,45.9;41,45.9;42,45.9;43,45.9;44,45.9;45,45.9;69,45.9;70,45.9;71,45.9;72,45.9;73,45.9;74,45.9;104,45.9;105,45.9;106,45.9;107,45.9;108,45.9;109,45.9;110,45.9;111,45.9;112,45.9;113,45.9;114,45.9;115,45.9;116,45.9;38.5,46.77;39.5,46.77;40.5,46.77;41.5,46.77;42.5,46.77;43.5,46.77;44.5,46.77;45.5,46.77;69.5,46.77;70.5,46.77;71.5,46.77;72.5,46.77;73.5,46.77;103.5,46.77;104.5,46.77;105.5,46.77;106.5,46.77;107.5,46.77;108.5,46.77;109.5,46.77;110.5,46.77;111.5,46.77;112.5,46.77;113.5,46.77;114.5,46.77;115.5,46.77;116.5,46.77;38,47.63;39,47.63;40,47.63;41,47.63;42,47.63;43,47.63;44,47.63;45,47.63;70,47.63;71,47.63;72,47.63;73,47.63;104,47.63;105,47.63;106,47.63;107,47.63;108,47.63;109,47.63;110,47.63;111,47.63;112,47.63;113,47.63;114,47.63;115,47.63;116,47.63;38.5,48.5;39.5,48.5;40.5,48.5;41.5,48.5;42.5,48.5;43.5,48.5;69.5,48.5;70.5,48.5;71.5,48.5;72.5,48.5;104.5,48.5;105.5,48.5;106.5,48.5;110.5,48.5;112.5,48.5;113.5,48.5;114.5,48.5;115.5,48.5;38,49.36;39,49.36;40,49.36;41,49.36;42,49.36;112,49.36;113,49.36;114,49.36;115,49.36;116,49.36;124,49.36;37.5,50.23;38.5,50.23;39.5,50.23;40.5,50.23;41.5,50.23;42.5,50.23;112.5,50.23;113.5,50.23;114.5,50.23;115.5,50.23;124.5,50.23;38,51.1;39,51.1;40,51.1;41,51.1;125,51.1;37.5,51.96;38.5,51.96;39.5,51.96;40.5,51.96;37,52.83;38,52.83;39,52.83;40,52.83;115,52.83;37.5,53.69;38.5,53.69;39.5,53.69;122.5,53.69;37,54.56;38,54.56;39,54.56;36.5,55.43;37.5,55.43;38.5,55.43;39.5,55.43;37,56.29;38,56.29;39,56.29;37.5,57.16;38.5,57.16;37,58.02;38,58.02;37.5,58.89;38.5,58.89';
+  var ns = 'http://www.w3.org/2000/svg', g = document.getElementById('mapdots'), frag = document.createDocumentFragment();
+  DOTS.split(';').forEach(function (p) { var xy = p.split(','); var ci = document.createElementNS(ns, 'circle'); ci.setAttribute('cx', xy[0]); ci.setAttribute('cy', xy[1]); ci.setAttribute('r', '0.22'); frag.appendChild(ci); });
+  g.appendChild(frag);
+  var city = { LON: [63, 14.72, 'London'], NYC: [36.5, 20.78, 'New York'], BLR: [90.5, 31.18, 'Bengaluru'], LIS: [60, 21.65, 'Lisbon'], LOS: [64, 33.77, 'Lagos'] };
+  var routes = [['LON', 'NYC'], ['NYC', 'LIS'], ['BLR', 'LIS'], ['LON', 'BLR'], ['LOS', 'LON']];
+  var arcs = document.getElementById('arcs');
+  routes.forEach(function (rt, idx) {
+    var a = city[rt[0]], b = city[rt[1]];
+    var mx = (a[0] + b[0]) / 2, my = Math.min(a[1], b[1]) - 9;
+    var p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', 'M ' + a[0] + ' ' + a[1] + ' Q ' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
+    p.setAttribute('class', 'arc'); p.style.animationDelay = (0.4 + idx * 0.5) + 's';
+    arcs.appendChild(p);
+  });
+  var cg = document.getElementById('cities');
+  Object.keys(city).forEach(function (k) {
+    var v = city[k], gg = document.createElementNS(ns, 'g'); gg.setAttribute('class', 'city');
+    var h1 = document.createElementNS(ns, 'circle'); h1.setAttribute('class', 'halo'); h1.setAttribute('cx', v[0]); h1.setAttribute('cy', v[1]); h1.setAttribute('r', '0.9');
+    var c1 = document.createElementNS(ns, 'circle'); c1.setAttribute('class', 'core'); c1.setAttribute('cx', v[0]); c1.setAttribute('cy', v[1]); c1.setAttribute('r', '0.75');
+    var t = document.createElementNS(ns, 'text'); t.setAttribute('x', v[0] + 1.4); t.setAttribute('y', v[1] + 0.7); t.textContent = v[2];
+    gg.appendChild(h1); gg.appendChild(c1); gg.appendChild(t); cg.appendChild(gg);
+  });
+
+  /* count-up on the measured stats */
+  if (!reduce) document.querySelectorAll('[data-count]').forEach(function (el) {
+    var target = parseFloat(el.getAttribute('data-count')), dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+    var unit = el.querySelector('small'), start = null;
+    function tick(ts) {
+      if (!start) start = ts;
+      var k = Math.min(1, (ts - start) / 1400), v = target * (1 - Math.pow(1 - k, 3));
+      el.firstChild.nodeValue = v.toFixed(dec);
+      if (k < 1) requestAnimationFrame(tick);
+    }
+    el.firstChild.nodeValue = (0).toFixed(dec); requestAnimationFrame(tick);
+    if (unit) el.appendChild(unit);
+  });
+})();
+</script>

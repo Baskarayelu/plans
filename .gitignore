@@ -8,3 +8,7 @@ cache/
 broadcast/*/31337/
 *.apk
 *.keystore
+.vercel/
+contracts/out/
+contracts/cache/
+contracts/tools/node_modules/

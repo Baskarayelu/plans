@@ -8,7 +8,7 @@ Rules for editing this file:
 - Never put claim links, invite secrets or keys in this file. The repository is public. Those go into the portal's private judge field only (marked below).
 - Update this file in the same commit as any product change that makes a sentence here true or false.
 
-Last updated: 6 Oct 2026. Product state: spec done, nothing deployed.
+Last updated: 6 Oct 2026. Product state: contracts, relayer and indexer in build; nothing deployed. Portal: only the repository URL is saved; the rest is pasted once contracts are deployed and verified on mainnet and core flows are live.
 
 ---
 
@@ -82,7 +82,7 @@ Live on mainnet: nothing yet. This description is updated as each part ships, wi
 ### Go-to-market and user acquisition strategy
 
 <!-- field: Go-to-market and user acquisition strategy | limit: 8000 -->
-Characters: 3919 / 8000
+Characters: 4017 / 8000
 ```text
 FIRST USERS
 Friend groups that already collect money in a group chat for a trip or a festival, with at least one member living in another country. For example: students and young professionals in the UK and US travelling with friends from home in India or Nigeria, or a mixed group going to a festival together. Each group has one organiser who brings 4 to 8 people, so every plan is its own small acquisition loop.
@@ -111,6 +111,7 @@ Nothing is deployed yet, so every onchain number is zero. We report only numbers
 - spends, approvals, settlements and settled volume
 - cross-border volume by country pair
 - APK downloads, from the GitHub release counter (offchain, labelled as such)
+Demo accounts, plans that include them, and our own test accounts are excluded from every number.
 
 PILOT BEFORE JUDGING (targets, not results)
 Before 13 Oct: three real groups, at least 12 people across at least 3 countries, each running a small real plan on mainnet from invite to settlement. Results will be reported here and on the stats page as they happen.
@@ -135,7 +136,7 @@ https://github.com/Baskarayelu/plans
 
 ### Live product
 
-**Pending.** It will be the landing page with the APK download and live stats, on the passkey domain (decision D2, not bought yet). The portal requires an https link that runs on Monad mainnet or testnet. Leave the field empty until the APK is downloadable from it.
+**Pending.** It will be the landing page with the APK download and live stats, at https://plans.0xo.in (the passkey domain; DNS record pending). The portal requires an https link that runs on Monad mainnet or testnet. Leave the field empty until the APK is downloadable from it.
 
 ### Technical demo video
 
@@ -150,7 +151,7 @@ https://github.com/Baskarayelu/plans
 Mainnet funds and claim links are pasted into the portal only. The bracketed slots below mark where they go.
 
 <!-- field: Judge access instructions | limit: 8000 -->
-Characters: 3991 / 8000
+Characters: 4045 / 8000
 ```text
 STATUS (6 Oct 2026): Plans is in build. The steps below describe the judge path being built. Each step stays marked pending until it works, and this field is updated as steps go live.
 
@@ -167,7 +168,7 @@ WHAT YOU NEED
 - About 10 minutes.
 
 1. INSTALL (pending)
-Open [download link: pending] on the phone and download the Plans APK (its SHA-256 is shown on the page). When Android asks, allow your browser to install unknown apps, then tap Install. If Google Play Protect says the developer is unrecognised, tap More details, then Install anyway.
+Open https://plans.0xo.in on the phone (pending) and download the Plans APK (its SHA-256 is shown on the page). When Android asks, allow your browser to install unknown apps, then tap Install. If Google Play Protect says the developer is unrecognised, tap More details, then Install anyway.
 
 2. CREATE YOUR ACCOUNT (pending)
 Open Plans, tap Create account and confirm with your screen lock. Enter a name and pick your country. That one prompt is the whole sign-up.
@@ -182,7 +183,7 @@ Open [judges' plan invite link: portal only, at release] and tap Join. You are n
 5. CORE FLOW (pending)
 a. Add $0.25 to the plan with Add money. The pot balance updates on screen.
 b. Pay $0.10 from the pot to Asha (Bengaluru), category Food & drink, split with everyone. It goes through instantly and appears in the feed.
-c. Try a $0.40 spend. The app shows "Needs 1 more approval". The demo member Ben (London) approves within about 10 seconds and the spend goes through. Ben, Asha and Maya are demo accounts run by our relayer so that one judge with one phone can see approvals and settlement. The app labels them "Demo".
+c. Try a $0.40 spend. The app shows "Needs 1 more approval". The demo member Ben (London) approves within about 10 seconds and the spend goes through. Ben, Asha and Maya are demo accounts run by our relayer so that one judge with one phone can see approvals and settlement. The app labels them "Demo", and they are never counted in our user numbers.
 d. Open Send, pick Asha (Bengaluru) and send $0.05. The receipt shows dollars and rupees, with the reference rate.
 e. On the home screen tap "Try a settle-up". It creates a short plan with the three demo members, adds a few spends, and lets you press Settle up. One transaction pays everyone. Tap Proof on any receipt to see the transaction on a Monad explorer.
 
@@ -229,13 +230,13 @@ Sending AUSD to another person or across borders:
 **Demo video (required, up to 2 minutes): pending.** You will send the brief. The app must provide this exact path on mainnet, uninterrupted, between two members in different countries:
 
 1. **Phone B ("Sam, New York"), fresh install:** Create account, one fingerprint, country United States. Home shows $0.00. *(passkey onboarding)*
-2. **Phone A ("Maya, London"), funded beforehand:** home shows "$5.00 · £3.7x", with the caption "Digital dollars (AUSD)". *(AUSD balance)*
+2. **Phone A ("Leah, London"), funded beforehand by claim link:** home shows "$3.00 · £2.2x", with the caption "Digital dollars (AUSD)". *(AUSD balance)*
 3. **Phone B:** Profile, then "My Plans code".
-4. **Phone A:** Send, scan Sam's code, enter £1.50. The app shows "Sam gets $2.0x". Confirm.
-5. **Phone B buzzes** "+$2.0x from Maya, London" within about a second. Its balance updates. The receipt shows both currencies, the reference rate, "Settled in 0.x s" and a Proof link to the mainnet transaction. *(completed send and receive, settled instantly)*
-6. **Optional:** Sam sends $1.00 back and Maya's phone receives it.
+4. **Phone A:** Send, scan Sam's code, enter £1.00. The app shows "Sam gets $1.3x". Confirm.
+5. **Phone B buzzes** "+$1.3x from Leah, London" within about a second. Its balance updates. The receipt shows both currencies, the reference rate, "Settled in 0.x s" and a Proof link to the mainnet transaction. *(completed send and receive, settled instantly)*
+6. **Optional:** Sam sends $0.50 back and Leah's phone receives it.
 
-This requires a mainnet-funded demo account for Maya of about $5 AUSD. Exact address and amount will follow at deployment.
+Funding: Leah's account is funded with a $3.00 claim link from the Plans treasury, so its address doesn't need to be known in advance. Leah and Sam are team test accounts, listed in `indexer/internal-accounts.json` and excluded from every number.
 
 ### Monad Foundation: Best Mera-Powered UX on Monad
 

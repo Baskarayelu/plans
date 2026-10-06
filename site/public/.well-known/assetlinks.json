@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.oxo.plans",
+      "sha256_cert_fingerprints": [
+        "80:79:E1:B7:EA:A6:65:F8:1E:38:9F:57:76:17:EF:CC:F3:1D:CF:E5:83:50:67:57:19:4D:D0:8D:9A:81:E1:CD"
+      ]
+    }
+  }
+]

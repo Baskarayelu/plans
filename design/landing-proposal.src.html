@@ -1,0 +1,647 @@
+<title>Plans Landing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Aceternity "Playful" structure (dotted hero panel with tilted floating cards, section headers with badges, world map),
+   recoloured to the Plans wristband palette: marigold on deep pine. */
+:root {
+  --bg: #F4F6F1;
+  --surface: #FFFFFF;
+  --surface-2: #EAEFE7;
+  --ink: #10231B;
+  --muted: #5A6B62;
+  --line: #D9E0D5;
+  --accent: #F5B83D;
+  --on-accent: #10231B;
+  --pos: #1F7A55;
+  --neg: #B8432F;
+  --info: #2B5F8A;
+  --dot: rgba(16, 35, 27, 0.16);
+  --mapdot: rgba(16, 35, 27, 0.30);
+  --flap: #E3E9DF;
+  --flap-ink: #10231B;
+  --flap-edge: #C9D2C4;
+  --shadow: 0 1px 0 rgba(16, 35, 27, .04), 0 10px 30px -12px rgba(16, 35, 27, .22);
+  --display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1511; --surface: #14201A; --surface-2: #1B2A22; --ink: #E8F0EA; --muted: #93A69A; --line: #26362D;
+    --accent: #F5B83D; --on-accent: #10231B; --pos: #4CC38A; --neg: #FF7A66; --info: #7FB2DE;
+    --dot: rgba(232, 240, 234, 0.10); --mapdot: rgba(232, 240, 234, 0.26);
+    --flap: #16231C; --flap-ink: #F2F6F3; --flap-edge: #050906;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 14px 34px -14px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1511; --surface: #14201A; --surface-2: #1B2A22; --ink: #E8F0EA; --muted: #93A69A; --line: #26362D;
+  --accent: #F5B83D; --on-accent: #10231B; --pos: #4CC38A; --neg: #FF7A66; --info: #7FB2DE;
+  --dot: rgba(232, 240, 234, 0.10); --mapdot: rgba(232, 240, 234, 0.26);
+  --flap: #16231C; --flap-ink: #F2F6F3; --flap-edge: #050906;
+  --shadow: 0 1px 0 rgba(0,0,0,.3), 0 14px 34px -14px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; margin: 0; padding-inline: 16px; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1180px; margin-inline: auto; }
+.mono { font-family: var(--mono); }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* review strip (proposal only) */
+.review { max-width: 1180px; margin: 12px auto 0; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; }
+.review b { color: var(--ink); font-weight: 600; }
+.review label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.slot { display: none; position: absolute; top: 10px; right: 10px; z-index: 30; font: 500 11px/1.2 var(--mono); letter-spacing: .02em; background: var(--surface); color: var(--info); border: 1px dashed var(--info); padding: 4px 8px; border-radius: 6px; }
+body.notes .slot { display: inline-block; }
+
+/* nav */
+nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; margin-top: 12px; }
+nav.top .bar { max-width: 1180px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px 10px 16px; background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 18px; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font: 800 22px/1 var(--display); letter-spacing: -.02em; text-decoration: none; }
+.logo .band { width: 26px; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, var(--ink) 6px 8px); }
+nav.top ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-weight: 500; font-size: 15px; }
+nav.top ul a { text-decoration: none; color: var(--muted); }
+nav.top ul a:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 600 16px/1 var(--body); text-decoration: none; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: inset 0 -2px 0 rgba(16,35,27,.18); }
+.btn-primary:hover { filter: brightness(1.04); }
+.btn-ghost { border-color: var(--line); color: var(--ink); background: var(--surface); }
+.btn small { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 999px; background: rgba(16,35,27,.12); }
+nav.top .btn { min-height: 40px; padding: 0 16px; font-size: 14px; }
+@media (max-width: 860px) { nav.top ul { display: none; } }
+
+/* hero (Playful hero panel, recoloured) */
+.hero { position: relative; max-width: 1180px; margin: 20px auto 0; border: 1px solid var(--line); border-radius: 35px; overflow: hidden; background: var(--surface); padding-block: 96px 120px; padding-inline: 20px; isolation: isolate; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -2; background-image: radial-gradient(circle, var(--dot) 1px, transparent 1px); background-size: 12px 12px; }
+.hero-inner { position: relative; z-index: 5; max-width: 760px; margin-inline: auto; text-align: center; display: grid; gap: 26px; justify-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.pill .flags { display: inline-flex; }
+.pill .flags span { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); font-size: 13px; margin-left: -6px; }
+.pill .flags span:first-child { margin-left: 0; }
+h1 { font: 800 clamp(40px, 6.4vw, 76px)/1.0 var(--display); letter-spacing: -.035em; margin: 0; text-wrap: balance; }
+h1 .w { display: inline-block; opacity: 1; transform: none; }
+.js h1 .w { opacity: 0; transform: translateY(18px); filter: blur(6px); animation: word .7s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes word { to { opacity: 1; transform: none; filter: blur(0); } }
+h1 .hl { background: linear-gradient(transparent 62%, var(--accent) 62% 92%, transparent 92%); padding-inline: .06em; }
+.lede { font-size: clamp(17px, 2vw, 20px); color: var(--muted); max-width: 600px; margin: 0; text-wrap: pretty; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.fineprint { font: 500 12px/1.4 var(--mono); color: var(--muted); }
+
+.float { position: absolute; z-index: 1; pointer-events: none; }
+.float > div { animation: bob 7s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.f1 { top: 64px; left: 4%; rotate: -12deg; } .f1 > div { animation-delay: -1s; }
+.f2 { top: 70px; right: 5%; rotate: 9deg; } .f2 > div { animation-delay: -3s; }
+.f3 { bottom: -18px; left: 7%; rotate: 8deg; } .f3 > div { animation-delay: -2s; }
+.f4 { bottom: 26px; right: 4%; rotate: -10deg; } .f4 > div { animation-delay: -4.5s; }
+.f5 { bottom: 150px; left: 1%; rotate: 16deg; } .f5 > div { animation-delay: -5.5s; }
+@media (max-width: 1080px) { .f5 { display: none; } .f1 { left: -40px; } .f2 { right: -60px; } }
+@media (max-width: 760px) { .float { opacity: .55; scale: .72; } .f1 { top: 10px; left: -70px; } .f2 { top: 6px; right: -120px; } .f3 { left: -60px; bottom: -60px; } .f4 { right: -110px; bottom: -40px; } .hero { padding-block: 80px 110px; } }
+
+/* ticket-stub receipt */
+.stub { width: 236px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.stub .top { padding: 14px 16px 12px; display: grid; gap: 6px; }
+.stub .row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.stub .amt { font: 800 26px/1 var(--display); letter-spacing: -.02em; }
+.stub .sub { font: 500 12px/1.3 var(--mono); color: var(--muted); }
+.stub .perf { height: 14px; position: relative; background:
+   radial-gradient(circle at 0 50%, var(--bg) 7px, transparent 7.5px),
+   radial-gradient(circle at 100% 50%, var(--bg) 7px, transparent 7.5px); }
+.stub .perf::after { content: ""; position: absolute; left: 14px; right: 14px; top: 50%; border-top: 1.5px dashed var(--line); }
+.stub .bot { padding: 8px 16px 14px; font: 500 11.5px/1.5 var(--mono); color: var(--muted); }
+.stub .bot b { color: var(--pos); font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--body); padding: 6px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.chip.pos { color: var(--pos); } .chip.neg { color: var(--neg); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; }
+.approve { width: 250px; display: grid; gap: 10px; }
+.approve .who { display: flex; gap: 10px; align-items: center; font-weight: 600; font-size: 14px; }
+.av { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font: 700 14px/1 var(--display); color: var(--on-accent); background: var(--accent); flex: none; }
+.av.b { background: #9ED3B8; } .av.c { background: #F2A28F; } .av.d { background: #A9C7E8; }
+.approve .acts { display: flex; gap: 8px; }
+.approve .acts span { flex: 1; text-align: center; padding: 9px 0; border-radius: 999px; font-weight: 600; font-size: 13px; border: 1px solid var(--line); }
+.approve .acts span.y { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.fx { font: 600 15px/1 var(--mono); display: grid; gap: 8px; width: 208px; }
+.fx .line { display: flex; justify-content: space-between; } .fx .line span:last-child { color: var(--muted); font-weight: 500; }
+.fp { display: inline-flex; gap: 10px; align-items: center; font-weight: 600; font-size: 13px; }
+.fp .emo { font-size: 18px; letter-spacing: 2px; padding: 6px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+
+/* sections */
+section { max-width: 1180px; margin-inline: auto; padding-block: 104px 0; }
+.shead { display: grid; gap: 14px; justify-items: center; text-align: center; margin-bottom: 44px; }
+.badge { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 7px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+h2 { font: 800 clamp(32px, 4.4vw, 52px)/1.04 var(--display); letter-spacing: -.03em; margin: 0; text-wrap: balance; max-width: 820px; }
+.shead p { color: var(--muted); font-size: 18px; margin: 0; max-width: 620px; text-wrap: pretty; }
+
+/* split-flap departure board */
+.board-wrap { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: clamp(14px, 3vw, 34px); box-shadow: var(--shadow); }
+.board-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.board-head .live { color: var(--pos); display: inline-flex; gap: 8px; align-items: center; }
+.board-head .live::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.board { display: grid; grid-template-columns: repeat(22, minmax(0, 1fr)); gap: clamp(2px, .45vw, 5px); }
+.cell { position: relative; aspect-ratio: 3 / 5; border-radius: 3px; background: var(--flap); border: 1px solid var(--flap-edge); overflow: hidden; perspective: 300px; }
+.cell span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 clamp(7px, 1.9vw, 22px)/1 var(--mono); color: var(--flap-ink); }
+.cell::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--flap-edge); opacity: .8; }
+.cell.flip span { animation: flap .11s ease-in; }
+@keyframes flap { 0% { transform: rotateX(70deg); opacity: .4; } 100% { transform: none; opacity: 1; } }
+.cell.ac { background: var(--accent); } .cell.ac span { color: var(--on-accent); }
+.cell.lab span { color: var(--muted); }
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 960px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .steps { grid-template-columns: minmax(0, 1fr); } }
+.step { position: relative; display: grid; gap: 12px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; min-width: 0; }
+.step .n { font: 600 13px/1 var(--mono); color: var(--muted); }
+.step h3 { font: 700 22px/1.15 var(--display); letter-spacing: -.02em; margin: 0; }
+.step p { margin: 0; color: var(--muted); font-size: 15px; }
+.step .demo { margin-top: 6px; min-height: 92px; display: grid; place-items: center; background: var(--surface-2); border-radius: 14px; padding: 12px; }
+.finger { width: 56px; height: 56px; border-radius: 999px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); position: relative; }
+.finger::after { content: ""; position: absolute; inset: -6px; border-radius: 999px; border: 2px solid var(--accent); opacity: 0; animation: ring 2.4s ease-out infinite; }
+@keyframes ring { 0% { opacity: .9; transform: scale(.85); } 70%,100% { opacity: 0; transform: scale(1.3); } }
+
+/* bento */
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+.bx { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 12px; align-content: start; min-width: 0; overflow: hidden; }
+.bx h3 { font: 700 22px/1.15 var(--display); letter-spacing: -.02em; margin: 0; }
+.bx p { margin: 0; color: var(--muted); font-size: 15px; max-width: 46ch; }
+.b1 { grid-column: span 3; } .b2 { grid-column: span 3; } .b3 { grid-column: span 2; } .b4 { grid-column: span 2; } .b5 { grid-column: span 2; }
+@media (max-width: 900px) { .bento { grid-template-columns: minmax(0, 1fr); } .b1, .b2, .b3, .b4, .b5 { grid-column: auto; } }
+.tiers { display: grid; gap: 8px; margin-top: 6px; }
+.tier { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: center; font-size: 14px; }
+.tier .amt { font: 600 14px/1 var(--mono); }
+.tier .bar { height: 30px; border-radius: 10px; background: var(--surface-2); display: flex; align-items: center; padding-inline: 12px; font-weight: 600; font-size: 13px; }
+.tier .bar.go { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.tier .bar.one { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.tier .bar.maj { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
+.budgets { display: grid; gap: 12px; margin-top: 6px; }
+.bud { display: grid; gap: 6px; font-size: 14px; }
+.bud .t { display: flex; justify-content: space-between; } .bud .t span:last-child { font-family: var(--mono); color: var(--muted); font-size: 13px; }
+.bud .track { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bud .fill { height: 100%; border-radius: 999px; background: var(--pos); width: var(--w); transform-origin: left; }
+.js .bud .fill { animation: grow 1.4s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes grow { from { transform: scaleX(0); } }
+.bud.over .fill { background: var(--neg); }
+.blocked { font: 600 13px/1.4 var(--body); color: var(--neg); background: color-mix(in srgb, var(--neg) 10%, transparent); border-radius: 12px; padding: 10px 12px; }
+.pause { display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; width: fit-content; }
+.pause i { width: 12px; height: 14px; border-inline: 4px solid var(--ink); }
+
+/* map */
+.mapbox { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; }
+.mapbox svg { display: block; width: 100%; height: auto; }
+.mapdots circle { fill: var(--mapdot); }
+.arc { fill: none; stroke: var(--accent); stroke-width: .45; stroke-linecap: round; stroke-dasharray: 120; stroke-dashoffset: 0; }
+.js .arc { stroke-dashoffset: 120; animation: draw 2.4s cubic-bezier(.3,.6,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.city circle.core { fill: var(--accent); }
+.city circle.halo { fill: var(--accent); opacity: .35; transform-box: fill-box; transform-origin: center; animation: halo 2s ease-out infinite; }
+@keyframes halo { 0% { transform: scale(.6); opacity: .6; } 100% { transform: scale(2.6); opacity: 0; } }
+.city text { font: 600 2.1px var(--mono); fill: var(--ink); }
+.map-note { position: absolute; left: 20px; bottom: 20px; display: grid; gap: 10px; }
+@media (max-width: 760px) { .map-note { position: static; padding: 16px; } }
+.split2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+@media (max-width: 900px) { .split2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.stat { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: grid; gap: 8px; }
+.stat .big { font: 800 clamp(44px, 6vw, 64px)/1 var(--display); letter-spacing: -.04em; }
+.stat .big small { font-size: .42em; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
+.stat p { margin: 0; color: var(--muted); font-size: 15px; }
+.stat .src { font: 500 11.5px/1.4 var(--mono); color: var(--muted); }
+.live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; position: relative; }
+.live-grid div { padding: 22px; border-left: 1px solid var(--line); display: grid; gap: 6px; }
+.live-grid div:first-child { border-left: 0; }
+.live-grid .v { font: 800 36px/1 var(--display); color: var(--muted); }
+.live-grid .k { font-size: 14px; color: var(--muted); }
+@media (max-width: 760px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-grid div:nth-child(3) { border-left: 0; } .live-grid div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+
+/* privacy */
+.priv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+@media (max-width: 900px) { .priv { grid-template-columns: minmax(0, 1fr); } }
+.phones { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.mini { width: 180px; border-radius: 26px; border: 1px solid var(--line); background: var(--bg); padding: 16px 14px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+.mini .lbl { font: 500 11px/1.3 var(--mono); color: var(--muted); }
+
+/* faq */
+.faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+@media (max-width: 760px) { .faq { grid-template-columns: minmax(0, 1fr); } }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+summary { cursor: pointer; font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::after { content: "+"; font: 500 20px/1 var(--mono); color: var(--muted); }
+details[open] summary::after { content: "–"; }
+details p { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+
+/* final cta + footer */
+.final { position: relative; text-align: center; display: grid; gap: 20px; justify-items: center; background: var(--ink); color: var(--bg); border-radius: 35px; padding-block: 72px; padding-inline: 20px; overflow: hidden; }
+.final h2 { color: var(--bg); }
+.final p { color: color-mix(in srgb, var(--bg) 72%, transparent); margin: 0; font-size: 18px; max-width: 540px; }
+.final .fineprint { color: color-mix(in srgb, var(--bg) 60%, transparent); }
+footer { max-width: 1180px; margin: 0 auto; padding-block: 40px 56px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 14px; }
+footer ul { display: flex; flex-wrap: wrap; gap: 18px; list-style: none; padding: 0; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .js h1 .w { opacity: 1; transform: none; filter: none; }
+  .js .arc { stroke-dashoffset: 0; }
+}
+</style>
+
+<div class="review" role="note">
+  <span><b>Landing page proposal</b> · design gate, not the live site. Motion is running. Built on the Aceternity “Playful” template, recoloured.</span>
+  <label for="notes"><input type="checkbox" id="notes"> Show review notes</label>
+</div>
+
+<nav class="top" aria-label="Main">
+  <div class="bar">
+    <a class="logo" href="#top"><span class="band" aria-hidden="true"></span>plans</a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#rules">Group rules</a></li>
+      <li><a href="#borders">Across borders</a></li>
+      <li><a href="#numbers">Numbers</a></li>
+      <li><a href="#faq">Questions</a></li>
+    </ul>
+    <a class="btn btn-primary" href="#get">Get the Android app</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <span class="slot">Base: Playful template hero (dotted panel, tilted cards, word reveal)</span>
+  <div class="float f1" aria-hidden="true"><div>
+    <div class="stub">
+      <div class="top">
+        <div class="row"><span class="sub">Dinner at Taberna</span><span class="chip">🍽 Food</span></div>
+        <div class="amt tnum">$36.00</div>
+        <div class="sub tnum">£26.72 · split 3 ways</div>
+      </div>
+      <div class="perf"></div>
+      <div class="bot">Paid from the Lisbon pot<br><b>Settled in 0.6 s</b></div>
+    </div>
+  </div></div>
+  <div class="float f2" aria-hidden="true"><div>
+    <div class="card approve">
+      <div class="who"><span class="av b">A</span><span>Asha wants <span class="tnum">$250</span> for the boat trip</span></div>
+      <div class="acts"><span>Not now</span><span class="y">Approve</span></div>
+    </div>
+  </div></div>
+  <div class="float f3" aria-hidden="true"><div>
+    <div class="card fx">
+      <div class="line tnum"><span>£1.50</span><span>you send</span></div>
+      <div class="line tnum"><span>$2.02</span><span>Sam gets</span></div>
+      <div class="line"><span style="font-size:11px;font-weight:500;color:var(--muted)">1 GBP = 1.3472 USD · ECB 14:05</span></div>
+    </div>
+  </div></div>
+  <div class="float f4" aria-hidden="true"><div>
+    <div class="card" style="display:grid;gap:10px;width:220px">
+      <div style="font:700 15px/1.2 var(--display)">Settled up 🎉</div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Maya · London</span><span class="chip pos">+£8.20</span></div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Sam · New York</span><span class="chip pos">+$10.40</span></div>
+      <div style="display:flex;justify-content:space-between" class="tnum"><span>Asha · Bengaluru</span><span class="chip neg">−₹350</span></div>
+    </div>
+  </div></div>
+  <div class="float f5" aria-hidden="true"><div>
+    <div class="card fp"><span>Your key</span><span class="emo">🦊🌵🎈</span></div>
+  </div></div>
+
+  <div class="hero-inner">
+    <span class="pill"><span class="flags" aria-hidden="true"><span>🇬🇧</span><span>🇺🇸</span><span>🇮🇳</span><span>🇵🇹</span></span>Friends in four countries, one pot</span>
+    <h1 id="headline">A shared pot for every plan, wherever your <span class="hl">friends</span> live.</h1>
+    <p class="lede">Join with one fingerprint. Spend from the pot under rules the group agrees on. When the plan ends, everyone is settled in one tap, in pounds, dollars or rupees.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#get">Get the Android app <small>Beta · 12 Oct</small></a>
+      <a class="btn btn-ghost" href="#how">See how it works</a>
+    </div>
+    <span class="fineprint">No bank account in common. No app password. Free for groups.</span>
+  </div>
+</header>
+
+<section aria-labelledby="board-title">
+  <div class="shead">
+    <span class="badge">Now boarding</span>
+    <h2 id="board-title">Trips, festivals, house shares. One pot each.</h2>
+  </div>
+  <div class="board-wrap">
+    <span class="slot">Aceternity component: Text Flipping Board (free), recoloured</span>
+    <div class="board-head"><span>Plans departures</span><span class="live">Live feed</span></div>
+    <div class="board" id="board" aria-label="Example plans board"></div>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-title">
+  <div class="shead">
+    <span class="badge">How it works</span>
+    <h2 id="how-title">From the group chat to settled, in four steps</h2>
+    <p>Everything happens in the app. Nobody needs a bank in the same country or anything to set up first.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <span class="n">Step 1</span>
+      <h3>Join with one fingerprint</h3>
+      <p>Tap the invite in your group chat. Your fingerprint creates your account and joins the plan.</p>
+      <div class="demo"><div class="finger" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 11a5 5 0 0 1 10 0v2a9 9 0 0 1-1 4"/><path d="M12 11v3a7 7 0 0 1-2 5"/><path d="M4 9a8 8 0 0 1 16 0"/><path d="M9 14a3 3 0 0 0 0 0v-3a3 3 0 0 1 6 0"/></svg></div></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 2</span>
+      <h3>Add money in your currency</h3>
+      <p>Type £40, $50 or ₹4,000. The pot holds digital dollars and shows everyone their own currency.</p>
+      <div class="demo"><span class="mono tnum" style="font-size:22px;font-weight:600">£40 → $53.89</span></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 3</span>
+      <h3>Spend under the group’s rules</h3>
+      <p>Small spends go straight through. Bigger ones wait for a friend’s yes. Everyone sees it live.</p>
+      <div class="demo"><span class="chip pos">Goes through now · under $25</span></div>
+    </div>
+    <div class="step">
+      <span class="n">Step 4</span>
+      <h3>Settle up in one tap</h3>
+      <p>At the end, one tap pays back everyone who is owed and collects from anyone who owes.</p>
+      <div class="demo"><span class="chip">3 countries · 1 tap · 0.6 s</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="rules" aria-labelledby="rules-title">
+  <div class="shead">
+    <span class="badge">Group rules</span>
+    <h2 id="rules-title">Rules your group sets, kept by the pot itself</h2>
+    <p>Pick Easygoing, Balanced or Strict, then change anything. Nobody, including us, can spend outside the rules.</p>
+  </div>
+  <div class="bento">
+    <div class="bx b1">
+      <span class="slot">Pro block slot: Bento Grids / Feature Sections (needs login)</span>
+      <h3>Small things go through. Big things need a yes.</h3>
+      <p>Balanced, the default: up to $25 is instant, up to $200 needs one friend, above that the majority.</p>
+      <div class="tiers">
+        <div class="tier"><span class="amt">≤ $25</span><span class="bar go">Goes through now</span></div>
+        <div class="tier"><span class="amt">≤ $200</span><span class="bar one">One friend approves</span></div>
+        <div class="tier"><span class="amt">&gt; $200</span><span class="bar maj">Most of the group approves</span></div>
+      </div>
+    </div>
+    <div class="bx b2">
+      <h3>Budgets per category</h3>
+      <p>Set a cap for stay, food or tickets. A spend that would go over is stopped before any money moves.</p>
+      <div class="budgets">
+        <div class="bud"><div class="t"><span>Stay</span><span class="tnum">$480 of $600</span></div><div class="track"><div class="fill" style="--w:80%"></div></div></div>
+        <div class="bud"><div class="t"><span>Tickets & activities</span><span class="tnum">$150 of $400</span></div><div class="track"><div class="fill" style="--w:37.5%"></div></div></div>
+        <div class="bud over"><div class="t"><span>Food & drink</span><span class="tnum">$188 of $200</span></div><div class="track"><div class="fill" style="--w:94%"></div></div></div>
+        <div class="blocked">Over the Food & drink budget by $12. Ask the group to raise it.</div>
+      </div>
+    </div>
+    <div class="bx b3">
+      <h3>Anyone can hit pause</h3>
+      <p>Something looks wrong? Any member can stop all spending for a day while the group sorts it out.</p>
+      <span class="pause"><i aria-hidden="true"></i>Pause spending</span>
+    </div>
+    <div class="bx b4">
+      <h3>Fair disputes</h3>
+      <p>Think a split is wrong? Flag it. The friend who paid can fix it, or the rest of the group decides.</p>
+      <span class="chip">Keep · or · Spender covers</span>
+    </div>
+    <div class="bx b5">
+      <h3>Leave any time</h3>
+      <p>Going home early? Leave the plan and get back what you put in, minus your share so far.</p>
+      <span class="chip pos tnum">Your refund: $61.40</span>
+    </div>
+  </div>
+</section>
+
+<section id="borders" aria-labelledby="borders-title">
+  <div class="shead">
+    <span class="badge">Across borders</span>
+    <h2 id="borders-title">Your friends live in different countries. Your pot doesn’t mind.</h2>
+    <p>Send to a friend in another country and they see it in their own currency in under a second, with the exchange rate on the receipt.</p>
+  </div>
+  <div class="mapbox">
+    <span class="slot">Aceternity component: World Map (from the Playful template), dots theme-aware</span>
+    <svg id="map" viewBox="0 0 126 60" role="img" aria-label="Map with money moving between London, New York, Bengaluru and Lisbon">
+      <g class="mapdots" id="mapdots"></g>
+      <g id="arcs"></g>
+      <g id="cities"></g>
+    </svg>
+  </div>
+  <div class="split2">
+    <div class="bx">
+      <h3>Send to anyone, even without the app</h3>
+      <p>Send a link. Your friend opens it, confirms with their fingerprint and the money is theirs, wherever they are. If nobody claims it in 7 days, it comes back to you.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="chip">🇬🇧 → 🇺🇸 £1.50 = $2.02</span><span class="chip">🇺🇸 → 🇮🇳 $25 = ₹2,090</span><span class="chip">🇮🇳 → 🇬🇧 ₹1,000 = £8.96</span></div>
+    </div>
+    <div class="stub" style="width:auto">
+      <div class="top">
+        <div class="row"><span class="sub">Maya → Sam</span><span class="sub">London → New York</span></div>
+        <div class="amt tnum">$2.02 <span style="font-size:15px;color:var(--muted)">· £1.50</span></div>
+        <div class="sub">Digital dollars (AUSD)</div>
+      </div>
+      <div class="perf"></div>
+      <div class="bot tnum">Rate 1 GBP = 1.3472 USD · ECB 14:05 UTC<br><b>Settled in 0.6 s</b> · Network cost covered by Plans</div>
+    </div>
+  </div>
+</section>
+
+<section id="numbers" aria-labelledby="numbers-title">
+  <div class="shead">
+    <span class="badge">Why it feels instant</span>
+    <h2 id="numbers-title">Built on Monad, measured, not promised</h2>
+    <p>We measured the network on 5 October 2026. These numbers are why a spend reaches every phone before you put yours down.</p>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <span class="slot">Pro block slot: Stats Sections (needs login)</span>
+      <div class="big tnum" data-count="301">301<small>ms</small></div>
+      <p>between blocks, median</p>
+      <span class="src">196 blocks · websocket timing</span>
+    </div>
+    <div class="stat">
+      <div class="big tnum" data-count="0.58" data-dec="2">0.58<small>s</small></div>
+      <p>until a payment is final, median</p>
+      <span class="src">0.65 s at p95 · 93 blocks</span>
+    </div>
+    <div class="stat">
+      <div class="big tnum">$0.0004</div>
+      <p>to send digital dollars, paid by Plans</p>
+      <span class="src">112,910 gas · 102 gwei · MON $0.031</span>
+    </div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="live-grid" aria-label="Live usage, starts at launch">
+    <span class="slot">Live stats page: pending, reads from the Envio indexer</span>
+    <div><span class="v tnum">—</span><span class="k">Plans created</span></div>
+    <div><span class="v tnum">—</span><span class="k">People</span></div>
+    <div><span class="v tnum">—</span><span class="k">Countries</span></div>
+    <div><span class="v tnum">—</span><span class="k">Settled up</span></div>
+  </div>
+  <p class="fineprint" style="text-align:center;margin-top:12px">Live counts start when Plans launches on Monad mainnet. Demo accounts are never counted.</p>
+</section>
+
+<section aria-labelledby="priv-title">
+  <div class="shead">
+    <span class="badge">Private by default</span>
+    <h2 id="priv-title">Your receipts are for your group only</h2>
+  </div>
+  <div class="priv">
+    <div class="bx">
+      <h3>Locked with your fingerprint</h3>
+      <p>Receipt photos, notes and names are encrypted with a key that comes from your passkey. Only people in the plan can open them.</p>
+      <p>New phone? Sign in with the same passkey and everything is back, receipts included. Nothing to copy, nothing to remember.</p>
+    </div>
+    <div class="bx" style="align-content:center">
+      <div class="phones">
+        <div class="mini"><span class="lbl">Your phone</span><span class="fp"><span class="emo">🦊🌵🎈</span></span><span class="lbl">Receipts unlocked</span></div>
+        <div class="mini"><span class="lbl">Your new phone</span><span class="fp"><span class="emo">🦊🌵🎈</span></span><span class="lbl">Same key, same receipts</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-title">
+  <div class="shead">
+    <span class="badge">Questions</span>
+    <h2 id="faq-title">Good questions, short answers</h2>
+  </div>
+  <div class="faq">
+    <details open><summary>What are digital dollars?</summary><p>The pot holds AUSD, a digital dollar issued by Agora and backed one to one by cash and short-term US Treasuries. You see it as dollars, next to your own currency.</p></details>
+    <details><summary>Do I need to know anything about crypto?</summary><p>No. You use your fingerprint. There are no passwords, seed phrases or network fees to pay.</p></details>
+    <details><summary>What if someone owes money at the end?</summary><p>When you join, you choose a small safety net. At settle-up, anything you owe up to that amount is collected from your Plans balance. Anything more is shown as a debt you can pay later.</p></details>
+    <details><summary>Can the organiser run off with the money?</summary><p>No. The pot has no owner. Every spend follows the rules the group agreed, and those rules can only change with the group’s approval.</p></details>
+    <details><summary>Which phones work?</summary><p>Android 9 or newer with a screen lock, for the beta. iPhone comes later.</p></details>
+    <details><summary>How do I get money in and out?</summary><p>For the beta, a friend can send you a link, or you can receive digital dollars from an exchange. Bank and card top-ups are planned.</p></details>
+  </div>
+</section>
+
+<section id="get" aria-labelledby="get-title" style="padding-bottom:40px">
+  <div class="final">
+    <span class="slot">Pro block slot: CTA Sections (needs login)</span>
+    <h2 id="get-title">Start a plan before the group chat goes quiet</h2>
+    <p>The Android beta opens on 12 October. Download the app, start a plan and drop the link in your chat.</p>
+    <a class="btn btn-primary" href="#get">Download for Android <small>Beta · 12 Oct</small></a>
+    <span class="fineprint">Android 9 or newer · free for groups · open source (MIT)</span>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 Plans · Built for Monad Metropolis</span>
+  <ul><li><a href="#how">How it works</a></li><li><a href="#numbers">Numbers</a></li><li><a href="#faq">Questions</a></li><li><span>Docs (soon)</span></li><li><span>GitHub: Baskarayelu/plans</span></li></ul>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.documentElement.classList.add('js');
+
+  /* review notes toggle */
+  var notes = document.getElementById('notes');
+  if (notes) notes.addEventListener('change', function () { document.body.classList.toggle('notes', notes.checked); });
+
+  /* hero word reveal (Playful hero pattern) */
+  var h = document.getElementById('headline');
+  if (h && !reduce) {
+    var i = 0;
+    (function wrap(node) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+        if (n.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            var s = document.createElement('span'); s.className = 'w'; s.textContent = part;
+            s.style.animationDelay = (0.12 + i++ * 0.07) + 's'; frag.appendChild(s);
+          });
+          n.parentNode.replaceChild(frag, n);
+        } else if (n.nodeType === 1) {
+          n.classList.add('w'); n.style.animationDelay = (0.12 + i++ * 0.07) + 's';
+        }
+      });
+    })(h);
+  }
+
+  /* split-flap board (ported from Aceternity Text Flipping Board) */
+  var COLS = 22, ROWS = 6;
+  var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$£₹.,-:/·';
+  var boards = [
+    ['PLAN    LISBON 12-16 OCT', 'PEOPLE  4  GB US IN PT', 'POT     $1,240.00', 'DINNER  $36.00 / 3', 'BOAT    $250 APPROVED', 'STATUS  SETTLED 0.6 S'],
+    ['PLAN    GLASTONBURY CREW', 'PEOPLE  6  GB IE NG', 'POT     $2,310.00', 'TICKETS $1,890.00', 'CAMPING $180 / 6', 'STATUS  ON TRACK'],
+    ['PLAN    BENGALURU WEDDING', 'PEOPLE  9  IN GB US AE', 'POT     $3,050.00', 'STAY    $1,400 OF $1,600', 'GIFTS   ₹25,000 SENT', 'STATUS  SETTLE SUNDAY']
+  ];
+  var boardEl = document.getElementById('board');
+  var cells = [];
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+    var d = document.createElement('div'); d.className = 'cell' + (c < 8 ? ' lab' : '');
+    var s = document.createElement('span'); s.textContent = ' '; d.appendChild(s);
+    boardEl.appendChild(d); cells.push({ el: d, span: s, cur: ' ', timer: null });
+  }
+  function pad(t) { t = t.toUpperCase(); return (t + ' '.repeat(COLS)).slice(0, COLS); }
+  function setCell(cell, ch, delay) {
+    clearTimeout(cell.timer);
+    if (reduce) { cell.span.textContent = ch === ' ' ? ' ' : ch; cell.cur = ch; return; }
+    if (cell.cur === ch) return;
+    var steps = ch === ' ' ? 6 + Math.floor(Math.random() * 5) : 10 + Math.floor(Math.random() * 12), k = 0;
+    function step() {
+      k++;
+      var last = k >= steps;
+      var show = last ? ch : CHARS[1 + Math.floor(Math.random() * (CHARS.length - 1))];
+      cell.el.classList.toggle('ac', !last && Math.random() < 0.12);
+      cell.span.textContent = show === ' ' ? ' ' : show;
+      cell.el.classList.remove('flip'); void cell.el.offsetWidth; cell.el.classList.add('flip');
+      if (!last) cell.timer = setTimeout(step, 55); else { cell.cur = ch; cell.el.classList.remove('ac'); }
+    }
+    cell.timer = setTimeout(step, delay);
+  }
+  var bi = 0;
+  function show(b) {
+    var lines = boards[b];
+    for (var r = 0; r < ROWS; r++) { var t = pad(lines[r] || ''); for (var c = 0; c < COLS; c++) setCell(cells[r * COLS + c], t[c], c * 30 + r * 20); }
+  }
+  show(0);
+  if (!reduce) setInterval(function () { bi = (bi + 1) % boards.length; show(bi); }, 7000);
+
+  /* world map (Aceternity World Map: dotted-map points + curved arcs) */
+  var DOTS = '__DOTS__';
+  var ns = 'http://www.w3.org/2000/svg', g = document.getElementById('mapdots'), frag = document.createDocumentFragment();
+  DOTS.split(';').forEach(function (p) { var xy = p.split(','); var ci = document.createElementNS(ns, 'circle'); ci.setAttribute('cx', xy[0]); ci.setAttribute('cy', xy[1]); ci.setAttribute('r', '0.22'); frag.appendChild(ci); });
+  g.appendChild(frag);
+  var city = { LON: [63, 14.72, 'London'], NYC: [36.5, 20.78, 'New York'], BLR: [90.5, 31.18, 'Bengaluru'], LIS: [60, 21.65, 'Lisbon'], LOS: [64, 33.77, 'Lagos'] };
+  var routes = [['LON', 'NYC'], ['NYC', 'LIS'], ['BLR', 'LIS'], ['LON', 'BLR'], ['LOS', 'LON']];
+  var arcs = document.getElementById('arcs');
+  routes.forEach(function (rt, idx) {
+    var a = city[rt[0]], b = city[rt[1]];
+    var mx = (a[0] + b[0]) / 2, my = Math.min(a[1], b[1]) - 9;
+    var p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', 'M ' + a[0] + ' ' + a[1] + ' Q ' + mx + ' ' + my + ' ' + b[0] + ' ' + b[1]);
+    p.setAttribute('class', 'arc'); p.style.animationDelay = (0.4 + idx * 0.5) + 's';
+    arcs.appendChild(p);
+  });
+  var cg = document.getElementById('cities');
+  Object.keys(city).forEach(function (k) {
+    var v = city[k], gg = document.createElementNS(ns, 'g'); gg.setAttribute('class', 'city');
+    var h1 = document.createElementNS(ns, 'circle'); h1.setAttribute('class', 'halo'); h1.setAttribute('cx', v[0]); h1.setAttribute('cy', v[1]); h1.setAttribute('r', '0.9');
+    var c1 = document.createElementNS(ns, 'circle'); c1.setAttribute('class', 'core'); c1.setAttribute('cx', v[0]); c1.setAttribute('cy', v[1]); c1.setAttribute('r', '0.75');
+    var t = document.createElementNS(ns, 'text'); t.setAttribute('x', v[0] + 1.4); t.setAttribute('y', v[1] + 0.7); t.textContent = v[2];
+    gg.appendChild(h1); gg.appendChild(c1); gg.appendChild(t); cg.appendChild(gg);
+  });
+
+  /* count-up on the measured stats */
+  if (!reduce) document.querySelectorAll('[data-count]').forEach(function (el) {
+    var target = parseFloat(el.getAttribute('data-count')), dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+    var unit = el.querySelector('small'), start = null;
+    function tick(ts) {
+      if (!start) start = ts;
+      var k = Math.min(1, (ts - start) / 1400), v = target * (1 - Math.pow(1 - k, 3));
+      el.firstChild.nodeValue = v.toFixed(dec);
+      if (k < 1) requestAnimationFrame(tick);
+    }
+    el.firstChild.nodeValue = (0).toFixed(dec); requestAnimationFrame(tick);
+    if (unit) el.appendChild(unit);
+  });
+})();
+</script>
