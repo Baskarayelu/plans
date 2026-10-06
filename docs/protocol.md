@@ -183,5 +183,6 @@ The result is capped at `active`, so a solo member is never stuck.
 | Easygoing | $100 | uint64 max | MAJORITY | none | 24 h | 1 h |
 | **Balanced (default)** | $25 | $200 | MAJORITY | $150 | 24 h | 1 h |
 | Strict | $0 | $100 | ALL | $100 | 24 h | 1 h |
+| Pilot | $0.25 | $1.00 | MAJORITY | none | 24 h | 1 h (plan lasts 48 h, review window 0) |
 
 **Demo plans:** judges' plan and "Try a settle-up". Instant $0.25 and one approval up to $1. A 5-minute ruleTimelock and reviewWindow of 0.

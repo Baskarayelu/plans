@@ -9,13 +9,22 @@ Deployer (MON, mainnet and testnet):  0x44E61d9E73394EDEBAB7095D224B0a6185EDa4e3
 Treasury (AUSD, mainnet):             0x0C2118133d7dFC751c326c86a5ddff5cF3846E35
 ```
 
-## What to send
+## Stages
 
-| # | Network | Token | Amount | To | What it's for | Spent or recoverable |
-|---|---|---|---|---|---|---|
-| 1 | Monad **testnet** | MON | **5** | Deployer | Testnet deploy (~1.0 MON) and automated emulator runs | Test funds |
-| 2 | Monad **mainnet** | MON | **15** | Deployer | Mainnet deploy (~1.0 MON); the rest goes to the 3 relayer keys for every user action | Spent as fees; anything left is recoverable |
-| 3 | Monad **mainnet** | AUSD | **27.00** | Treasury | See breakdown below | Mostly spent; parts recoverable |
+Funding comes in stages. Plan only around the stage that has arrived.
+
+| Stage | When | Network | Token | Amount | To | For | Spent or recoverable |
+|---|---|---|---|---|---|---|---|
+| 1 | Now | Testnet | MON | 5 | Deployer | Testnet deploy (~1.0 MON) and all automated emulator runs | Test funds |
+| 1 | Now | Mainnet | MON | 15 | Deployer | Mainnet deploy (~1.0 MON); the rest goes to the 3 relayer keys | Spent as fees; leftover recoverable |
+| 1 | Now | Mainnet | AUSD | 8.00 | Treasury | $3 Agora video account, $3 demo members, $2 mainnet test runs | All recoverable |
+| 2 | Mainnet release of the app | Mainnet | AUSD | 4.00 | Treasury | 8 judge claim links × $0.50 | Unclaimed links refund automatically |
+| 3 | You confirm pilot groups | Mainnet | AUSD | $0.50 × confirmed pilot users | Treasury | One claim link per pilot user | Claimed money is the pilot user's |
+
+**Rules while working:**
+- Emulator test runs use **testnet** wherever the flow allows.
+- Mainnet test spending stays inside the $2.00 test allowance.
+- Recoverable money (the Agora video accounts, demo members, test accounts) goes back to the treasury when each flow is done, and every report states the treasury balance.
 
 ### MON on mainnet: 15 MON (about $0.47 at $0.0315)
 
@@ -26,7 +35,7 @@ Treasury (AUSD, mainnet):             0x0C2118133d7dFC751c326c86a5ddff5cF3846E35
 | Judge claim links, judges' plan and demo members joining | ~3 M | 0.30 |
 | Pilot: 15 people × (claim, join, add money, 2 spends, a vote, a send, ack) plus 3 plans and settle-ups | ~32 M | 3.25 |
 | Agora video: 5 takes × (claim, onboarding, send, send back) | ~4 M | 0.41 |
-| Mainnet emulator runs: 3 full automated runs | ~15 M | 1.53 |
+| Mainnet checks of flows that can't run on testnet | ~15 M | 1.53 |
 | **Subtotal** | ~99 M | **10.05** |
 | Buffer for retries and failed attempts (~50%) | | 4.95 |
 | **Total** | | **15** |
@@ -35,16 +44,13 @@ After deployment, 14 MON covers about **680 average actions** of 200k gas each. 
 
 Reserve-balance note: Monad caps how much MON one sender can spend on gas within any three blocks. Splitting the MON across three relayer keys stays well inside that cap.
 
-### AUSD on mainnet: $27.00
+### Stage 1 AUSD on mainnet: $8.00
 
-| Item | Amount | Notes | Spent or recoverable |
-|---|---|---|---|
-| Agora bounty video: one $3.00 claim link for "Leah, London" | $3.00 | Shows a $3.00 balance, sends £1.00 (~$1.35) to Sam, Sam sends $0.50 back. Retakes reuse the same money between our two test accounts. | Recoverable (both are our accounts) |
-| Judge claim links: 8 × $0.50 | $4.00 | Single use, expire 31 Oct | Unclaimed links refund automatically; claimed ones are spent |
-| Demo members Ben, Asha, Maya: $1.00 each | $3.00 | Fund the judges' plan ($1.00 in total) and "Try a settle-up" runs (at most $0.30 per run, mostly paid back to the demo accounts at settle-up) | Mostly recoverable (we hold the keys) |
-| Pilot claim links: 15 × $1.00 | $15.00 | One per pilot person, with a few spare | Claimed ones are spent (the money is the pilot user's); unclaimed refund after 7 days |
-| Mainnet emulator test runs | $2.00 | Claim links for test accounts | Recoverable |
-| **Total** | **$27.00** | | |
+| Item | Amount | Notes |
+|---|---|---|
+| Agora bounty video: one $3.00 claim link for "Leah, London" | $3.00 | Shows a $3.00 balance, sends £1.00 (~$1.35) to Sam, Sam sends $0.50 back. Retakes reuse the same money. Returned to the treasury afterwards. |
+| Demo members Ben, Asha, Maya: $1.00 each | $3.00 | Fund the judges' plan ($1.00 in total) and "Try a settle-up" runs (at most $0.30 per run, mostly paid back to the demo accounts at settle-up). |
+| Mainnet test runs | $2.00 | Only for checks that can't run on testnet. Returned afterwards. |
 
 ## Cheapest way to get each token onto Monad mainnet
 
