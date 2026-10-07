@@ -14,7 +14,7 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 | Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 44 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 44 |
 | Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app | **122 passing** (unit, plus integration against anvil) |
 | Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **26 passing** |
-| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.1) (Monad testnet) | **173 passing**, plus a copy check that fails the build on crypto words |
+| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0, test 2](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.2) (Monad testnet) | **173 passing**, plus a copy check that fails the build on crypto words |
 | Website and docs | [`site/`](site) | Live at https://plans.0xo.in | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
 
 ## Monad testnet deployment (chain 10143)

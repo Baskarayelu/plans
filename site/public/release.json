@@ -1,9 +1,9 @@
 {
   "_comment": "Edited by the release owner. status: pending | live. Fill sha256 (lowercase hex) and size when the APKs are published to GitHub Releases.",
   "status": "live",
-  "version": "1.0.0 (test 1, Monad testnet)",
+  "version": "1.0.0 (test 2, Monad testnet)",
   "publishedAt": "7 Oct 2026",
-  "notes": "https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.1",
+  "notes": "https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.2",
   "apks": [
     {
       "id": "mainnet",
@@ -21,9 +21,9 @@
       "label": "Plans Test",
       "network": "Monad testnet",
       "description": "A separate test build with free test dollars, for experimenting. Installs alongside the real app.",
-      "url": "https://github.com/Baskarayelu/plans/releases/download/v1.0.0-test.1/plans-test.apk",
-      "sha256": "d000d25116f9f0a93ecbc3e17ec75cbaefc133118a8af3f419d5dd68b1affa12",
-      "sizeBytes": 88746249
+      "url": "https://github.com/Baskarayelu/plans/releases/download/v1.0.0-test.2/plans-test.apk",
+      "sha256": "55a2192323702bf2ce9d556c31620c78d81707d2bfab413632326ed6630e7564",
+      "sizeBytes": 88864789
     }
   ]
 }
