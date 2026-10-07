@@ -9,6 +9,7 @@ import { AppBar, Bleed } from "../layout";
 import { useLocal } from "../money";
 import { Txt } from "../Text";
 import { dateRange } from "../planBits";
+import { fonts } from "../../theme/tokens";
 
 export function PersonAvatar({ p, size = 40, flag = true, ring }: { p: Person; size?: number; flag?: boolean; ring?: boolean }) {
   return <Avatar initial={p.initial} color={p.color} size={size} flag={flag ? p.flag : undefined} ring={ring} />;
@@ -53,7 +54,7 @@ export function PlanTop({ plan, right, band, onMore, onPeople }: { plan: PlanVM;
       <AppBar
         title={
           <Row gap={0}>
-            <Txt numberOfLines={1} style={{ fontFamily: "BricolageGrotesque_700Bold", fontSize: 18, lineHeight: 22, flexShrink: 1 }}>
+            <Txt numberOfLines={1} style={{ fontFamily: fonts.displayBold, fontSize: 18, lineHeight: 22, flexShrink: 1 }}>
               {plan.meta.emoji} {plan.meta.name}
             </Txt>
             {plan.meta.demo || plan.raw.isDemo ? <DemoTag /> : null}

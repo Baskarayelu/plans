@@ -29,6 +29,12 @@ export const viewport: Viewport = {
   ],
 };
 
+// Error capture for post-deploy checks that cannot read the console (Safari WebDriver); see e2e/web/postdeploy.mjs.
+const ERROR_CAPTURE = `(function(){var E=(window.__plansErrors=[]);function push(t,m){try{if(E.length<100)E.push({t:t,m:String(m).slice(0,300)})}catch(e){}}
+window.addEventListener("error",function(e){var el=e&&e.target;if(el&&el!==window&&(el.src||el.href))push("resource",el.src||el.href);else push("error",(e&&e.message)||"error")},true);
+window.addEventListener("unhandledrejection",function(e){push("rejection",e&&e.reason&&(e.reason.message||e.reason))});
+var ce=console.error;console.error=function(){push("console",Array.prototype.map.call(arguments,String).join(" "));return ce.apply(console,arguments)}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -36,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${body.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: ERROR_CAPTURE }} />
+      </head>
       <body className="flex min-h-screen flex-col">
         <RootProvider theme={{ hotKey: false, defaultTheme: "system", enableSystem: true }}>{children}</RootProvider>
       </body>

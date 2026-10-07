@@ -23,6 +23,18 @@ cd "$HERE"
 rm -rf "$OUT"
 npx expo export --platform web --output-dir "$OUT" $([ "${CLEAR:-1}" = "0" ] || echo --clear) >/dev/null
 rm -f "$OUT/metadata.json"
+# Expo exports package assets (fonts, icons) under assets/node_modules/…. Nothing under a node_modules
+# path reaches production: git ignores it and the Vercel CLI does not upload it. Move every such
+# directory to "pkg" and rewrite the URLs that point at it, then refuse a build that still has one.
+while d="$(find "$OUT" -type d -name node_modules -print -quit)" && [ -n "$d" ]; do
+  mv "$d" "$(dirname "$d")/pkg"
+done
+find "$OUT" -type f \( -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.json" -o -name "*.map" \) -print0 |
+  xargs -0 perl -pi -e '1 while s#(/assets/(?:[^"'"'"'\s()]*/)?)node_modules/#$1pkg/#g'
+if find "$OUT" -name node_modules | grep -q . || grep -rlq "assets/[^\"' ]*node_modules" "$OUT"; then
+  echo "web build: a node_modules path is still in the export (it would 404 in production)" >&2
+  exit 1
+fi
 # The bundle must carry this app's config (contract addresses, relayer): refuse a bundle without it.
 grep -q "$PLANS_RELAYER_URL_TESTNET" "$OUT"/_expo/static/js/web/entry-*.js || { echo "web build: app config missing from the bundle (stale Metro cache?)" >&2; exit 1; }
 # Record what was built (no secrets): network, chain, relayer and contract addresses.

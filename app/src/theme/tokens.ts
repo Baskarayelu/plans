@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 /** Design tokens from design/gen/app.css (approved design). */
 export type Palette = {
   bg: string;
@@ -68,15 +69,20 @@ export const WRISTBAND_LIST = Object.values(WRISTBANDS);
 /** Avatar colours for people (design P). */
 export const AVATAR_COLORS = ["#D9634B", "#3C78B8", "#8C5CC4", "#2B8A5F", "#B7792A", "#5E6B73", "#C24F7A", "#3E8E9E"];
 
+// On the web each family carries a system fallback, so text still renders if a font file fails to load.
+const SANS = ', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const MONO = ', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const withFallback = (family: string, stack: string) => (Platform.OS === "web" ? `${family}${stack}` : family);
+
 export const fonts = {
-  display: "BricolageGrotesque_800ExtraBold",
-  displayBold: "BricolageGrotesque_700Bold",
-  body: "Figtree_400Regular",
-  bodyMedium: "Figtree_500Medium",
-  bodySemi: "Figtree_600SemiBold",
-  bodyBold: "Figtree_700Bold",
-  mono: "IBMPlexMono_500Medium",
-  monoSemi: "IBMPlexMono_600SemiBold",
+  display: withFallback("BricolageGrotesque_800ExtraBold", SANS),
+  displayBold: withFallback("BricolageGrotesque_700Bold", SANS),
+  body: withFallback("Figtree_400Regular", SANS),
+  bodyMedium: withFallback("Figtree_500Medium", SANS),
+  bodySemi: withFallback("Figtree_600SemiBold", SANS),
+  bodyBold: withFallback("Figtree_700Bold", SANS),
+  mono: withFallback("IBMPlexMono_500Medium", MONO),
+  monoSemi: withFallback("IBMPlexMono_600SemiBold", MONO),
 };
 
 /** Mix `a` over `b` at `p` (0..1) like CSS color-mix(in srgb, a p%, b). */

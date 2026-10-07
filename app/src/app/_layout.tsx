@@ -83,8 +83,10 @@ function Nav() {
   );
 }
 
+const FONT_WAIT_MS = 2500;
+
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
     Figtree_400Regular,
@@ -94,6 +96,16 @@ export default function RootLayout() {
     IBMPlexMono_500Medium,
     IBMPlexMono_600SemiBold,
   });
+  // Never wait on fonts for ever: after FONT_WAIT_MS, or on a load error, render with the fallback fonts.
+  const [fontWaitOver, setFontWaitOver] = React.useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontWaitOver(true), FONT_WAIT_MS);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (fontError) console.warn("fonts failed to load; using system fonts", fontError.message);
+  }, [fontError]);
+  const fontsSettled = fontsLoaded || !!fontError || fontWaitOver;
   // Already loaded (a remount on the web): don't blank the app or re-read storage over an open session.
   const [ready, setReady] = React.useState(identity.get().status !== "loading");
 
@@ -117,10 +129,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && ready) void SplashScreen.hideAsync().catch(() => undefined);
-  }, [fontsLoaded, ready]);
+    if (fontsSettled && ready) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [fontsSettled, ready]);
 
-  if (!fontsLoaded || !ready) return null;
+  if (!fontsSettled || !ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

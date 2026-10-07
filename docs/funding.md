@@ -60,3 +60,15 @@ Reserve-balance note: Monad caps how much MON one sender can spend on gas within
 4. **Testnet MON:** use the Monad testnet faucet, or send from any wallet holding testnet MON, to the deployer address. Testnet AUSD needs nothing from you: the relayer draws it from Agora's testnet faucet.
 
 None of these keys belong to any other project. The keys live only on this machine (`monad/secrets/`, outside the repository).
+
+## Received and spent (ledger)
+
+| Date | Network | In / out | Amount | From → to | Transaction | Note |
+|---|---|---|---|---|---|---|
+| 7 Oct 2026 | Testnet | In | 5 MON | → Deployer | (sent by Baskar) | Deployer 0.337 → 5.337 MON |
+| 7 Oct 2026 | Testnet | Out | 1.30 MON | Deployer → relayer lane 1 `0x8A2b…8E78` | `0xe5b30c7d…c4ac` | gas limit 21000 from eth_estimateGas |
+| 7 Oct 2026 | Testnet | Out | 1.20 MON | Deployer → relayer lane 2 `0x03Aa…A649` | `0x778c9e74…a172` | gas limit 21000 from eth_estimateGas |
+| 7 Oct 2026 | Testnet | Out | 1.35 MON | Deployer → relayer lane 3 `0xe5ce…2662` | `0x956baa98…92e0` | gas limit 21000 from eth_estimateGas |
+| 7 Oct 2026 | Testnet | Out | ~0.054 MON | Deployer → MockKeystoneForwarder | `0x66ad55a2…f8a6`, `0x94f2071f…c1b3` | Chainlink CRE FX rounds 1 and 2 (263,000 gas each) |
+
+Balances after: deployer 1.43 MON, lanes 1.31 / 1.32 / 1.35 MON (testnet).

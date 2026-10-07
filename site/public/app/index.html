@@ -16,6 +16,22 @@
     <link rel="apple-touch-icon" href="/app/icons/icon-192.png" />
     <title>Plans</title>
     <script>
+      // Error capture for checks that cannot read the console (Safari WebDriver): every script error,
+      // failed resource and console.error since the first byte, in window.__plansErrors.
+      (function () {
+        var E = (window.__plansErrors = []);
+        function push(t, m) { try { if (E.length < 100) E.push({ t: t, m: String(m).slice(0, 300) }); } catch (e) {} }
+        window.addEventListener("error", function (e) {
+          var el = e && e.target;
+          if (el && el !== window && (el.src || el.href)) push("resource", el.src || el.href);
+          else push("error", (e && e.message) || "error");
+        }, true);
+        window.addEventListener("unhandledrejection", function (e) { push("rejection", e && e.reason && (e.reason.message || e.reason)); });
+        var ce = console.error;
+        console.error = function () { push("console", Array.prototype.map.call(arguments, String).join(" ")); return ce.apply(console, arguments); };
+      })();
+    </script>
+    <script>
       // Plans links (/app/j/<pot>#s=…, /app/v/<pot>#s=…, /app/join#pot=…&s=…, /app/c/1#k=…, /app/claim#k=…,
       // /app/p/<addr>#…) are handled HERE, before the app's router reads the address: the "#" part (which
       // holds the invite secret or claim key) is kept in memory for the app (window.__plansLink, read once
@@ -63,6 +79,6 @@
   <body>
     <noscript>Plans needs JavaScript to run in your browser.</noscript>
     <div id="root"></div>
-  <script src="/app/_expo/static/js/web/entry-374b21fa2e7ac344f76f82647c15ab91.js" defer></script>
+  <script src="/app/_expo/static/js/web/entry-440e158d4c5cdd413e5773ad1baeefa7.js" defer></script>
 </body>
 </html>

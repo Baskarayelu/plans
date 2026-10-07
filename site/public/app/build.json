@@ -1,6 +1,6 @@
 {
   "network": "testnet",
   "relayer": "https://relayer-production-ecef.up.railway.app",
-  "bundle": "_expo/static/js/web/entry-374b21fa2e7ac344f76f82647c15ab91.js",
-  "builtAt": "2026-10-07T12:19:50.651Z"
+  "bundle": "_expo/static/js/web/entry-440e158d4c5cdd413e5773ad1baeefa7.js",
+  "builtAt": "2026-10-07T17:10:37.876Z"
 }
