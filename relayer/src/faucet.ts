@@ -18,6 +18,8 @@ export interface FaucetOptions {
   amount: bigint;
   perAddressPerDay: number;
   perIpPerDay: number;
+  /** All drips across everyone per UTC day: protects the lanes' AUSD if the per-network limit is beaten. */
+  totalPerDay: number;
 }
 
 export class Faucet {
@@ -51,12 +53,20 @@ export class Faucet {
     if (!this.enabled) throw new RelayError(404, "FAUCET_DISABLED", "The faucet is only available on testnet.");
     const addrKey = `faucet:addr:${address.toLowerCase()}`;
     const ipKey = `faucet:ip:${ip}`;
+    const totalKey = "faucet:total";
     if (!this.store.takeDaily(addrKey, this.opts.perAddressPerDay)) {
       throw new RelayError(429, "FAUCET_LIMIT", "This address already got test dollars today. Try again tomorrow.");
     }
+    // A venue's Wi-Fi puts a whole group behind one address, so the per-network limit is generous and
+    // has its own code: the app must never tell a brand-new account "come back tomorrow" because of it.
     if (!this.store.takeDaily(ipKey, this.opts.perIpPerDay)) {
       this.store.refundDaily(addrKey);
-      throw new RelayError(429, "FAUCET_LIMIT", "Too many faucet requests from this network today.");
+      throw new RelayError(429, "FAUCET_NETWORK_LIMIT", "Many people on this network got test dollars today.");
+    }
+    if (!this.store.takeDaily(totalKey, this.opts.totalPerDay)) {
+      this.store.refundDaily(addrKey);
+      this.store.refundDaily(ipKey);
+      throw new RelayError(429, "FAUCET_DAILY_CAP", "Today's test dollars have all been given out.");
     }
     // Serialise drips: they all spend from lane 0's AUSD.
     const run = async () => {
@@ -84,6 +94,7 @@ export class Faucet {
     } catch (e) {
       this.store.refundDaily(addrKey);
       this.store.refundDaily(ipKey);
+      this.store.refundDaily(totalKey);
       throw e;
     }
   }

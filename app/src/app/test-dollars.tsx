@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { isTestnet } from "../config";
-import { RelayError, requestFaucet } from "../lib/api/relayer";
+import { CODE_COPY, RelayError, requestFaucet } from "../lib/api/relayer";
 import { formatUsd, formatUsdShort } from "../lib/domain/currency";
 import { queryClient, qk, useBalance, useMe } from "../lib/state/data";
 import { storage } from "../lib/state/storage";
@@ -18,14 +18,19 @@ import { Txt } from "../ui/Text";
 const DEFAULT_UNITS = 25_000_000n;
 const sameUtcDay = (a: number, b: number) => new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10);
 
-async function faucet(account: string): Promise<{ amount: bigint; limited: boolean }> {
+/** Why there are no test dollars right now. Only "account" means this account already had today's. */
+type Limit = "account" | "network" | "everyone";
+
+async function faucet(account: string): Promise<{ amount: bigint; limited: Limit | null }> {
   try {
     const r = await requestFaucet(account);
     const prefs = await storage.loadPrefs();
     await storage.savePrefs({ ...prefs, lastFaucetAt: Date.now() });
-    return { amount: r.amount && /^\d+$/.test(r.amount) ? BigInt(r.amount) : DEFAULT_UNITS, limited: false };
+    return { amount: r.amount && /^\d+$/.test(r.amount) ? BigInt(r.amount) : DEFAULT_UNITS, limited: null };
   } catch (e) {
-    if (e instanceof RelayError && e.code === "FAUCET_LIMIT") return { amount: 0n, limited: true };
+    if (e instanceof RelayError && e.code === "FAUCET_LIMIT") return { amount: 0n, limited: "account" };
+    if (e instanceof RelayError && e.code === "FAUCET_NETWORK_LIMIT") return { amount: 0n, limited: "network" };
+    if (e instanceof RelayError && e.code === "FAUCET_DAILY_CAP") return { amount: 0n, limited: "everyone" };
     throw e;
   }
 }
@@ -35,7 +40,7 @@ export default function TestDollars() {
   const { address } = useMe();
   const bal = useBalance();
   const local = useLocal();
-  const [limited, setLimited] = useState(false);
+  const [limited, setLimited] = useState<Limit | null>(null);
   const [got, setGot] = useState<bigint | null>(null);
   const act = useAction(faucet);
   const mounted = useRef(true);
@@ -45,7 +50,7 @@ export default function TestDollars() {
 
   useEffect(() => {
     void storage.loadPrefs().then((p) => {
-      if (p.lastFaucetAt && sameUtcDay(p.lastFaucetAt, Date.now())) setLimited(true);
+      if (p.lastFaucetAt && sameUtcDay(p.lastFaucetAt, Date.now())) setLimited("account");
     });
   }, []);
 
@@ -67,7 +72,7 @@ export default function TestDollars() {
     const r = await act.run(address);
     if (!r) return;
     if (r.limited) {
-      setLimited(true);
+      setLimited(r.limited);
       return;
     }
     setGot(r.amount);
@@ -87,9 +92,9 @@ export default function TestDollars() {
           <Btn label="Done" onPress={() => (router.canGoBack() ? router.back() : router.replace("/balance"))} testID="btn-done" />
         ) : (
           <Btn
-            label={limited ? "Next top-up tomorrow" : `Get ${formatUsdShort(amount)} test dollars`}
-            icon="gift"
-            disabled={limited || !address}
+            label={limited === "account" || limited === "everyone" ? "Next top-up tomorrow" : limited === "network" ? "Try again" : `Get ${formatUsdShort(amount)} test dollars`}
+            icon={limited === "network" ? "refresh" : "gift"}
+            disabled={limited === "account" || limited === "everyone" || !address}
             loading={act.busy}
             onPress={() => void get()}
             testID="btn-get-test-dollars"
@@ -118,6 +123,17 @@ export default function TestDollars() {
           One top-up a day for each account.
         </Txt>
       </Row>
+      {limited === "network" || limited === "everyone" ? (
+        <View style={{ marginTop: 12 }}>
+          <Banner
+            kind="inf"
+            icon={limited === "network" ? "wifioff" : "clock"}
+            title={limited === "network" ? "Busy network" : "All given out for today"}
+            text={limited === "network" ? CODE_COPY.FAUCET_NETWORK_LIMIT : CODE_COPY.FAUCET_DAILY_CAP}
+            testID={`test-dollars-limit-${limited}`}
+          />
+        </View>
+      ) : null}
       {act.error ? (
         <View style={{ marginTop: 12 }}>
           <Banner kind="neg" icon="alert" title={act.error.title} text={act.error.message} />

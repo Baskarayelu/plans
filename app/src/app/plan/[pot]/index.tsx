@@ -13,6 +13,7 @@ import { formatUsd, formatUsdShort } from "../../../lib/domain/currency";
 import { CATEGORIES } from "../../../lib/domain/rules";
 import { identity } from "../../../lib/identity/session";
 import { personFor, qk, queryClient, useMe, usePlan, type PlanCardVM, type PlanVM } from "../../../lib/state/data";
+import { CollectBanner, uncollected } from "../../../ui/plan/CollectBanner";
 import { useStore } from "../../../lib/state/observable";
 import { useAction } from "../../../lib/state/useAction";
 import { useColors } from "../../../theme/ThemeProvider";
@@ -207,9 +208,10 @@ function PhonePlanBody({
 
       {plan.settled ? (
         <View style={{ marginTop: 12 }}>
-          <Banner kind="pos" icon="check" title="Settled" text={raw.settledAt ? `Everyone was paid on ${dayMonth(raw.settledAt)}.` : "Everyone has been paid."} testID="banner-settled">
+          <Banner kind="pos" icon="check" title="Settled" text={settledText(plan)} testID="banner-settled">
             <Btn label="See the summary" kind="sec" sm onPress={() => go("/plan/[pot]/memory")} style={{ marginTop: 8, height: 40 }} testID="btn-banner-summary" />
           </Banner>
+          <CollectBanner plan={plan} />
         </View>
       ) : plan.ended ? (
         <View style={{ marginTop: 12 }}>
@@ -668,10 +670,14 @@ function DeskPlanBody({ plan, refetch, refreshing, offline, refreshError, update
       {plan.frozen && !plan.settled ? <PausedBanner plan={plan} offline={offline} /> : null}
       {plan.settled
         ? banner(
-            <Banner kind="pos" icon="check" title="Settled" text={raw.settledAt ? `Everyone was paid on ${dayMonth(raw.settledAt)}.` : "Everyone has been paid."} testID="banner-settled">
+            <Banner kind="pos" icon="check" title="Settled" text={settledText(plan)} testID="banner-settled">
               <Btn label="See the summary" kind="sec" sm onPress={() => go("/plan/[pot]/memory")} style={{ marginTop: 8, height: 40 }} testID="btn-banner-summary" />
             </Banner>,
           )
+        : null}
+      {plan.settled ? <CollectBanner plan={plan} /> : null}
+      {plan.settled
+        ? null
         : plan.ended
           ? banner(
               <Banner kind="acc" icon="flag" title="This plan has ended" text="Check the numbers together, then settle up in one go." testID="banner-ended">
@@ -854,4 +860,11 @@ function DeskPlanBody({ plan, refetch, refreshing, offline, refreshError, update
       </Sheet>
     </Screen>
   );
+}
+
+/** The settled banner's line: "everyone was paid" only when nobody is still waiting to collect. */
+function settledText(plan: PlanVM): string {
+  const on = plan.raw.settledAt ? ` on ${dayMonth(plan.raw.settledAt)}` : "";
+  if (uncollected(plan.raw.members, plan.me, plan.settled).length) return `Settled${on}. Some money is still waiting to be collected.`;
+  return plan.raw.settledAt ? `Everyone was paid${on}.` : "Everyone has been paid.";
 }

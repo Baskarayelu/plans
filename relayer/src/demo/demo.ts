@@ -444,7 +444,7 @@ export class DemoService {
     }
     if (!this.d.store.takeDaily(ipKey, this.d.cfg.perIpPerDay)) {
       this.d.store.refundDaily(judgeKey);
-      throw new RelayError(429, "DEMO_LIMIT", "Too many demo settle-ups from this network today.");
+      throw new RelayError(429, "DEMO_NETWORK_LIMIT", "Many people on this network started a demo today.");
     }
     try {
       const inviteSecret = extras.inviteSecret ?? generatePrivateKey();

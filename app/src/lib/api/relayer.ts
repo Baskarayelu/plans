@@ -216,7 +216,7 @@ export async function getTxLatency(hash: string): Promise<{ latencyMs: number; [
 
 // ─────────────── friendly errors ───────────────
 
-const CODE_COPY: Record<string, string> = {
+export const CODE_COPY: Record<string, string> = {
   USED_OR_CANCELED_AUTHORIZATION: "This payment already went through or was cancelled. Check your balance before trying again.",
   EXPIRED_AUTHORIZATION: "This payment took too long and expired. Nothing moved. Please try again.",
   NOT_ACTIVE_MEMBER: "You're not an active member of this plan.",
@@ -263,6 +263,9 @@ const CODE_COPY: Record<string, string> = {
   GAS_CAP_EXCEEDED: "That's too big to do in one go.",
   REVERTED_ONCHAIN: "Things changed while we were sending it. Nothing moved; check and try again.",
   FAUCET_LIMIT: "You've had today's test dollars. Come back tomorrow.",
+  FAUCET_NETWORK_LIMIT: "Lots of people on this Wi-Fi got test dollars today. Try again on mobile data, or ask a friend in your plan to send you some.",
+  FAUCET_DAILY_CAP: "Today's test dollars have all been given out. Try again tomorrow, or ask a friend in your plan to send you some.",
+  DEMO_NETWORK_LIMIT: "Lots of people on this Wi-Fi started a demo today. Try again on mobile data.",
   NOT_MEMBER: "You're not in this plan.",
   NOT_SETTLED: "This plan isn't settled yet. Settle up first, then collect.",
   NOTHING_TO_COLLECT: "There's nothing left to collect from this plan.",

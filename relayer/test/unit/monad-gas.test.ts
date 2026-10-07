@@ -136,7 +136,7 @@ describe("every relayer transaction uses a Monad-estimated gas limit", () => {
       [
         "drip",
         () =>
-          new Faucet({ enabled: true, isMainnet: false, address: FAUCET, ausd: AUSD, amount: 1_000_000n, perAddressPerDay: 5, perIpPerDay: 5 }, client, relayer, pool, new Store(":memory:")).drip(
+          new Faucet({ enabled: true, isMainnet: false, address: FAUCET, ausd: AUSD, amount: 1_000_000n, perAddressPerDay: 5, perIpPerDay: 5, totalPerDay: 50 }, client, relayer, pool, new Store(":memory:")).drip(
             "0x00000000000000000000000000000000000000a1",
             "1.2.3.4",
           ),

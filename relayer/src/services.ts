@@ -50,6 +50,7 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
       amount: cfg.faucet.amount,
       perAddressPerDay: cfg.faucet.perAddressPerDay,
       perIpPerDay: cfg.faucet.perIpPerDay,
+      totalPerDay: cfg.faucet.totalPerDay,
     },
     client,
     relayer,

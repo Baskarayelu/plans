@@ -149,7 +149,8 @@ const envSchema = z.object({
   FAUCET_ADDRESS: optAddress,
   FAUCET_AMOUNT: big(25_000_000n),
   FAUCET_PER_ADDRESS_PER_DAY: int(1),
-  FAUCET_PER_IP_PER_DAY: int(3),
+  FAUCET_PER_IP_PER_DAY: int(40),
+  FAUCET_TOTAL_PER_DAY: int(400),
 
   PUSH_ENABLED: bool(true),
   EXPO_PUSH_URL: z.string().optional().default("https://exp.host/--/api/v2/push/send"),
@@ -167,7 +168,7 @@ const envSchema = z.object({
   DEMO_MAX_OUTLAY: big(300_000n),
   DEMO_PLAN_MINUTES: int(15),
   DEMO_PER_JUDGE_PER_DAY: int(3),
-  DEMO_PER_IP_PER_DAY: int(10),
+  DEMO_PER_IP_PER_DAY: int(40),
   DEMO_TICK_MS: int(1000),
 
   BLOB_DIR: z.string().optional(),
@@ -266,6 +267,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       amount: e.FAUCET_AMOUNT,
       perAddressPerDay: e.FAUCET_PER_ADDRESS_PER_DAY,
       perIpPerDay: e.FAUCET_PER_IP_PER_DAY,
+      totalPerDay: e.FAUCET_TOTAL_PER_DAY,
     },
     push: { enabled: e.PUSH_ENABLED, url: e.EXPO_PUSH_URL, accessToken: e.EXPO_ACCESS_TOKEN },
     demo: {

@@ -25,6 +25,7 @@ import { Txt } from "../../ui/Text";
 
 const ERR: Record<string, { title: string; text: string }> = {
   DEMO_LIMIT: { title: "That's enough demos for today", text: "You can start 3 a day. Try again tomorrow, or carry on with one you started." },
+  DEMO_NETWORK_LIMIT: { title: "This Wi-Fi is busy with demos", text: "Lots of people on this network started a demo today. Try again on mobile data, or carry on with one you started." },
   DEMO_DISABLED: { title: "The demo isn't available right now", text: "The demo friends are switched off on this server. Try again later." },
   DEMO_NOT_CONFIGURED: { title: "The demo friends are taking a break", text: "Try again later." },
 };
