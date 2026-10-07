@@ -309,7 +309,21 @@ async function runSafari() {
   }
 }
 
+/** Static files the app depends on: the service worker must be JavaScript with its scope header. */
+async function runStatic() {
+  const problems = [];
+  const r = await fetch(BASE + "/app/sw.js", { cache: "no-store" }).catch((e) => ({ ok: false, status: 0, headers: new Headers(), err: e }));
+  const type = r.headers.get("content-type") ?? "";
+  if (r.status !== 200) problems.push(`/app/sw.js HTTP ${r.status}`);
+  if (!/javascript/.test(type)) problems.push(`/app/sw.js content-type "${type}" (expected JavaScript)`);
+  if (r.headers.get("service-worker-allowed") !== "/app") problems.push(`/app/sw.js Service-Worker-Allowed "${r.headers.get("service-worker-allowed")}" (expected /app)`);
+  const m = await fetch(BASE + "/app/manifest.webmanifest", { cache: "no-store" }).catch(() => ({ status: 0 }));
+  if (m.status !== 200) problems.push(`/app/manifest.webmanifest HTTP ${m.status}`);
+  record({ browser: "http", page: "sw.js + manifest", viewport: "-", theme: "-", ok: problems.length === 0, problems });
+}
+
 const started = Date.now();
+await runStatic();
 if (BROWSERS.includes("chrome")) await runChrome();
 if (BROWSERS.includes("safari")) await runSafari();
 const failed = results.filter((r) => !r.ok);
