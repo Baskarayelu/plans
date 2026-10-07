@@ -2,7 +2,7 @@
   "schedule": "0 */30 * * * *",
   "chainName": "monad-testnet",
   "chainSelector": "2183018362218727504",
-  "receiverAddress": "",
-  "gasLimit": "",
+  "receiverAddress": "0xaB7eeDe1DA994137a340155f350A8F81358FFCa2",
+  "gasLimit": "263000",
   "maxSpreadBps": 200
 }
