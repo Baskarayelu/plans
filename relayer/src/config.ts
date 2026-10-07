@@ -174,6 +174,7 @@ const envSchema = z.object({
   BLOB_MAX_BYTES: int(2 * 1024 * 1024),
   BLOB_DISK_CAP_BYTES: int(2 * 1024 * 1024 * 1024),
   BLOB_PUT_PER_IP_PER_HOUR: int(60),
+  SLOT_PUT_PER_IP_PER_HOUR: int(60),
 
   LONGSTOP_ENABLED: bool(true),
   LONGSTOP_INTERVAL_MS: int(60 * 60 * 1000),
@@ -287,6 +288,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       diskCapBytes: e.BLOB_DISK_CAP_BYTES,
       putPerIpPerHour: e.BLOB_PUT_PER_IP_PER_HOUR,
     },
+    /** Keyed slots (browser linking); stored under <blobs.dir>/slots and counted against the blob disk cap. */
+    slots: { putPerIpPerHour: e.SLOT_PUT_PER_IP_PER_HOUR },
     longStop: { enabled: e.LONGSTOP_ENABLED, intervalMs: e.LONGSTOP_INTERVAL_MS, graceDays: e.LONGSTOP_GRACE_DAYS },
   };
 }

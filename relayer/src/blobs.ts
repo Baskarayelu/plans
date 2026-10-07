@@ -37,7 +37,8 @@ export class BlobStore {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       const st = statSync(p);
-      if (st.isDirectory()) total += BlobStore.#scan(p);
+      // <dir>/slots holds the keyed slot store (slots.ts), which keeps its own count.
+      if (st.isDirectory()) total += name === "slots" ? 0 : BlobStore.#scan(p);
       else if (SHA256_RE.test(name)) total += st.size;
     }
     return total;

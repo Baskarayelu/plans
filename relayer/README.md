@@ -133,6 +133,41 @@ The server decodes the body, recomputes sha256 over the decoded bytes, and store
 
 **Download.** `GET` returns `{"data": "<base64url, unpadded>"}` when the `Accept` header includes `application/json`, which is what the app sends. Otherwise it returns the raw bytes as `application/octet-stream`. Both carry `Cache-Control: public, max-age=31536000, immutable`, `Vary: Accept` and an ETag (which differs between the two forms), and `If-None-Match` gives 304. Unknown ids return 404.
 
+### Keyed slots: `PUT /v1/slots/:id`, `GET /v1/slots/:id`
+
+Small ciphertext records at an id the app derives itself, used to link a browser to an account (the
+exact protocol is in `app/docs/crypto.md` §9). Unlike blobs, the id is not a hash of the body, so
+writes are guarded. `:id` is 64 hex characters (case-insensitive; stored lowercase).
+
+**Write.** `PUT` with `Content-Type: application/json`:
+
+```json
+{ "data": "<base64url, at most 8192 decoded bytes>", "ttl": 600, "auth": "<64 hex>" }
+```
+
+- `ttl` (optional) is 60–600 seconds; omitted means permanent.
+- `auth` (optional) is a 64-hex secret. The server keeps only `sha256(auth bytes)`.
+- No slot, or an expired one: created, **201** `{ "id", "created": true, "expiresAt": <unix s> | null }`.
+- An unexpired slot that was created with `auth`, and the request carries the same `auth`: overwritten, **200** (`created: false`).
+- Any other write to an unexpired slot: **409** `SLOT_TAKEN`. Without `auth`, a slot is write-once until it expires.
+
+| Status | Meaning |
+|---|---|
+| 400 | `INVALID_SLOT_ID`, `INVALID_PARAMS` (missing `data`, `ttl` out of range, `auth` not 64 hex), `INVALID_BASE64`, `EMPTY_BODY`, `INVALID_JSON` |
+| 404 | `SLOTS_DISABLED` when the relayer has no blob storage |
+| 409 | `SLOT_TAKEN` |
+| 413 | `SLOT_TOO_LARGE` (over 8192 decoded bytes) |
+| 429 | Over `SLOT_PUT_PER_IP_PER_HOUR` (60) writes per IP per hour |
+| 507 | `STORAGE_FULL`: slots and blobs together reached `BLOB_DISK_CAP_BYTES` |
+
+**Read.** `GET` returns **200** `{ "data": "<base64url>", "expiresAt": <unix s> | null }` with
+`Cache-Control: no-store`, or **404** `NOT_FOUND` when the slot is missing or expired.
+
+Slots live in `<BLOB_DIR>/slots/<aa>/<id>` as small JSON files (`data`, `expiresAt`, `authHash`),
+written atomically (temp file + rename). Writes are synchronous so check-then-write is atomic in the
+single-replica process. Expired slots are deleted when read or rewritten, and an hourly sweep
+deletes the rest.
+
 ### `GET /v1/fx/round`
 
 The latest round of the onchain FxReference (written by the Chainlink CRE workflow), read with one `eth_call` and cached for 15 s. The relayer never writes to FxReference. The address is `FX_REFERENCE_ADDRESS`, or `factory.fxReference()` when unset; without one the endpoint returns 404 `FX_REFERENCE_DISABLED`.
@@ -326,6 +361,7 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 | `src/longstop.ts` | Long-stop settlement |
 | `src/store.ts` | SQLite state, including sent-transaction timings |
 | `src/blobs.ts` | Encrypted blob store |
+| `src/slots.ts` | Keyed slots (browser linking) |
 | `src/app.ts` | Hono routes, CORS, body limit and rate limits |
 | `src/services.ts` | Wiring |
 | `src/index.ts` | Server entrypoint |

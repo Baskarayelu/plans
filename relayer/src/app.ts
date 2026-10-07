@@ -18,10 +18,15 @@ import type { LongStop } from "./longstop.js";
 import { verifyPushRegistration, type PushDispatcher } from "./push.js";
 import { RateLimiter } from "./ratelimit.js";
 import type { Relayer } from "./relay.js";
+import { normaliseSlotId, SLOT_TTL_MAX, SLOT_TTL_MIN, type SlotStore } from "./slots.js";
 import type { Store } from "./store.js";
 
 export interface AppServices {
-  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & { blobs?: Config["blobs"]; indexerGraphqlUrl?: string | null };
+  cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & {
+    blobs?: Config["blobs"];
+    slots?: Config["slots"];
+    indexerGraphqlUrl?: string | null;
+  };
   client: PublicClient;
   pool: LanePool;
   relayer: Relayer;
@@ -33,10 +38,18 @@ export interface AppServices {
   demo?: DemoService;
   longStop?: LongStop;
   blobs?: BlobStore;
+  /** Keyed slots for browser linking (lives next to the blobs; absent when blobs are disabled). */
+  slots?: SlotStore;
   version?: string;
 }
 
 const hexBlob = (max: number) => z.string().regex(/^0x([0-9a-fA-F]{2})*$/).refine((v) => (v.length - 2) / 2 <= max);
+
+const putSlotSchema = z.object({
+  data: z.string().min(1),
+  ttl: z.number().int().min(SLOT_TTL_MIN).max(SLOT_TTL_MAX).optional(),
+  auth: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
+});
 
 const trySettleUpSchema = z.object({
   member: zAddress,
@@ -81,6 +94,7 @@ export function createApp(s: AppServices) {
   const addrLimiter = new RateLimiter(s.cfg.http.addressPerMin, 60_000);
   const blobPutLimiter = new RateLimiter(s.cfg.blobs?.putPerIpPerHour ?? 60, 3_600_000);
   const blobMax = s.cfg.blobs?.maxBytes ?? 2 * 1024 * 1024;
+  const slotPutLimiter = new RateLimiter(s.cfg.slots?.putPerIpPerHour ?? 60, 3_600_000);
   let lastBalanceRefresh = 0;
   let fxRoundCache: { at: number; view: FxRoundView } | null = null;
 
@@ -164,7 +178,7 @@ export function createApp(s: AppServices) {
         faucet: { enabled: !!s.faucet?.enabled },
         demo: { enabled: !!s.demo?.enabled },
         longStop: s.longStop ? { lastRunAt: s.longStop.lastRunAt, settled: s.longStop.settledCount } : null,
-        blobs: s.blobs ? { usedBytes: s.blobs.usedBytes, capBytes: s.blobs.opts.diskCapBytes } : null,
+        blobs: s.blobs ? { usedBytes: s.blobs.usedBytes, slotBytes: s.slots?.usedBytes ?? 0, capBytes: s.blobs.opts.diskCapBytes } : null,
         time: Math.floor(Date.now() / 1000),
       },
       ok ? 200 : 503,
@@ -297,6 +311,34 @@ export function createApp(s: AppServices) {
       etag,
       "x-content-type-options": "nosniff",
     });
+  });
+
+  /**
+   * Keyed slots (browser linking, app/docs/crypto.md §9). PUT {data: base64url (≤ 8192 bytes),
+   * ttl?: 60–600 s (omitted = permanent), auth?: 64 hex}. 201 created; 200 overwritten (same auth);
+   * 409 SLOT_TAKEN for an unexpired slot without matching auth.
+   */
+  app.put("/v1/slots/:id", async (c) => {
+    if (!s.slots) throw new RelayError(404, "SLOTS_DISABLED", "Slot storage isn't enabled on this relayer.");
+    const id = normaliseSlotId(c.req.param("id"));
+    const body = putSlotSchema.parse(await readJson(c));
+    const bytes = decodeBase64Url(body.data);
+    const r = slotPutLimiter.take(`slot:${clientIp(c, s.cfg.http.trustProxy)}`);
+    if (!r.ok) {
+      c.header("retry-after", String(Math.ceil(r.retryAfterMs / 1000)));
+      throw new RelayError(429, "RATE_LIMITED", "Too many uploads from this network. Please try again later.", { retryAfterMs: r.retryAfterMs });
+    }
+    const out = s.slots.put(id, bytes, { ttl: body.ttl, auth: body.auth });
+    return c.json(out, out.created ? 201 : 200, { "cache-control": "no-store" });
+  });
+
+  app.get("/v1/slots/:id", (c) => {
+    if (!s.slots) throw new RelayError(404, "SLOTS_DISABLED", "Slot storage isn't enabled on this relayer.");
+    const id = normaliseSlotId(c.req.param("id"));
+    const slot = s.slots.get(id);
+    c.header("cache-control", "no-store");
+    if (!slot) throw new RelayError(404, "NOT_FOUND", "No slot with that id.");
+    return c.json({ data: Buffer.from(slot.data).toString("base64url"), expiresAt: slot.expiresAt });
   });
 
   app.get("/v1/demo/accounts", (c) => {
