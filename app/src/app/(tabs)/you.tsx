@@ -1,11 +1,14 @@
 import * as Device from "expo-device";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { APP_VERSION, isTestnet } from "../../config";
 import { countryByCode, currencyFor, formatUsd } from "../../lib/domain/currency";
 import { identity, signOut } from "../../lib/identity/session";
+import { ADD_BROWSER_SEEN } from "../../lib/link/deviceOps";
+import type { DeviceEntry } from "../../lib/link/devices";
 import { useBalance } from "../../lib/state/data";
+import { kvGet } from "../../lib/state/kv";
 import { useStore } from "../../lib/state/observable";
 import { useColors, useTheme } from "../../theme/ThemeProvider";
 import { Icon } from "../../ui/Icon";
@@ -17,6 +20,7 @@ import { useLocal } from "../../ui/money";
 import { SidePanel } from "../../ui/shell/panel";
 import { useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
+import { DeskDeviceList, devicesLine, RemoveConfirm, useDevices } from "../../ui/link/devices";
 
 const WEB = Platform.OS === "web";
 
@@ -25,6 +29,17 @@ function notificationsLine(): string {
   const N = (globalThis as { Notification?: { permission?: string } }).Notification;
   const p = N?.permission;
   return p === "granted" ? "Browser notifications on · approvals, money in, settle-ups" : p === "denied" ? "Browser notifications off · turn them on in the browser" : "Approvals, money in, settle-ups";
+}
+
+/** "New" on You → Add a browser until it has been opened once (171). */
+function useAddBrowserNew(): boolean {
+  const [isNew, setNew] = useState(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      void kvGet(ADD_BROWSER_SEEN).then((v) => setNew(!v));
+    }, []),
+  );
+  return isNew;
 }
 
 /** 53 You: profile, key fingerprint, settings. Long-press the version row → hidden Diagnostics. */
@@ -40,6 +55,8 @@ export default function You() {
   const chev = <Icon name="chev" size={20} />;
   const { desk } = useLayout();
   const browser = thisBrowser();
+  const devs = useDevices();
+  const addNew = useAddBrowserNew();
   const signOutSheet = (
     <Sheet visible={confirmOut} onClose={() => setConfirmOut(false)} testID="sheet-sign-out">
       <Txt v="d22">{WEB ? "Sign out of this browser?" : "Sign out of Plans?"}</Txt>
@@ -109,13 +126,27 @@ export default function You() {
           testID="row-plans-account"
         />
         <ListItem left={<Tile icon="bell" />} title="Notifications" sub="Approvals, money in, settle-ups" right={chev} onPress={() => router.push("/notifications")} testID="row-notifications" />
+        {/* 171 (revised by the lead): one wording everywhere, the device list, and "Add a browser". */}
         <ListItem
           left={<Tile icon={WEB ? "key" : "phone"} />}
-          title={WEB ? "Devices with your passkey" : "Phones with your passkey"}
-          sub={WEB ? `${browser ?? "This browser"} (this browser)` : `${Device.modelName ?? "This phone"} (this one)`}
+          title="Devices with your passkey"
+          sub={devicesLine(devs.devices, devs.myId) ?? (WEB ? `${browser ?? "This browser"} (this browser)` : `${Device.modelName ?? "This phone"} (this one)`)}
           right={chev}
-          onPress={() => router.push("/key")}
+          onPress={() => router.push("/devices")}
           testID="row-phones"
+        />
+        <ListItem
+          left={<Tile icon="link" />}
+          title="Add a browser"
+          sub="Use Plans on a computer with your account"
+          right={
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {addNew ? <Chip label="New" sm tone="acc" /> : null}
+              {chev}
+            </View>
+          }
+          onPress={() => router.push("/add-browser")}
+          testID="row-add-browser"
         />
         <ListItem
           left={<Tile icon="eye" />}
@@ -149,6 +180,8 @@ function DeskYou({ chev, browser, themeSeg, onSignOut, signOutSheet }: { chev: R
   const { mode } = useTheme();
   const install = useInstallPrompt();
   const [another, setAnother] = useState(false);
+  const [removing, setRemoving] = useState<{ d: DeviceEntry; me: boolean } | null>(null);
+  const devs = useDevices();
   const p = st.profile;
   const cty = countryByCode(p?.country);
   const cur = currencyFor(p?.currency);
@@ -188,20 +221,30 @@ function DeskYou({ chev, browser, themeSeg, onSignOut, signOutSheet }: { chev: R
           <Txt v="ov" color="muted">
             Devices with your passkey
           </Txt>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }} testID="device-this">
-            <IconWell>
-              <ComputerIcon />
-            </IconWell>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Txt v="lt">This browser</Txt>
-              <Txt v="t13" color="muted">
-                {browser ?? "This computer"}
-              </Txt>
-            </View>
-            <Chip label="This one" sm tone="pos" />
+          <View style={{ marginTop: 4 }}>
+            <DeskDeviceList
+              removingId={removing?.d.id}
+              onRemove={(d, me) => setRemoving({ d, me })}
+              fallback={
+                <>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }} testID="device-this">
+                            <IconWell>
+                              <ComputerIcon />
+                            </IconWell>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Txt v="lt">This browser</Txt>
+                              <Txt v="t13" color="muted">
+                                {browser ?? "This computer"}
+                              </Txt>
+                            </View>
+                            <Chip label="This one" sm tone="pos" />
+                          </View>
+                          <Hr m={12} />
+                          <Btn label="+ Save a passkey on another device" kind="txt" sm onPress={() => setAnother(true)} testID="btn-save-passkey-another" style={{ alignSelf: "flex-start", height: 36, minHeight: 36, paddingHorizontal: 0 }} />
+                </>
+              }
+            />
           </View>
-          <Hr m={12} />
-          <Btn label="+ Save a passkey on another device" kind="txt" sm onPress={() => setAnother(true)} testID="btn-save-passkey-another" style={{ alignSelf: "flex-start", height: 36, minHeight: 36, paddingHorizontal: 0 }} />
         </Card>
         <Card style={{ flex: 1, paddingVertical: 4 }} testID="card-settings">
           {row({ left: <Tile icon="globe" />, title: "Country & money", sub: `${cty?.name ?? "—"} · ${cur.symbol.trim()} ${cur.code}`, onPress: () => router.push({ pathname: "/profile", params: { edit: "1" } }), testID: "row-country-money" })}
@@ -213,7 +256,7 @@ function DeskYou({ chev, browser, themeSeg, onSignOut, signOutSheet }: { chev: R
             testID: "row-plans-account",
           })}
           {row({ left: <Tile icon="bell" />, title: "Notifications", sub: notificationsLine(), onPress: () => router.push("/notifications"), testID: "row-notifications" })}
-          {row({ left: <Tile icon="key" />, title: "Devices with your passkey", sub: `${browser ?? "This browser"} (this browser)`, onPress: () => router.push("/key"), testID: "row-phones" })}
+          {row({ left: <Tile icon="key" />, title: "Devices with your passkey", sub: devicesLine(devs.devices, devs.myId) ?? `${browser ?? "This browser"} (this browser)`, onPress: () => router.push("/devices"), testID: "row-phones" })}
           <ListItem left={<Tile icon="eye" />} title="Appearance" sub={mode === "system" ? "Follows this computer" : mode === "dark" ? "Dark" : "Light"} right={themeSeg} testID="row-theme" />
           {row({ left: <Tile icon="shield" />, title: "What could go wrong", sub: "Lost phone, someone who won't pay, outages, freezes", onPress: () => router.push("/risks"), testID: "row-what-could-go-wrong" })}
           {isTestnet ? row({ left: <Tile icon="gift" kind="a" />, title: "Get test dollars", sub: "Test version only", onPress: () => router.push("/test-dollars"), testID: "row-test-dollars" }) : null}
@@ -225,12 +268,22 @@ function DeskYou({ chev, browser, themeSeg, onSignOut, signOutSheet }: { chev: R
         </Card>
       </View>
       <View style={{ height: 24 }} />
+      {removing ? (
+        <SidePanel kind="detail" onClose={() => setRemoving(null)}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <Txt v="ov" color="muted">
+              Devices with your passkey
+            </Txt>
+          </View>
+          <RemoveConfirm d={removing.d} me={removing.me} onCancel={() => setRemoving(null)} onDone={() => setRemoving(null)} />
+        </SidePanel>
+      ) : null}
       <SidePanel kind="live">
         <View style={{ flex: 1 }} testID="panel-your-key">
           <Txt v="d22" style={{ marginBottom: 14 }}>
             Your key
           </Txt>
-          <KeyWhy compact />
+          <KeyWhy compact linked={!!st.address && devs.devices?.find((d) => d.id === devs.myId)?.linked} />
           <Card tint style={{ marginTop: 20 }}>
             <Txt v="ov" color="muted">
               How friends see you

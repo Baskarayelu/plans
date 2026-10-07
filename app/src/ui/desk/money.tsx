@@ -68,10 +68,10 @@ export function IconWell({ children, size = 40 }: { children: React.ReactNode; s
 }
 
 /** What the three pictures mean, in the words of a computer (118's panel, the key page on a laptop). */
-export function KeyWhy({ compact }: { compact?: boolean }) {
+export function KeyWhy({ compact, linked }: { compact?: boolean; linked?: boolean }) {
   const items: [IconName, string][] = [
     ["lock", "Receipt photos and notes are scrambled before they leave this computer. Only people in that plan can open them."],
-    ["key", "Your key comes from your passkey, so this browser and your phone have the same one."],
+    ["key", linked ? "Your phone gave this browser your key when you linked it, so receipts and notes open here too." : "Your key comes from your passkey, so this browser and your phone have the same one."],
     ["eye", "Plans can't see your photos or notes. Neither can anyone outside the plan."],
     ["users", "If a friend's three pictures change and they didn't get a new device, ask them before approving anything."],
   ];

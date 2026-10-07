@@ -25,7 +25,7 @@ import { usePanelEntry } from "./panel";
 import { PANEL_LAPTOP, PANEL_WIDE, RAIL_ICONS, RAIL_WIDE, useLayout } from "./responsive";
 
 /** Routes drawn without the rail: before you're in, and full-page moments. */
-const BARE = [/^\/welcome/, /^\/unlock$/, /^\/unsupported/, /^\/restored/, /^\/error/, /^\/profile/];
+const BARE = [/^\/welcome/, /^\/unlock$/, /^\/unsupported/, /^\/restored/, /^\/error/, /^\/profile/, /^\/link$/];
 
 type Place = { key: "plans" | "send" | "activity" | "you"; label: string; icon: IconName; href: string };
 const PLACES: Place[] = [
@@ -39,7 +39,7 @@ export function placeFor(path: string): Place["key"] | null {
   if (path === "/" || path.startsWith("/plan") || path.startsWith("/demo")) return "plans";
   if (path.startsWith("/send") || path === "/my-code" || path === "/balance" || path === "/add-balance") return "send";
   if (path.startsWith("/activity") || path === "/notifications") return "activity";
-  if (path.startsWith("/you") || path === "/key" || path === "/help" || path.startsWith("/risks") || path === "/test-dollars") return "you";
+  if (path.startsWith("/you") || path === "/key" || path === "/devices" || path === "/add-browser" || path === "/help" || path.startsWith("/risks") || path === "/test-dollars") return "you";
   return null;
 }
 

@@ -32,6 +32,8 @@ export type Prefs = {
   hideDemoCard?: boolean;
   endpoints?: { relayerUrl?: string; graphqlUrl?: string; rpcUrl?: string; wsUrl?: string };
   pushRegisteredAt?: number;
+  /** Web: the browser push subscription last registered with the relayer (webPush.web.ts). */
+  webPush?: { endpoint: string; address: string; at: number };
   lastFaucetAt?: number;
 };
 

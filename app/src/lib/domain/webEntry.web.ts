@@ -5,6 +5,8 @@
  * This module (imported first by the root layout) turns that into `pendingLink` (memory only) and
  * deletes the global. See webLinks.ts.
  */
+import { config } from "../../config";
+import { pendingLinkQr } from "../link/pending";
 import { pendingLink, webPathToLink } from "./webLinks";
 
 type Raw = { path: string; hash: string };
@@ -12,6 +14,11 @@ const w = (typeof window !== "undefined" ? window : undefined) as (Window & { __
 
 export function takeRawLink(raw: Raw | undefined): void {
   if (!raw) return;
+  // "Link this browser" QR opened as an address: the approving side ("Add a browser") reads it once.
+  if (raw.path.replace(/\/+$/, "") === "/link") {
+    if (raw.hash) pendingLinkQr.set(`https://${config.linkHost}/app/link${raw.hash.startsWith("#") ? raw.hash : `#${raw.hash}`}`);
+    return;
+  }
   const link = webPathToLink(raw.path, raw.hash);
   // A link that's missing its secret (or has a malformed one) opens its screen in the "incomplete link" state.
   if (link) pendingLink.set(link);

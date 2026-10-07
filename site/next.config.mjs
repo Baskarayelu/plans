@@ -86,6 +86,15 @@ const config = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
+        // The web app's service worker (notifications only). Its scope is "/app" (no slash) so it also covers
+        // /app itself, which is wider than its folder: that needs Service-Worker-Allowed. Never cached stale.
+        source: "/app/sw.js",
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/app" },
+          { key: "Cache-Control", value: "no-cache" },
+        ],
+      },
+      {
         // Everywhere except the link pages above and the web app, which keep "no-referrer" (a later match would override it).
         source: "/:path((?!j/|c/|p/|v/|s/|app/|app$).*)",
         headers: [{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }],

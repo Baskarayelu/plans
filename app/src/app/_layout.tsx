@@ -28,6 +28,7 @@ import { ThemeProvider, useColors } from "../theme/ThemeProvider";
 import { NO_MOTION } from "../ui/motion";
 import { AppShell } from "../ui/shell/AppShell";
 import { ToastHost } from "../ui/Toast";
+import { DeviceWatch } from "../ui/link/devices";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 mark("app_boot");
@@ -38,8 +39,8 @@ mark("app_boot");
  * handle signing in themselves (invites, claims) and the public help pages stay open. Android starts
  * at "/" (src/app/index.tsx) and locks through AppEffects, so this gate is web only.
  */
-const OPEN_LOCKED = /^\/(unlock|welcome|join|claim|unsupported|help|risks|error)(\/|$)/;
-const OPEN_NONE = /^\/(welcome|join|claim|unsupported|help|risks|error|link)(\/|$)/;
+const OPEN_LOCKED = /^\/(unlock|welcome|join|claim|unsupported|help|risks|error|link)(\/|$)/;
+const OPEN_NONE = /^\/(welcome|join|claim|unsupported|help|risks|error|link|add-browser)(\/|$)/;
 function WebGate() {
   const path = usePathname();
   const params = useGlobalSearchParams();
@@ -143,6 +144,7 @@ export default function RootLayout() {
             <RouteMarks />
             <WebGate />
             <AppEffects />
+            <DeviceWatch />
             <ToastHost />
           </QueryClientProvider>
         </ThemeProvider>

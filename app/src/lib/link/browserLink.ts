@@ -46,9 +46,11 @@ export type BrowserLink = {
    * Polls the reply slot every 2 s until a reply arrives or the link expires. Resolves with the
    * verified bundle (saving the vault first when `b2` and `credentialId` were given). Rejects with
    * LinkError ("expired", "tampered", "wrong-account"), SlotError (vault save failed) or the
-   * signal's abort reason. Single use: the link is dead once it settles.
+   * signal's abort reason. Single use: the link is dead once it settles. `onNetwork` hears
+   * "offline" while polls fail for network reasons (the link keeps waiting) and "online" again
+   * after a poll gets through (design 176c).
    */
-  wait(signal?: AbortSignal): Promise<AccountBundle>;
+  wait(signal?: AbortSignal, onNetwork?: (state: "online" | "offline") => void): Promise<AccountBundle>;
   /** Stops the link and wipes its key. */
   cancel(): void;
 };
@@ -123,7 +125,7 @@ export async function startBrowserLink(opts: StartBrowserLinkOptions = {}): Prom
     fingerprint: linkFingerprint(s, linkPub),
     exp,
     cancel: kill,
-    async wait(signal?: AbortSignal): Promise<AccountBundle> {
+    async wait(signal?: AbortSignal, onNetwork?: (state: "online" | "offline") => void): Promise<AccountBundle> {
       if (dead) throw new LinkError("expired", "link already finished");
       try {
         for (;;) {
@@ -133,9 +135,11 @@ export async function startBrowserLink(opts: StartBrowserLinkOptions = {}): Prom
           let reply: Uint8Array | null = null;
           try {
             reply = await getSlot(replySlot);
+            onNetwork?.("online");
           } catch (e) {
             // Keep polling through brief network trouble; the expiry ends it.
             if (!(e instanceof SlotError) || (e.kind !== "offline" && e.kind !== "rate-limited")) throw e;
+            onNetwork?.("offline");
           }
           if (dead) throw new LinkError("expired", "cancelled");
           if (reply) {

@@ -342,6 +342,63 @@ output is never used.
   phone's passkey. Linking adds one more device that can sign for the account; there is no
   "unlink" that revokes the key (it is the same account), only deleting the browser passkey.
 
+### 9.8a Devices with your passkey, and removing a linked browser
+
+Every device on an account keeps one shared list (designs 171, 174, 178) in a permanent slot.
+Code: `src/lib/link/devices.ts` (constructions), `deviceOps.ts` (sync, remove, notices). Tests:
+`src/__tests__/linkDevices.test.ts`.
+
+```
+root  = HKDF(ikm = keys-namespace PRF output (the IKM of §3; `k` of the bundle), salt = "", info = "plans/v1/devices", 32)
+id    = hex(HKDF(root, "", "plans/v1/devices-id", 32))
+key   = HKDF(root, "", "plans/v1/devices-key", 32)
+auth  = hex(HKDF(root, "", "plans/v1/devices-auth", 32))
+pt    = {"v":1,"devices":[{id, kind: phone|browser, label, linked, addedAt, seenAt?, removedAt?, vault?: {id, auth}}],
+         "events":[{t, kind: added|removed, device, label, by}]}            (≤ 24 devices, ≤ 30 events)
+box   = 0x01 ‖ nonce(24) ‖ AEAD(key, nonce, pt, aad = "plans/v1/devices|" + id)
+PUT /v1/slots/<id> {data: b64u(box), auth}                                   (permanent; overwrite needs auth)
+```
+
+`root` is derived next to the keys at every unlock (`applyKeys`) and wiped on lock, like the keys.
+Device ids are 8 random bytes per install (`plans.device.v1`, not secret). Every device on the
+account (the phone from its PRF `second`, a linked browser from the bundle's `k`) derives the same
+slot. Writes are read → change → write → read back, redone once if the change was lost (two
+devices writing in the same instant can still lose one change; the list is advisory).
+
+- A linked browser lists itself right after linking with `vault = {id: vaultId, auth: hex(vaultAuth)}`
+  (§9.6) and an `added` event. Other devices show "… can now use your account" once on their next
+  open (they remember the newest event time they've shown in `plans.devices.seen.<address>`; a
+  device's first read only sets that mark).
+- **Remove** (any device with the account): one fresh ceremony pinned to *that device's own*
+  passkey (the confirmation), then `PUT /v1/slots/<vaultId> {data: b64u(REMOVED_VAULT), auth: vaultAuth}`
+  with `REMOVED_VAULT = 0x00 ‖ UTF-8("plans/v1/removed")`, then the entry gets `removedAt` (its vault
+  auth is dropped) and a `removed` event. A browser removing itself takes `vaultAuth` from its own
+  ceremony's `b2` and signs out.
+- Afterwards the browser's passkey finds `REMOVED_VAULT` instead of a vault: `unlockStored` and
+  discoverable sign-in fail with `LinkedBrowserError("removed")` and nothing opens ("This browser
+  was removed from your account"). A missing vault is `LinkedBrowserError("gone")` → link again.
+- Only linked browsers can be removed. A device that uses the account's own passkey (the phone, or
+  a browser where that passkey synced) can't be shut out from another device: the passkey is the
+  account.
+
+Threat notes: the relayer sees the list's slot id and ciphertext size only. Putting `vaultAuth` in
+the list lets every device on the account overwrite that browser's vault, which they could anyway
+(they hold the account key). As in §9.7, removal doesn't revoke the account key: a browser that
+copied the key out while linked keeps it, and an open tab keeps its unlocked session until it
+locks. Removal stops the browser's passkey from opening Plans.
+
+### 9.8b Web: "Create account" and the phone's passkey over the browser's QR
+
+`webCreateStart` asks with `requireKeys: "cross-device"` and "Use your phone's passkey" with
+`requireKeys: true`: an answer from another device (hybrid, `authenticatorAttachment:
+"cross-platform"`) without the keys-namespace output is refused as `prf-unavailable` with nothing
+saved, and 166 shows 176a ("Link with a code"). Whether desktop Chrome and Safari return PRF
+results for an Android phone's passkey over hybrid needs a real-device test.
+
+A link QR opened as an address (`/app/link#c=…&k=…&e=…`) is handled by `public/index.html` like
+invites: the fragment goes to memory (`src/lib/link/pending.ts`), the history entry becomes
+`/app/add-browser`.
+
 ### 9.8 Relayer slots API
 
 `PUT /v1/slots/<64 hex>` with JSON `{"data": b64u (≤ 8192 bytes decoded), "ttl"?: 60–600 (omitted =

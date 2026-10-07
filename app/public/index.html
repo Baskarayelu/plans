@@ -33,7 +33,7 @@
     </script>
     <script>
       // Plans links (/app/j/<pot>#s=…, /app/v/<pot>#s=…, /app/join#pot=…&s=…, /app/c/1#k=…, /app/claim#k=…,
-      // /app/p/<addr>#…) are handled HERE, before the app's router reads the address: the "#" part (which
+      // /app/p/<addr>#…, /app/link#c=…) are handled HERE, before the app's router reads the address: the "#" part (which
       // holds the invite secret or claim key) is kept in memory for the app (window.__plansLink, read once
       // by src/lib/domain/webEntry.web.ts) and the history entry is replaced with the app route without it.
       (function () {
@@ -55,6 +55,9 @@
           else if (r === "/join" && h) route = "/join" + qs({ pot: (f.pot || "").toLowerCase(), n: f.n });
           else if (/^\/c\/[^/]*$/.test(r) || (r === "/claim" && h)) route = "/claim" + qs({ n: f.n, m: f.m, a: f.a });
           else if ((m = /^\/p\/([^/]*)$/.exec(r))) route = "/send/amount" + qs({ to: m[1].toLowerCase(), n: f.n, c: f.c, cc: f.cc, cur: f.cur, a: f.a });
+          // A "link this browser" QR opened directly (/app/link#c=…&k=…&e=…): the code stays in memory
+          // for the "Add a browser" screen (src/lib/link/pending.ts), never in the URL bar or history.
+          else if (r === "/link" && f.c) route = "/add-browser";
           if (!route) return;
           window.__plansLink = { path: r, hash: h };
           window.history.replaceState(null, "", B + route);

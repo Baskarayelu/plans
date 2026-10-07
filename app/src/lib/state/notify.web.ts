@@ -1,9 +1,11 @@
 /**
  * Web attention: while the Plans tab is open but hidden, each live banner also becomes a
  * browser notification (if allowed) and the tab title shows a count, "(2) Plans", cleared when
- * the tab is visible again. Web push (notifications with the tab closed) isn't used: the APK gets
- * Expo push; the web app only knows what happens while it is open.
+ * the tab is visible again. Notifications with the tab closed are Web Push (webPush.web.ts and
+ * /app/sw.js), turned on from the notifications screen where the browser allows it.
  */
+import { webPushActive } from "./webPushState";
+
 export type NotifyPermission = { status: "granted" | "denied" | "undetermined"; canAskAgain: boolean };
 
 const N = () => (typeof Notification !== "undefined" ? Notification : null);
@@ -54,7 +56,8 @@ export function attention(t: { title: string; sub?: string }): void {
   unseen++;
   setTitle();
   const n = N();
-  if (n && n.permission === "granted") {
+  // With Web Push on, the push notification covers it; don't show the same news twice.
+  if (n && n.permission === "granted" && !webPushActive()) {
     try {
       const note = new n(t.title, { body: t.sub, icon: `${location.origin}/app/favicon.ico`, tag: "plans-live" });
       note.onclick = () => {

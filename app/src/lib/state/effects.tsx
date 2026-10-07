@@ -3,7 +3,8 @@
  * - lock after 10 minutes in the background (signing session and keys are wiped);
  * - the live feed: start/stop the WebSocket, invalidate queries on events, show toasts;
  * - register the X25519 key, post group-key wraps for members who have none yet;
- * - register for push notifications with the relayer.
+ * - register for push notifications with the relayer (Expo on Android; Web Push in the browser,
+ *   where only the notifications screen ever asks for permission — webPush.web.ts).
  */
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
@@ -24,6 +25,7 @@ import { personFor, queryClient, qk, type PlanCardVM } from "./data";
 import { useStore } from "./observable";
 import { usesPush } from "./notify";
 import { storage } from "./storage";
+import { startWebPush, syncWebPush } from "./webPush";
 import { showToast } from "../../ui/Toast";
 
 const LOCK_AFTER_MS = 10 * 60_000;
@@ -167,6 +169,8 @@ export function AppEffects() {
   const bgAt = useRef<number | null>(null);
 
   useEffect(() => {
+    // Web: the notifications service worker (no prompt). No-op on Android.
+    startWebPush();
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "background") {
         bgAt.current = Date.now();
@@ -195,6 +199,8 @@ export function AppEffects() {
     const off = onLiveEvent(handleEvent);
     void ensureKeyRegistered();
     void ensurePush();
+    const acct = currentAccountOrNull();
+    if (acct) void syncWebPush(acct);
     return () => {
       off();
       stopLive();

@@ -11,10 +11,11 @@
  * vault instead.
  */
 import { config } from "../../config";
-import { fromBase64Url, wipe } from "../crypto/bytes";
+import { equalBytes, fromBase64Url, wipe } from "../crypto/bytes";
 import { classifyPasskeyError, freshPrfOutputs, PasskeyError } from "../identity/session";
 import { storage, type Profile } from "../state/storage";
 import { fetchVaultBox } from "./browserLink";
+import { isRemovedVault } from "./devices";
 import {
   bundleFromPrf,
   LINK_CLOCK_SKEW_SEC,
@@ -79,6 +80,22 @@ export async function fetchOfferByCode(code: string, now = nowSec()): Promise<Ph
   }
 }
 
+/**
+ * A scanned QR carries no device label. The browser also uploaded its offer (for the typed-code
+ * path), which has one: read it, and use it only if it opens with this link's secret and names the
+ * same one-time key. Best effort: undefined on any problem. The label stays a hint (design 173).
+ */
+export async function labelForQrOffer(offer: PhoneLinkOffer, now = nowSec()): Promise<string | undefined> {
+  try {
+    const box = await getSlot(slotIds(offer.s).offer);
+    if (!box) return undefined;
+    const o = openOffer(offer.s, box, now - LINK_CLOCK_SKEW_SEC);
+    return equalBytes(o.linkPub, offer.linkPub) && o.exp === offer.exp ? o.deviceLabel : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The account bundle from a fresh ceremony (or this device's vault), checked against the stored account. */
 async function freshBundle(profile: Profile | undefined): Promise<AccountBundle> {
   const stored = await storage.loadAccount();
@@ -92,7 +109,7 @@ async function freshBundle(profile: Profile | undefined): Promise<AccountBundle>
     } catch (e) {
       throw e instanceof SlotError ? e : classifyPasskeyError(e);
     }
-    if (!box) throw new LinkError("not-found", "this browser's linked account is no longer stored");
+    if (!box || isRemovedVault(box)) throw new LinkError("not-found", "this browser's linked account is no longer stored");
     const out = await freshPrfOutputs(stored.credentialId);
     wipe(out.first);
     try {

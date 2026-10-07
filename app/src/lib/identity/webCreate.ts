@@ -20,7 +20,9 @@ const HARD: PasskeyFailure[] = ["not-supported", "no-provider", "domain-not-veri
 
 export async function webCreateStart(): Promise<WebCreateStart> {
   try {
-    const r = await findExistingAccount();
+    // A phone's passkey picked through "Use a phone or tablet" here must bring the keys output too,
+    // or it's the 176a path (link with a code) rather than an account opened half-way.
+    const r = await findExistingAccount({ requireKeys: "cross-device" });
     return { kind: "restored", isNew: r.isNew, linked: r.linked };
   } catch (e) {
     const kind = e instanceof PasskeyError ? e.kind : "failed";
@@ -29,9 +31,14 @@ export async function webCreateStart(): Promise<WebCreateStart> {
   }
 }
 
-/** Choice (i): the phone's passkey through the browser's own QR ("hybrid"). */
+/**
+ * Choice (i): the phone's passkey through the browser's own QR ("hybrid", design 167). A browser
+ * that doesn't return the PRF outputs over hybrid fails as "prf-unavailable" with nothing saved,
+ * and the choice screen shows 176a with "Link with a code". (Needs a real-device test; see
+ * discoverableSignIn in session.ts.)
+ */
 export async function signInWithPhone(): Promise<{ isNew: boolean; linked: boolean }> {
-  const r = await findExistingAccount({ hints: ["hybrid"] });
+  const r = await findExistingAccount({ hints: ["hybrid"], requireKeys: true });
   return { isNew: r.isNew, linked: r.linked };
 }
 

@@ -2,9 +2,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { handlePasskeyFailure } from "../lib/identity/flows";
-import { identity, signOut, unlockStored } from "../lib/identity/session";
+import { identity, isLinkedBrowserError, signOut, unlockStored } from "../lib/identity/session";
+import { storage } from "../lib/state/storage";
 import { useStore } from "../lib/state/observable";
-import { Avatar, Btn, FingerprintPill, Logo } from "../ui/kit";
+import { Avatar, Btn, FingerprintPill, Logo, Row } from "../ui/kit";
+import { Icon } from "../ui/Icon";
 import { EntryHeader, EntrySplit, useEntryRoomy } from "../ui/desk/entry";
 import { Screen } from "../ui/layout";
 import { useLayout } from "../ui/shell/responsive";
@@ -13,6 +15,9 @@ import { Txt } from "../ui/Text";
 /**
  * Lock screen: one fingerprint per app launch opens the signing session and the keys. The
  * ceremony is pinned to the stored passkey, so Android goes straight to the fingerprint.
+ * 177: a linked browser says so in one line; if it was removed from the account (178) it goes to
+ * Welcome with "This browser was removed from your account", and if its account is no longer
+ * stored, to 166 where linking again takes a minute.
  */
 export default function Unlock() {
   const { next } = useLocalSearchParams<{ next?: string }>();
@@ -22,6 +27,10 @@ export default function Unlock() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
   const tried = useRef(false);
+  const [linked, setLinked] = useState(false);
+  useEffect(() => {
+    void storage.loadAccount().then((a) => setLinked(!!a?.vault));
+  }, []);
 
   const unlock = async () => {
     setBusy(true);
@@ -31,6 +40,11 @@ export default function Unlock() {
       if (!identity.get().profile) router.replace({ pathname: "/profile", params: next ? { next } : {} });
       else router.replace((next as never) ?? "/(tabs)");
     } catch (e) {
+      if (isLinkedBrowserError(e)) {
+        await signOut();
+        router.replace({ pathname: "/welcome", params: e.reason === "removed" ? { removed: "1" } : { choose: "1" } });
+        return;
+      }
       setMsg(handlePasskeyFailure(e).inline);
     } finally {
       setBusy(false);
@@ -64,9 +78,9 @@ export default function Unlock() {
               {name ? `Welcome back, ${name}` : "Welcome back"}
             </Txt>
             <Txt v="t17" color="muted" style={{ fontSize: 19, lineHeight: 27, marginTop: 12, marginBottom: 20, maxWidth: 520 }}>
-              Confirm it's you to open your plans. Your passkey unlocks with your fingerprint, face or screen lock.
+              {linked ? "Unlock Plans with the passkey saved in this browser." : "Confirm it's you to open your plans. Your passkey unlocks with your fingerprint, face or screen lock."}
             </Txt>
-            {st.fingerprint ? <FingerprintPill emoji={st.fingerprint} /> : null}
+            {st.fingerprint && !linked ? <FingerprintPill emoji={st.fingerprint} /> : null}
             {msg ? (
               <Txt v="t15" color="neg" style={{ marginTop: 16, maxWidth: 520 }} testID="unlock-message">
                 {msg}
@@ -76,6 +90,7 @@ export default function Unlock() {
               <Btn label="Unlock with passkey" icon="key" onPress={unlock} loading={busy} testID="btn-unlock" />
               <Btn label="Use a different account" kind="sec" onPress={() => void different()} testID="btn-different-account" />
             </View>
+            {linked ? <LinkedNote fingerprint={st.fingerprint} /> : null}
             <View style={{ flex: 1, minHeight: 32 }} />
           </View>
         </EntrySplit>
@@ -110,6 +125,7 @@ export default function Unlock() {
           Confirm it's you to open your plans. Your fingerprint is your key.
         </Txt>
         {st.fingerprint ? <FingerprintPill emoji={st.fingerprint} /> : null}
+        {linked ? <LinkedNote center /> : null}
         {msg ? (
           <Txt v="t13" color="neg" center testID="unlock-message">
             {msg}
@@ -117,5 +133,27 @@ export default function Unlock() {
         ) : null}
       </View>
     </Screen>
+  );
+}
+
+/** 177: one small line that this browser is linked, and the key to compare with the phone. */
+function LinkedNote({ fingerprint, center }: { fingerprint?: string; center?: boolean }) {
+  return (
+    <View style={{ marginTop: center ? 0 : 20, gap: 12, alignItems: center ? "center" : "flex-start" }} testID="unlock-linked">
+      <Row gap={8}>
+        <Icon name="link" size={18} />
+        <Txt v="t13" weight="semi">
+          This browser is linked to your account · its own passkey
+        </Txt>
+      </Row>
+      {fingerprint ? (
+        <Row gap={12} wrap>
+          <FingerprintPill emoji={fingerprint} />
+          <Txt v="t13" color="muted">
+            Check these match your phone if you ever need to.
+          </Txt>
+        </Row>
+      ) : null}
+    </View>
   );
 }

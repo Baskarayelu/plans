@@ -1,8 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { failureKind, passkeyNotice, type PasskeyContext, type PasskeyNotice } from "../lib/identity/flows";
-import { createOrRestore, identity, restoreWithPasskey } from "../lib/identity/session";
+import { createOrRestore, identity, isLinkedBrowserError, restoreWithPasskey } from "../lib/identity/session";
 import { usePasskeyWait } from "../lib/identity/usePasskeyWait";
 import { createAsNew, signInWithPhone, webCreateStart } from "../lib/identity/webCreate";
 import { useColors } from "../theme/ThemeProvider";
@@ -10,11 +10,17 @@ import { WRISTBANDS } from "../theme/tokens";
 import { Avatar, Band, Banner, Btn, Logo, Row } from "../ui/kit";
 import { EntryHeader, EntrySplit, PhoneQrRow, useEntryRoomy } from "../ui/desk/entry";
 import { Screen } from "../ui/layout";
+import { LinkChoice, type ChoiceBusy } from "../ui/link/LinkChoice";
 import { useLayout } from "../ui/shell/responsive";
+import { Icon } from "../ui/Icon";
 import { Txt } from "../ui/Text";
 
 /**
- * 01/125 Welcome. Create account → 02 (Android's own passkey sheet) → 03. I already use Plans → 04 → 05.
+ * 01/125 Welcome. Web (165–167): "Create account" asks the browser for any Plans passkey first; when
+ * none answers, 166 (ui/link/LinkChoice) offers the phone's passkey, linking this browser, or "I'm new".
+ * 177/178: `removed=1` says this browser was removed from the account; `choose=1` opens 166 directly.
+ *
+ * Create account → 02 (Android's own passkey sheet) → 03. I already use Plans → 04 → 05.
  * 126: if the sheet takes over a second, the button says so. 127–129: a cancel, a phone without
  * passkeys, or a failure each get a banner that says what happened and what to do next.
  */
@@ -22,19 +28,28 @@ export default function Welcome() {
   const c = useColors();
   const { desk } = useLayout();
   const roomy = useEntryRoomy();
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, removed, choose: chooseParam } = useLocalSearchParams<{ next?: string; removed?: string; choose?: string }>();
   const [busy, setBusy] = useState<PasskeyContext | null>(null);
   const [notice, setNotice] = useState<(PasskeyNotice & { ctx: PasskeyContext }) | null>(null);
   const wait = usePasskeyWait();
   const inFlight = useRef(false);
   const runId = useRef(0);
   // Web: "Create account" first asks the browser for any Plans passkey; when none is picked the person
-  // chooses (lib/identity/webCreate.ts). INTERIM choice UI with approved components until design 166 is approved.
-  const [choose, setChoose] = useState(false);
+  // chooses on 166 (lib/identity/webCreate.ts, ui/link/LinkChoice.tsx).
+  const [choose, setChoose] = useState(Platform.OS === "web" && chooseParam === "1");
+  // 176a: the phone's passkey answered without what Plans needs in this browser.
+  const [prfMissing, setPrfMissing] = useState(false);
+  const [choiceBusy, setChoiceBusy] = useState<ChoiceBusy>(null);
+  const [wasRemoved, setWasRemoved] = useState(removed === "1");
+  // The same screen can be reached again with new params (Unlock or Remove → Welcome while the gate also routes here).
+  useEffect(() => {
+    if (removed === "1") setWasRemoved(true);
+    if (chooseParam === "1" && Platform.OS === "web") setChoose(true);
+  }, [removed, chooseParam]);
 
-  const after = (restored: boolean) => {
+  const after = (restored: boolean, via?: "phone") => {
     const hasProfile = !!identity.get().profile;
-    if (restored) router.replace({ pathname: "/restored", params: next ? { next } : {} });
+    if (restored) router.replace({ pathname: "/restored", params: { ...(next ? { next } : {}), ...(via ? { via } : {}) } });
     else if (!hasProfile) router.replace({ pathname: "/profile", params: next ? { next } : {} });
     else router.replace((next as never) ?? "/(tabs)");
   };
@@ -47,6 +62,7 @@ export default function Welcome() {
     const id = ++runId.current;
     const current = () => id === runId.current;
     setNotice(null);
+    setWasRemoved(false);
     setBusy(ctx);
     wait.start(ctx);
     try {
@@ -54,7 +70,10 @@ export default function Welcome() {
         const r = await webCreateStart();
         if (current()) wait.finish("ok");
         if (r.kind === "restored") after(true);
-        else if (current()) setChoose(true);
+        else if (current()) {
+          setPrfMissing(r.why === "prf-unavailable");
+          setChoose(true);
+        }
       } else if (ctx === "create") {
         const r = await createOrRestore("Plans");
         if (current()) wait.finish("ok");
@@ -68,6 +87,12 @@ export default function Welcome() {
       if (!current()) return;
       const kind = failureKind(e);
       wait.finish(kind);
+      // A linked browser's passkey whose account was removed (178) or is no longer stored (→ 166).
+      if (isLinkedBrowserError(e)) {
+        if (e.reason === "removed") setWasRemoved(true);
+        else if (Platform.OS === "web") setChoose(true);
+        return;
+      }
       setNotice({ ...passkeyNotice(kind, ctx), ctx });
     } finally {
       if (current()) {
@@ -81,12 +106,12 @@ export default function Welcome() {
     if (inFlight.current) return;
     inFlight.current = true;
     setNotice(null);
-    setBusy("create");
+    setChoiceBusy(which);
     try {
       if (which === "phone") {
         await signInWithPhone();
         setChoose(false);
-        after(true);
+        after(true, "phone");
       } else {
         await createAsNew("Plans");
         setChoose(false);
@@ -94,11 +119,22 @@ export default function Welcome() {
       }
     } catch (e) {
       const kind = failureKind(e);
-      // The phone's passkey answered but can't open Plans here: that's what "Link this browser" is for (pending design 166–170).
-      setNotice({ ...passkeyNotice(kind, which === "phone" ? "restore" : "create"), ctx: "create" });
+      if (which === "phone" && kind === "prf-unavailable") {
+        // 176a: the phone's passkey answered but can't open Plans here. Nothing was saved; linking is the way.
+        setPrfMissing(true);
+      } else if (which === "phone" && kind === "cancelled") {
+        // Cancel or Back in the browser's QR dialog → 166 as it was (167).
+      } else if (isLinkedBrowserError(e)) {
+        if (e.reason === "removed") {
+          setChoose(false);
+          setWasRemoved(true);
+        }
+      } else {
+        setNotice({ ...passkeyNotice(kind, which === "phone" ? "restore" : "create"), ctx: "create" });
+      }
     } finally {
       inFlight.current = false;
-      setBusy(null);
+      setChoiceBusy(null);
     }
   };
 
@@ -107,7 +143,7 @@ export default function Welcome() {
   const shown = stuck && busy ? { ...passkeyNotice("stuck", busy), ctx: busy } : notice;
   const waiting = wait.phase === "waiting" && !!busy;
 
-  let primary = (() => {
+  const primary = (() => {
     if (waiting && busy === "create") return <Btn label="Opening passkey…" loading disabled testID="btn-create-account" />;
     if (!shown || stuck) {
       if (shown && stuck) return <Btn label="Try again" icon="refresh" onPress={() => void run(shown.ctx === "restore" ? "restore" : "create")} testID="btn-try-again" />;
@@ -118,7 +154,7 @@ export default function Welcome() {
     return <Btn label="Try again" icon={shown.kind === "cancelled" ? "fp" : "refresh"} onPress={() => void run(shown.ctx === "restore" ? "restore" : "create")} testID="btn-try-again" />;
   })();
 
-  let secondary = (() => {
+  const secondary = (() => {
     if (waiting && busy === "restore") return <Btn label="Opening passkey…" kind="sec" loading disabled style={{ marginTop: 8 }} testID="btn-restore" />;
     if (waiting) return <Btn label="I already use Plans" kind="off" disabled style={{ marginTop: 8 }} testID="btn-restore" />;
     if (shown && !stuck && (shown.action === "setup" || shown.action === "create"))
@@ -128,16 +164,37 @@ export default function Welcome() {
   })();
 
   let noticeEl = shown ? <Banner kind={shown.tone} icon={shown.icon} title={shown.title} text={shown.text} testID={`welcome-notice-${shown.kind}`} /> : null;
+  if (!noticeEl && wasRemoved)
+    noticeEl = <Banner kind="mut" icon="info" title="This browser was removed from your account." text="To use Plans here again, link it again from your phone." testID="welcome-notice-removed" />;
+
   if (choose) {
-    noticeEl = (
-      <View style={{ gap: 8 }}>
-        <Banner kind="inf" icon="key" title="Use Plans on your phone already?" text="Use your phone's passkey to bring your account here. Plans never makes a second account unless you say you're new." testID="welcome-choice" />
-        {shown ? <Banner kind={shown.tone} icon={shown.icon} title={shown.title} text={shown.text} testID={`welcome-notice-${shown.kind}`} /> : null}
-      </View>
+    const choiceNotice = notice ? <Banner kind={notice.tone} icon={notice.icon} title={notice.title} text={notice.text} testID={`welcome-notice-${notice.kind}`} /> : undefined;
+    return (
+      <LinkChoice
+        busy={choiceBusy}
+        prfMissing={prfMissing}
+        notice={choiceNotice}
+        onPhone={() => void runChoice("phone")}
+        onNew={() => void runChoice("new")}
+        onBack={() => {
+          setChoose(false);
+          setPrfMissing(false);
+          setNotice(null);
+        }}
+      />
     );
-    primary = <Btn label="Use your phone's passkey" icon="phone" loading={!!busy} disabled={!!busy} onPress={() => void runChoice("phone")} testID="btn-use-phone" />;
-    secondary = <Btn label="I'm new to Plans" kind="sec" disabled={!!busy} onPress={() => void runChoice("new")} style={{ marginTop: 8 }} testID="btn-new-to-plans" />;
   }
+
+  // 165: while the browser's own dialog is open, say why it's looking first.
+  const lookingFirst =
+    Platform.OS === "web" && waiting && busy === "create" ? (
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }} testID="welcome-looking-first">
+        <Icon name="search" size={18} color={c.muted} />
+        <Txt v="t13" color="muted" style={{ flex: 1 }}>
+          Looking for a Plans passkey in this browser first, so you don't end up with two accounts.
+        </Txt>
+      </View>
+    ) : null;
 
   if (desk) {
     // 102 on a laptop: the bands on the left, one clear choice on the right (130 puts the notice above the buttons).
@@ -154,6 +211,7 @@ export default function Welcome() {
               Friends anywhere chip in, spend under rules you agree, and settle up in one tap. Right here in your browser.
             </Txt>
             {noticeEl ? <View style={{ marginBottom: 20, maxWidth: 520 }}>{noticeEl}</View> : null}
+            {lookingFirst ? <View style={{ marginBottom: 16, maxWidth: 460 }}>{lookingFirst}</View> : null}
             <View style={{ width: 400, maxWidth: "100%" }}>
               {primary}
               {secondary}
@@ -200,6 +258,7 @@ export default function Welcome() {
       </Txt>
       <View style={{ flex: 1, minHeight: 16 }} />
       {noticeEl ? <View style={{ marginBottom: 12 }}>{noticeEl}</View> : null}
+      {lookingFirst ? <View style={{ marginBottom: 12 }}>{lookingFirst}</View> : null}
       {primary}
       {secondary}
       <Txt v="t13" color="muted" center style={{ marginTop: 12 }} testID="welcome-foot">

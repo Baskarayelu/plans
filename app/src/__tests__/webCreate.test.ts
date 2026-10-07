@@ -1,5 +1,5 @@
 /** Web "Create account": an existing passkey is always looked for first, and nothing is created without the person choosing it. */
-const mockState: { calls: string[]; find: "ok" | "cancelled" | "no-credentials" | "prf-unavailable" | "not-supported" } = { calls: [], find: "ok" };
+const mockState: { calls: string[]; opts: unknown[]; find: "ok" | "cancelled" | "no-credentials" | "prf-unavailable" | "not-supported" } = { calls: [], opts: [], find: "ok" };
 const calls = mockState.calls;
 
 jest.mock("../lib/identity/session", () => {
@@ -15,6 +15,7 @@ jest.mock("../lib/identity/session", () => {
   return {
     PasskeyError,
     findExistingAccount: jest.fn(async (opts?: { hints?: string[] }) => {
+      mockState.opts.push(opts);
       mockState.calls.push(`find${opts?.hints ? ":" + opts.hints.join(",") : ""}`);
       if (mockState.find !== "ok") throw new PasskeyError(mockState.find, "test");
       return { kind: "restored", isNew: false, linked: false };
@@ -31,6 +32,7 @@ const w = require("../lib/identity/webCreate") as typeof import("../lib/identity
 
 beforeEach(() => {
   calls.length = 0;
+  mockState.opts.length = 0;
   mockState.find = "ok";
 });
 
@@ -57,5 +59,11 @@ describe("web create account", () => {
     expect(calls).toEqual(["find:hybrid"]);
     await w.createAsNew();
     expect(calls).toEqual(["find:hybrid", "create"]);
+  });
+
+  it("never lets a phone's passkey in half-way: the QR choice requires the keys output, the first look does when it came from another device (176a)", async () => {
+    await w.webCreateStart();
+    await w.signInWithPhone();
+    expect(mockState.opts).toEqual([{ requireKeys: "cross-device" }, { hints: ["hybrid"], requireKeys: true }]);
   });
 });

@@ -122,6 +122,28 @@ export async function registerPush(body: { address: string; expoPushToken: strin
   if (r.status >= 400) throw new RelayError(r.status, r.body?.error?.code ?? "PUSH_FAILED", r.body?.error?.message ?? "");
 }
 
+/** The relayer's VAPID public key for browser push (GET /v1/config webPushPublicKey); null when it has none. */
+export async function getWebPushKey(): Promise<string | null> {
+  const r = await fetchJson<{ chainId?: number; webPushPublicKey?: string | null }>(`${config.relayerUrl}/v1/config`, { timeoutMs: 6_000 });
+  if (r.status !== 200 || r.body?.chainId !== config.chainId) return null;
+  const k = r.body.webPushPublicKey;
+  return typeof k === "string" && /^[A-Za-z0-9_-]{80,100}$/.test(k) ? k : null;
+}
+
+export async function registerWebPush(body: {
+  address: string;
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } };
+  deadline: number;
+  signature: Hex;
+}): Promise<void> {
+  const r = await fetchJson<{ error?: { code: string; message: string } }>(`${config.relayerUrl}/v1/push/web`, { method: "POST", body: jsonStringify(body) });
+  if (r.status >= 400) throw new RelayError(r.status, r.body?.error?.code ?? "PUSH_FAILED", r.body?.error?.message ?? "");
+}
+
+export async function unregisterWebPush(endpoint: string): Promise<void> {
+  await fetchJson(`${config.relayerUrl}/v1/push/web`, { method: "DELETE", body: jsonStringify({ endpoint }), timeoutMs: 6_000 });
+}
+
 export type DemoAccounts = { enabled: boolean; accounts: { name: string; city: string; country: string; address: string }[]; pots: { pot: string; stage: string; createdAt: number }[] };
 
 export async function getDemoAccounts(): Promise<DemoAccounts> {

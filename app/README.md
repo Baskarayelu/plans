@@ -96,7 +96,7 @@ npm run web                                  # dev server (passkeys only work on
 | react-native-view-shot + share sheet | html2canvas → PNG → Web Share API (files), else download + copy link | `lib/share/shareImage(.web).ts` |
 | expo-haptics | no-op on desktops (vibrate where the browser has it) | — |
 | Expo push | in-page live feed; browser Notification while the tab is hidden; "(2) Plans" title count. No web push | `lib/state/notify(.web).ts` |
-| App Links `/j /c /p` | `/app/j/<pot>#s=…`, `/app/join#pot=…&s=…`, `/app/v/<pot>#s=…`, `/app/c/1#k=…`, `/app/claim#k=…`, `/app/p/<addr>#…`: parsed by an inline script in `public/index.html` before the router reads the address; the secret kept in memory (`window.__plansLink` → `pendingLink`), the history entry replaced with the route without it | `public/index.html`, `lib/domain/webLinks.ts`, `webEntry(.web).ts` |
+| App Links `/j /c /p` | `/app/j/<pot>#s=…`, `/app/join#pot=…&s=…`, `/app/v/<pot>#s=…`, `/app/c/1#k=…`, `/app/claim#k=…`, `/app/p/<addr>#…`, `/app/link#c=…` (a link-this-browser QR, → `/app/add-browser`): parsed by an inline script in `public/index.html` before the router reads the address; the secret kept in memory (`window.__plansLink` → `pendingLink`), the history entry replaced with the route without it | `public/index.html`, `lib/domain/webLinks.ts`, `webEntry(.web).ts` |
 | expo-brightness, intent launcher, PlansNative | guarded / not used on the web | — |
 
 Nothing more is stored on the web than on Android: PRF outputs, the signing key, the X25519 secret and
@@ -132,7 +132,13 @@ transaction paths and `../e2e/web/timing.mjs` measures the web one.
 ### Sign-in on the web
 
 - "Create account" asks the browser for any Plans passkey first (`lib/identity/webCreate.ts`); only "I'm
-  new to Plans" creates one. The choice is shown with existing components until design 166 is approved.
+  new to Plans" creates one. Nothing answered → 166 (`ui/link/LinkChoice.tsx`): the phone's passkey through
+  the browser's QR (167), "Link this browser" (`/link`, 168–170), or "I'm new". Phone browsers list "Link this
+  browser" first. A phone's passkey that comes back without the keys output shows 176a ("Link with a code").
+- "Add a browser" (`/add-browser`, 171–175) approves a new browser from any device with the account, the web
+  app included; "Devices with your passkey" (`/devices`, the laptop You card, 178) lists them and removes a
+  linked browser after a passkey confirmation. Other devices get an in-app notice on their next open
+  (`ui/link/devices.tsx` `DeviceWatch`). See `docs/crypto.md` §9.8a.
 - Reloading or opening a deep route with a stored account goes through Unlock and back (`WebGate` in
   `src/app/_layout.tsx`); with no account, through Welcome. A layout remount never locks an open session.
 

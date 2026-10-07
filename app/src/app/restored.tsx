@@ -7,7 +7,7 @@ import { groupKeyFor, profilesFrom } from "../lib/domain/groups";
 import { identity, saveProfile } from "../lib/identity/session";
 import { useBalance, useMyPlans } from "../lib/state/data";
 import { useStore } from "../lib/state/observable";
-import { BigIcon, Btn, Card, Chip, EmojiTile, FingerprintPill, ListItem, Row, Skel, Tile } from "../ui/kit";
+import { Banner, BigIcon, Btn, Card, Chip, EmojiTile, FingerprintPill, ListItem, Row, Skel, Tile } from "../ui/kit";
 import { EntrySplit } from "../ui/desk/entry";
 import { AppBar, Screen } from "../ui/layout";
 import { useLayout } from "../ui/shell/responsive";
@@ -16,7 +16,7 @@ import { Txt } from "../ui/Text";
 
 /** 05 Restore success: the account came back; plans, names and receipts are rebuilt from the passkey. */
 export default function Restored() {
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, via } = useLocalSearchParams<{ next?: string; via?: string }>();
   const st = useStore(identity, (s) => s);
   const [rebuilding, setRebuilding] = useState(!st.profile);
   const plans = useMyPlans();
@@ -55,6 +55,16 @@ export default function Restored() {
 
   const name = st.profile?.name;
   const list = plans.data ?? [];
+  // 167: signed in with the phone's passkey through the browser's QR. Every later visit would ask for
+  // the phone again, so offer linking this browser once (it gets its own passkey).
+  const linkOffer =
+    via === "phone" ? (
+      <View style={{ marginTop: 12 }}>
+        <Banner kind="inf" icon="link" title="Next time, skip the phone" text="Link this browser once and it gets its own passkey. Takes a minute." testID="restored-link-offer">
+          <Btn label="Link this browser" kind="txt" sm onPress={() => router.push("/link")} testID="btn-link-this-browser" style={{ height: 36, minHeight: 36, paddingHorizontal: 0 }} />
+        </Banner>
+      </View>
+    ) : null;
   const rows = (
     <>
       {plans.isLoading || rebuilding ? (
@@ -119,6 +129,7 @@ export default function Restored() {
                 </Txt>
               </Row>
             </Card>
+            {linkOffer}
             <View style={{ width: 240, marginTop: 20 }}>
               <Btn label={name ? "Go to my plans" : "Continue"} onPress={go} disabled={rebuilding} testID="btn-go-to-my-plans" />
             </View>
@@ -152,6 +163,7 @@ export default function Restored() {
           {st.fingerprint ? "Same key as your other phone, so your receipts and notes open as normal." : "Your receipts unlock the first time you open one."}
         </Txt>
       </Card>
+      {linkOffer}
       {plans.data && plans.data.length === 0 && !rebuilding ? (
         <View style={{ marginTop: 12 }}>
           <Chip label="No plans yet" sm />

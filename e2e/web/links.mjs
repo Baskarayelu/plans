@@ -7,6 +7,7 @@
 //   1. Plans links opened in a browser reach their screen (never "Unmatched Route"), and the secret in
 //      "#" is gone from the address bar and from history:
 //        /app/j/<pot>#s=…&n=…   /app/v/<pot>#s=…   /app/join#pot=…&s=…   /app/c/1#k=…   /app/claim#k=…   /app/p/<addr>#n=…
+//        /app/link#c=…&k=…&e=… (a link-this-browser QR; the full flow is in linkbrowser.mjs)
 //   2. An invite whose secret isn't a usable key (all zeros, short) shows the "stopped working" state, no crash.
 //   3. Reloading a deep route with a stored account goes through Unlock and comes back to that route.
 //   4. Client-side navigation (pushState + popstate) keeps the session unlocked.
@@ -26,6 +27,7 @@ const b64u = (b) => Buffer.from(b).toString("base64url");
 const SECRET = b64u(createHash("sha256").update("plans.e2e.links|invite").digest());
 const KEY = b64u(createHash("sha256").update("plans.e2e.links|claim").digest());
 const ADDR = "0x" + "5a".repeat(20);
+const LINK_CODE = "K7Q29RXDM4TA";
 
 const results = [];
 const check = (name, ok, detail = "") => {
@@ -57,6 +59,8 @@ try {
     { name: "claim /app/c/1#k=", url: `/app/c/1#k=${KEY}&n=Ben&a=25000000`, path: `/app/claim?n=Ben&a=25000000`, screen: ["screen-claim"], secret: KEY },
     { name: "claim alias /app/claim#k=", url: `/app/claim#k=${KEY}&n=Ben`, path: `/app/claim?n=Ben`, screen: ["screen-claim"], secret: KEY },
     { name: "Plans code /app/p/<addr>#n=", url: `/app/p/${ADDR}#n=Sam&cc=US`, path: null, screen: ["screen-welcome", "screen-send-amount", "screen-amount"], secret: null },
+    // "Link this browser" QR opened as an address in a browser without the account: Add a browser explains; the code is gone from the bar.
+    { name: "link QR /app/link#c=&k=&e=", url: `/app/link#c=${LINK_CODE}&k=${b64u(new Uint8Array(32).fill(7))}&e=${Math.floor(Date.now() / 1000) + 600}`, path: "/app/add-browser", screen: ["screen-add-browser-none"], secret: LINK_CODE },
   ];
   for (const c of cases) {
     const { ctx, page } = await fresh(browser);

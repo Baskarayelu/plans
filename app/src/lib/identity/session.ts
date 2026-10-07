@@ -19,6 +19,7 @@ import { config } from "../../config";
 import { concatBytes, equalBytes, fromBase64Url, randomBytes, toHex, utf8, wipe } from "../crypto/bytes";
 import { deriveAccountPrivateKey, deriveKeys, KEYS_PRF_SALT, type PlansKeys } from "../crypto/keys";
 import { fetchVaultBox } from "../link/browserLink";
+import { devicesRootFrom, isRemovedVault } from "../link/devices";
 import { LinkError, openVault, wipeBundle, type AccountBundle } from "../link/protocol";
 import { SlotError } from "../link/slots";
 import { createStore } from "../state/observable";
@@ -53,6 +54,8 @@ export const identity = createStore<IdentityState>({ status: "loading", keysPend
 let session: Secp256k1SigningSession | null = null;
 let account: LocalAccount | null = null;
 let keys: PlansKeys | null = null;
+/** The root of the account's device list key (lib/link/devices.ts), from the same PRF output as `keys`. Memory only. */
+let devicesRoot: Uint8Array | null = null;
 
 export function currentAccount(): LocalAccount {
   if (!account) throw new LockedError();
@@ -63,6 +66,10 @@ export function currentAccountOrNull(): LocalAccount | null {
 }
 export function currentKeys(): PlansKeys | null {
   return keys;
+}
+/** Root of the "Devices with your passkey" list key, while unlocked with keys (null otherwise). Don't keep it. */
+export function currentDevicesRoot(): Uint8Array | null {
+  return devicesRoot;
 }
 
 export class LockedError extends Error {
@@ -88,6 +95,22 @@ export class PasskeyError extends Error {
     super(kind);
   }
 }
+
+/**
+ * A linked browser whose account can't be opened any more (docs/crypto.md §9.6, §9.9):
+ *   "removed" its vault was overwritten by "Remove" on one of the account's devices (design 177/178)
+ *   "gone"    no vault for this passkey (lost, or never saved): link this browser again (166)
+ */
+export class LinkedBrowserError extends PasskeyError {
+  constructor(
+    public reason: "removed" | "gone",
+    detail: string,
+  ) {
+    super("failed", detail);
+  }
+}
+
+export const isLinkedBrowserError = (e: unknown): e is LinkedBrowserError => e instanceof LinkedBrowserError;
 
 export function classifyPasskeyError(e: unknown): PasskeyError {
   if (e instanceof PasskeyError) return e;
@@ -137,6 +160,8 @@ function applyKeys(prfSecond: Uint8Array | null): void {
   try {
     if (keys) wipe(keys.x25519Secret, keys.cacheKey);
     keys = deriveKeys(prfSecond);
+    if (devicesRoot) wipe(devicesRoot);
+    devicesRoot = devicesRootFrom(prfSecond);
   } finally {
     wipe(prfSecond);
   }
@@ -320,7 +345,18 @@ export async function openFromBundle(
  * for the returned credential is always looked up: found → the linked account; not found → the
  * account from PRF first. A failed lookup (not a 404) throws instead of falling back.
  */
-async function discoverableSignIn(opts: { hints?: string[] } = {}): Promise<{ isNew: boolean; linked: boolean }> {
+export type SignInOptions = {
+  hints?: string[];
+  /**
+   * Refuse an answer without the keys-namespace PRF output instead of opening the account half-way
+   * (design 176a: "the person isn't let in half-way"). `true` always; "cross-device" only when the
+   * passkey came from another device over the browser's QR ("Use a phone or tablet"), where a
+   * second, keys-only ceremony would mean scanning again.
+   */
+  requireKeys?: boolean | "cross-device";
+};
+
+async function discoverableSignIn(opts: SignInOptions = {}): Promise<{ isNew: boolean; linked: boolean }> {
   const prev = await storage.loadAccount();
   let r: Awaited<ReturnType<typeof getPasskeyPrfOutput>>;
   let second: Uint8Array | null;
@@ -334,8 +370,17 @@ async function discoverableSignIn(opts: { hints?: string[] } = {}): Promise<{ is
   const handle = takeAssertionUserHandle();
   const first = r.prfOutput;
   try {
+    // NEEDS A REAL-DEVICE TEST (lead's decision 4): whether Chrome and Safari on macOS / Windows hand
+    // back PRF results when the passkey lives on an Android phone reached through the browser's QR
+    // (hybrid). The CDP virtual authenticator can't model hybrid. When the answer has no keys output
+    // we stop here (nothing saved) and the choice screen offers "Link with a code" (176a).
+    const crossDevice = lastCeremonyDiagnostics()?.authenticatorAttachment === "cross-platform";
+    if (!second && (opts.requireKeys === true || (opts.requireKeys === "cross-device" && crossDevice))) {
+      throw new PasskeyError("prf-unavailable", "The passkey answered without the keys output Plans needs in this browser.");
+    }
     const credIdBytes = fromBase64Url(r.credentialId);
     const box = await lookupVault(credIdBytes);
+    if (box && isRemovedVault(box)) throw new LinkedBrowserError("removed", "This browser was removed from the account.");
     if (box) {
       wipe(first);
       let b2: Uint8Array;
@@ -352,7 +397,7 @@ async function discoverableSignIn(opts: { hints?: string[] } = {}): Promise<{ is
       return { isNew: f.isNew, linked: true };
     }
     if (isLinkHandle(handle)) {
-      throw vaultFailure("This browser passkey was made for linking, and its linked account is no longer stored. Link this browser again from your phone.");
+      throw new LinkedBrowserError("gone", "This browser passkey was made for linking, and its linked account is no longer stored. Link this browser again from your phone.");
     }
     openSession(first);
     applyKeys(second);
@@ -365,7 +410,7 @@ async function discoverableSignIn(opts: { hints?: string[] } = {}): Promise<{ is
 }
 
 /** "I already use Plans": the system picker lists every Plans passkey (incl. other devices). Vault-aware. */
-export async function restoreWithPasskey(opts: { hints?: string[] } = {}): Promise<{ isNew: boolean; linked: boolean }> {
+export async function restoreWithPasskey(opts: SignInOptions = {}): Promise<{ isNew: boolean; linked: boolean }> {
   return discoverableSignIn(opts);
 }
 
@@ -375,7 +420,7 @@ export async function restoreWithPasskey(opts: { hints?: string[] } = {}): Promi
  * classified PasskeyError otherwise ("cancelled", "no-credentials", and "prf-unavailable" when
  * the phone's passkey gave no PRF over hybrid, which is when the UI should offer linking).
  */
-export async function findExistingAccount(opts: { hints?: string[] } = {}): Promise<{ kind: "restored"; isNew: boolean; linked: boolean }> {
+export async function findExistingAccount(opts: SignInOptions = {}): Promise<{ kind: "restored"; isNew: boolean; linked: boolean }> {
   const r = await discoverableSignIn(opts);
   return { kind: "restored", ...r };
 }
@@ -409,7 +454,8 @@ export async function unlockStored(): Promise<void> {
 async function unlockVault(prev: StoredAccount): Promise<void> {
   const credIdBytes = fromBase64Url(prev.credentialId);
   const box = await lookupVault(credIdBytes);
-  if (!box) throw vaultFailure("This browser's linked account is no longer stored. Link this browser again from your phone.");
+  if (!box) throw new LinkedBrowserError("gone", "This browser's linked account is no longer stored. Link this browser again from your phone.");
+  if (isRemovedVault(box)) throw new LinkedBrowserError("removed", "This browser was removed from the account.");
   const out = await freshPrfOutputs(prev.credentialId);
   wipe(out.first);
   try {
@@ -538,6 +584,8 @@ export function lock(): void {
   account = null;
   if (keys) wipe(keys.x25519Secret, keys.cacheKey);
   keys = null;
+  if (devicesRoot) wipe(devicesRoot);
+  devicesRoot = null;
   const st = identity.get();
   if (st.status === "unlocked") identity.patch({ status: "locked", keysPending: false });
 }
