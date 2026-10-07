@@ -1,0 +1,16 @@
+{
+  "name": "Plans",
+  "short_name": "Plans",
+  "description": "One pot for the whole plan. Friends anywhere chip in, spend under rules you agree, and settle up in one tap.",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/app",
+  "display": "standalone",
+  "background_color": "#F4F6F1",
+  "theme_color": "#10231B",
+  "icons": [
+    { "src": "/app/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/app/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/app/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,9 +1,9 @@
 import { Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** "Use Plans in your browser": the web app at /app, labelled "Coming soon" until it ships. */
+/** "Use Plans in your browser": the web app at /app (the Expo app built for the web; see ../app/README.md). */
 export const WEB_APP_PATH = "/app";
-export const WEB_APP_LIVE = false;
+export const WEB_APP_LIVE = true;
 
 export function WebAppButton({ label = "Use Plans in your browser", className }: { label?: string; className?: string }) {
   return (
