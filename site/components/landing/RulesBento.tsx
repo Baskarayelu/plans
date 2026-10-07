@@ -1,7 +1,7 @@
 "use client";
 
-// PRO BLOCK SLOT: "Bento Grids" (Aceternity UI Pro). Replace the grid below with the Pro bento and pass each
-// cell's title/body/visual from RULES_CELLS; keep the section id "rules" (nav anchor) and the header copy.
+// Aceternity UI Pro block "Bento Grid With Skeletons" (Bento Grids), adapted: Card / CardSkeleton / CardTitle /
+// CardDescription from the block, recoloured to the Plans tokens, with each cell's visual in the skeleton panel.
 import { motion } from "motion/react";
 import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { SectionHeader, Chip } from "@/components/ui/primitives";
@@ -118,6 +118,39 @@ export const RULES_CELLS: RulesCell[] = [
   },
 ];
 
+function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div
+      className={cn(
+        "group/card relative flex min-w-0 flex-col overflow-hidden rounded-[22px] border border-line bg-surface p-2 transition-all duration-200 md:p-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function CardSkeleton({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-[176px] flex-1 items-center overflow-hidden rounded-[16px] bg-surface-2 px-5 py-6">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 [background-image:radial-gradient(color-mix(in_srgb,var(--ink)_14%,transparent)_1px,transparent_1px)] [background-size:15px_15px] mask-t-from-60% mask-b-from-60%"
+      />
+      <div className="relative z-10 w-full">{children}</div>
+    </div>
+  );
+}
+
+function CardTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="m-0 px-3 pt-5 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{children}</h3>;
+}
+
+function CardDescription({ children }: { children: React.ReactNode }) {
+  return <p className="m-0 max-w-[46ch] px-3 pt-2 pb-4 text-[15px] text-muted">{children}</p>;
+}
+
 export function RulesBento({ cells = RULES_CELLS }: { cells?: RulesCell[] }) {
   return (
     <section id="rules" aria-labelledby="rules-title" className="mx-auto max-w-[1180px] scroll-mt-24 pt-[104px]">
@@ -129,17 +162,11 @@ export function RulesBento({ cells = RULES_CELLS }: { cells?: RulesCell[] }) {
       />
       <div className="grid grid-cols-1 gap-4 min-[901px]:grid-cols-6">
         {cells.map((c) => (
-          <div
-            key={c.key}
-            className={cn(
-              "relative grid min-w-0 content-start gap-3 overflow-hidden rounded-[22px] border border-line bg-surface p-6",
-              c.span === "wide" ? "min-[901px]:col-span-3" : "min-[901px]:col-span-2",
-            )}
-          >
-            <h3 className="m-0 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{c.title}</h3>
-            <p className="m-0 max-w-[46ch] text-[15px] text-muted">{c.body}</p>
-            {c.visual}
-          </div>
+          <Card key={c.key} className={c.span === "wide" ? "min-[901px]:col-span-3" : "min-[901px]:col-span-2"}>
+            <CardSkeleton>{c.visual}</CardSkeleton>
+            <CardTitle>{c.title}</CardTitle>
+            <CardDescription>{c.body}</CardDescription>
+          </Card>
         ))}
       </div>
     </section>
