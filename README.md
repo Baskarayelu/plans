@@ -67,7 +67,7 @@ Plans uses AUSD, Agora's digital dollar, and only Agora's public interfaces:
 
 - **Public API:** `GET https://api.agora.finance/v0/metrics` for AUSD supply on Monad.
 - **Reserves:** Agora's monthly attestation reports. The latest one's date and firm are bundled in [`app/src/lib/agora/attestation.json`](app/src/lib/agora/attestation.json) and updated by hand.
-- **Staging environment:** access requested by the entrant on 7 Oct 2026; **pending**.
+- **Staging environment:** requested from Agora's CTO through the mentor page on 7 Oct 2026; no reply yet.
 
 "Instant settlement" in Plans means a send that is final on Monad in under a second (measured). It is not Agora's Instant Settlement product.
 

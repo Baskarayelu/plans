@@ -41,16 +41,16 @@ Must show the live, working product and Monad transactions (rules §4.1): no sli
 
 ## 3. Pitch video (required, at most 2:00)
 
-Team, problem, why us. Talking head plus a few product shots.
+Team, problem, why us. **Generated voice, no one on camera**: the founder story is told in the first person by the voiceover and carried by visuals (a group chat, a spreadsheet, a map, the product). The script is written and approved first; the voice is generated from the approved script only. On-screen credit at the end: "Voice generated; story and words by Baskar A".
 
-| Time | Beat | Notes |
-|---|---|---|
-| 0:00–0:15 | Baskar to camera: who he is, the moment that started it (a trip with friends in different countries; one person's card, a spreadsheet, weeks of chasing) | Real story only |
-| 0:15–0:35 | The problem: every group-money product stops at a border or a bank; shared pots need you to trust the admin | Cite Monzo/Wise/Revolut limits from `research/block4/best-in-class.md` |
-| 0:35–0:55 | Zeel Patel's request on screen: "a neobank specifically for plans", and Plans as the answer | Quote under 15 words, attributed |
-| 0:55–1:20 | Product in 25 seconds: join with a fingerprint, rules the pot keeps, settle in one tap across countries | Reuse clips from the demo |
-| 1:20–1:40 | Who it's for and how the next 100 users arrive: cross-country friend groups, festivals and trips; the invite link and the settle summary as the loop; pilot results | Only real pilot numbers |
-| 1:40–2:00 | Why Monad (sub-second final settlement, cost per action) and what's next (iOS, card top-up partner) | — |
+| Time | Voiceover beat | Visuals | Notes |
+|---|---|---|---|
+| 0:00–0:15 | Who Baskar is and the moment that started it: a trip with friends in different countries, one person's card, a spreadsheet, weeks of chasing | Animated group chat with "who paid for what?" messages; a spreadsheet filling with red cells; three flags on a map | Real story only, in his words |
+| 0:15–0:35 | The problem: every group-money product stops at a border or a bank; shared pots need you to trust the admin | Side-by-side cards for Monzo, Wise and Revolut pots, each with its limit stamped on | Cite limits from `research/block4/best-in-class.md` |
+| 0:35–0:55 | Zeel Patel's request, and Plans as the answer | The request as a quote card: under 15 words, attributed; then the Plans wordmark | Quote under 15 words |
+| 0:55–1:20 | The product in 25 seconds: join with a fingerprint, rules the pot keeps, settle in one tap across countries | Clips from the technical demo (three phones), with no faces | Reuse demo footage |
+| 1:20–1:40 | Who it's for and how the next 100 users arrive: cross-country friend groups, festivals and trips; the invite link and the settle summary as the loop; pilot results | Invite link landing in a chat; the proof page; pilot numbers as counters | Only real pilot numbers |
+| 1:40–2:00 | Why Monad (sub-second final settlement, cost per action) and what's next (iOS, card top-up partner) | The measured stats from plans.0xo.in; end card with the repo and @PlansOnMonad | — |
 
 ## 4. 30-second product clip (optional)
 
