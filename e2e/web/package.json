@@ -1,0 +1,14 @@
+{
+  "name": "plans-e2e-web",
+  "private": true,
+  "type": "module",
+  "description": "Drives the Plans web app (plans.0xo.in/app) in headless Chrome with a CDP virtual authenticator.",
+  "scripts": {
+    "smoke": "node smoke.mjs",
+    "timing": "node timing.mjs",
+    "flows": "node flows.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.12.0"
+  }
+}
