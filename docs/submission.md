@@ -41,7 +41,7 @@ A group money pot for trips and plans: friends in different countries join with 
 ### Description
 
 <!-- field: Description | limit: 8000 -->
-Characters: 4966 / 8000
+Characters: 5217 / 8000
 ```text
 Plans is a group money pot for trips, festivals and anything friends plan together, including friends who live in different countries. It is a native Android app on Monad.
 
@@ -73,9 +73,10 @@ WHY MONAD (measured on mainnet, 5 Oct 2026, 20:18 to 20:28 UTC)
 - Each plan is a separate contract with its own storage, so many groups settling at once do not contend for the same state under Monad's parallel execution.
 - eth_sendRawTransactionSync returns the receipt in the same call, so the app can show "done" without polling.
 
-STATUS (6 Oct 2026)
+STATUS (7 Oct 2026)
 Done: specification and rule set; the five contracts with 178 passing tests (unit, fuzz, six invariants over 51,200 random calls each, and fork tests against real AUSD on Monad mainnet); gas for 44 actions checked exactly against live Monad mainnet; the relayer (78 tests); the Envio indexer (21 tests).
-Pending: mainnet deployment and verification, the Android app, the landing page and the stats page.
+Live on Monad testnet: six contracts deployed and verified on MonadVision (including collect after settle-up and Chainlink CRE exchange-rate rounds), the relayer, and a downloadable Android test build. 256 end-to-end scenarios pass on a mainnet fork with real AUSD.
+Pending: the indexer going live, the web app, mainnet deployment and the stats page.
 Live on mainnet: nothing yet. This description is updated as each part ships, with contract addresses and transaction hashes.
 ```
 
@@ -151,7 +152,7 @@ https://github.com/Baskarayelu/plans
 Mainnet funds and claim links are pasted into the portal only. The bracketed slots below mark where they go.
 
 <!-- field: Judge access instructions | limit: 8000 -->
-Characters: 4045 / 8000
+Characters: 4071 / 8000
 ```text
 STATUS (6 Oct 2026): Plans is in build. The steps below describe the judge path being built. Each step stays marked pending until it works, and this field is updated as steps go live.
 
@@ -160,7 +161,7 @@ WHAT IS ON MAINNET
 - Money is AUSD at 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a, Agora's official Monad deployment.
 - Demo funds on mainnet are deliberately small: judge claim links of $0.50 each and a judges' plan holding $2 (pending).
 - Gas is paid by our relayer. You never need MON.
-- Monad testnet: a separate testnet build with free test dollars, for unlimited experimenting (pending).
+- Monad testnet: a separate test build with free test dollars is downloadable now from https://plans.0xo.in/download (Plans Test).
 
 WHAT YOU NEED
 - An Android phone, Android 9 or newer (10 or newer recommended). Works the same in the US and the UK. No SIM, VPN or local account needed.
