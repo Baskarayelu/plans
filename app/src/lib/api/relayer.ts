@@ -190,6 +190,8 @@ export async function getTxLatency(hash: string): Promise<{ latencyMs: number; [
 // ─────────────── friendly errors ───────────────
 
 const CODE_COPY: Record<string, string> = {
+  USED_OR_CANCELED_AUTHORIZATION: "This payment already went through or was cancelled. Check your balance before trying again.",
+  EXPIRED_AUTHORIZATION: "This payment took too long and expired. Nothing moved. Please try again.",
   NOT_ACTIVE_MEMBER: "You're not an active member of this plan.",
   PLAN_NOT_OPEN: "This plan isn't open for spending right now.",
   FROZEN: "Spending is paused on this plan.",

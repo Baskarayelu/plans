@@ -142,6 +142,8 @@ export const commonErrorsAbi = parseAbi([
   "error Unauthorized()",
   "error Reentrancy()",
   "error InvalidSignature()",
+  "error UsedOrCanceledAuthorization()",
+  "error ExpiredAuthorization()",
   "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
   "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)",
   "error ERC2612ExpiredSignature(uint256 deadline)",

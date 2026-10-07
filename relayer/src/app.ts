@@ -174,7 +174,8 @@ export function createApp(s: AppServices) {
     const body = await readJson(c);
     const prep = prepareAction(body);
     // createPot is the most expensive action anyone can trigger with throwaway keys: cap it per IP per day.
-    if (prep.action === "createPot" && !s.store.takeDaily(`createPot:ip:${clientIp(c, s.cfg.http.trustProxy)}`, s.cfg.http.createPotPerIpPerDay)) {
+    const potQuotaKey = `createPot:ip:${clientIp(c, s.cfg.http.trustProxy)}`;
+    if (prep.action === "createPot" && !s.store.takeDaily(potQuotaKey, s.cfg.http.createPotPerIpPerDay)) {
       throw new RelayError(429, "RATE_LIMITED", "Too many new plans from this network today.");
     }
     if (prep.actor) {
@@ -184,7 +185,14 @@ export function createApp(s: AppServices) {
         throw new RelayError(429, "RATE_LIMITED", "Too many requests for this account. Please slow down.", { retryAfterMs: r.retryAfterMs });
       }
     }
-    const result = await s.relayer.relayPrepared(prep);
+    let result;
+    try {
+      result = await s.relayer.relayPrepared(prep);
+    } catch (err) {
+      // A createPot that never reached the chain (bad signature, rule check) gives its daily slot back.
+      if (prep.action === "createPot" && err instanceof RelayError && err.status < 500) s.store.refundDaily(potQuotaKey);
+      throw err;
+    }
     return c.json(result, 200);
   });
 

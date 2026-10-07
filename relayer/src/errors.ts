@@ -53,6 +53,8 @@ const NAMED: Record<string, string> = {
   InvalidRules: "Those rules aren't valid.",
   InvalidSchedule: "The plan's dates aren't valid: the end must be after the start and within 365 days.",
   InvalidSignature: "A signature didn't check out. Please try again.",
+  UsedOrCanceledAuthorization: "This payment was already sent or cancelled. Check your balance before trying again.",
+  ExpiredAuthorization: "This payment request has expired. Please try again.",
   InvalidSplit: "The split isn't valid: everyone in it must be an active member, with no duplicates and weights above zero.",
   InvalidStatus: "That proposal or dispute can't take this action in its current state.",
   NonceAlreadyUsed: "This request was already used. Please try again.",

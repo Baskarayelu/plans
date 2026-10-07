@@ -1,0 +1,19 @@
+{
+  "name": "@plans/e2e-stage-a",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stage A end-to-end tests: every Plans flow and failure path through the relayer HTTP API, on a local anvil fork of Monad mainnet with real AUSD",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "tsx run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "4.23.15",
+    "typescript": "^5.9.0",
+    "viem": "2.57.3"
+  }
+}

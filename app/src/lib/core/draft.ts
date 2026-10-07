@@ -64,13 +64,19 @@ export function draftBase(d: Draft): Exclude<PresetId, "demo"> {
   return d.preset === "demo" ? "balanced" : d.preset;
 }
 
+/** Seconds subtracted from "now" for plans that start today (see planTimes). */
+export const START_SKEW_SEC = 300;
+
 /** Onchain start/end (seconds). Pilot fixes now → +48 h. */
 export function planTimes(d: Draft, nowMs = Date.now()): { startTime: number; endTime: number; fixed: boolean } {
   const base = PRESETS[draftBase(d)];
   const now = Math.floor(nowMs / 1000);
-  if (base.durationSec) return { startTime: now, endTime: now + base.durationSec, fixed: true };
+  // A start in the past is treated as "now" by the pot, so a phone clock running ahead of the chain
+  // can't leave a new plan closed for a few seconds.
+  const startNow = now - START_SKEW_SEC;
+  if (base.durationSec) return { startTime: startNow, endTime: now + base.durationSec, fixed: true };
   const today = dayOf(nowMs);
-  const startTime = d.startDay <= today ? now : Math.floor(d.startDay / 1000);
+  const startTime = d.startDay <= today ? startNow : Math.floor(d.startDay / 1000);
   let endTime = Math.floor(addDays(d.endDay, 1) / 1000) - 1;
   if (endTime < startTime) endTime = startTime;
   if (endTime - startTime > MAX_PLAN_SEC) endTime = startTime + MAX_PLAN_SEC;
