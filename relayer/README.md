@@ -241,6 +241,30 @@ The deadline must be in the future and at most 24 h ahead. Smart accounts are ve
 
 Demo accounts never receive pushes. History replayed during backfill never triggers pushes.
 
+### Browser push: `POST /v1/push/web`, `DELETE /v1/push/web`
+
+The web app (plans.0xo.in/app) gets the same notifications through standard Web Push (VAPID; `web-push` package). Off unless `WEB_PUSH_VAPID_PUBLIC`, `WEB_PUSH_VAPID_PRIVATE` and `WEB_PUSH_SUBJECT` are all set; `GET /v1/config` then includes `webPushPublicKey` (otherwise `null`) and both routes 404 `WEB_PUSH_DISABLED`. Which browsers can receive it: `docs/web-notifications.md`.
+
+```json
+{ "address": "0x…", "subscription": { "endpoint": "https://fcm.googleapis.com/fcm/send/…", "keys": { "p256dh": "…", "auth": "…" } }, "deadline": 1760000000, "signature": "0x…" }
+```
+
+Same proof as `/v1/push/register`: EIP-191 by `address` (EOAs and ERC-1271 via `verifyMessage`), deadline in the future and at most 24 h ahead, over exactly:
+
+```
+Plans web push notifications
+Address: 0xAbC…
+Endpoint: https://fcm.googleapis.com/fcm/send/…
+Keys: <p256dh> <auth>
+Deadline: 1760000000
+```
+
+- Endpoints must be `https://` on a browser push service (`fcm.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`, `*.notify.windows.com`, `android.googleapis.com`): the relayer never POSTs anywhere else.
+- An endpoint belongs to the last address that registered it; each address keeps up to 5. Stored in SQLite (`web_push_subs`).
+- `DELETE /v1/push/web` with `{ "endpoint": "…" }` forgets that subscription. The endpoint is a secret only the browser and the relayer know, so it needs no signature (and can only ever stop notifications).
+- Every Expo push above is also sent to the recipient's browser subscriptions: same title and body, plus the screen to open. The body is Declarative Web Push JSON (`{"web_push": 8030, "notification": {title, body, navigate, lang}, "tag"}`), which Safari 18.4+ shows by itself; the service worker (`app/public/sw.js`) shows it everywhere else. TTL 24 h, urgency high.
+- A 404 or 410 from the push service removes the subscription. `/v1/health` reports `push.web` (subscriptions, sent, failed, removed).
+
 ### Demo
 
 | Endpoint | Purpose |
@@ -328,7 +352,7 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 ## Deploy on Railway
 
 1. Create a service from this directory (root `relayer/`). `railway.json` builds the `Dockerfile` (node:24-slim).
-2. Add a **volume** mounted at `/data`. The SQLite state lives there (push tokens, daily quotas, the listener cursor, demo runs and sent-transaction timings), and so do the encrypted blobs in `/data/blobs`. Size the volume for `BLOB_DISK_CAP_BYTES` (2 GB by default) plus some headroom.
+2. Add a **volume** mounted at `/data`. The SQLite state lives there (push tokens, browser push subscriptions, daily quotas, the listener cursor, demo runs and sent-transaction timings), and so do the encrypted blobs in `/data/blobs`. Size the volume for `BLOB_DISK_CAP_BYTES` (2 GB by default) plus some headroom.
 3. Keep it at **one replica**. Nonce lanes and SQLite are single-writer.
 4. Set the variables from `.env.example`. At minimum:
    - `CHAIN_ID`
@@ -337,6 +361,7 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
    - `PLANS_SEND_ADDRESS`
    - `START_BLOCK` (the factory's deploy block)
    - for the demo: `DEMO_ENABLED=true` and `DEMO_KEY_BEN`, `DEMO_KEY_ASHA`, `DEMO_KEY_MAYA`
+   - for browser notifications: `WEB_PUSH_VAPID_PUBLIC`, `WEB_PUSH_VAPID_PRIVATE`, `WEB_PUSH_SUBJECT` (one key pair per network; keep it stable)
 
    `PORT` is provided by Railway.
 5. **Fund the accounts:**
@@ -354,7 +379,8 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 | `src/lanes.ts` | Key lanes, nonces, sync send and fallback |
 | `src/errors.ts` | Revert decoding and friendly messages |
 | `src/listener.ts` | Backfill, websocket and polling listener |
-| `src/push.ts` | Push registration, routing and the Expo dispatcher |
+| `src/push.ts` | Push registration, routing and the Expo dispatcher (and the web push queue) |
+| `src/webpush.ts`, `src/routes/webpush.ts` | Browser push: VAPID config, subscription proof and storage, `/v1/push/web` |
 | `src/fx.ts` | Signed FX reference; read-only FxReference latest round |
 | `src/faucet.ts` | Testnet faucet |
 | `src/demo/` | Demo members (`policy.ts` is the pure decision logic) |

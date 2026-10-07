@@ -1,5 +1,6 @@
 /**
  * Push: token registration (EIP-191 signed) and an Expo push dispatcher driven by chain events.
+ * The same notifications also go to browser subscriptions (webpush.ts) when VAPID keys are set.
  * Notification text never includes memos (they are encrypted to the group) — only amounts and categories.
  */
 import { getAddress, type Address, type Hex, type PublicClient } from "viem";
@@ -9,6 +10,7 @@ import { CATEGORIES, RelayError } from "./errors.js";
 import type { ChainEvent } from "./listener.js";
 import { log, shortErr } from "./log.js";
 import type { Store } from "./store.js";
+import { sendErrorStatus, webPushPayload, type WebPush, type WebPushPayload, type WebSubscription } from "./webpush.js";
 
 export const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[A-Za-z0-9_\-]{8,200}\]$/;
 
@@ -134,8 +136,17 @@ interface ExpoMessage {
   priority: "high";
 }
 
+interface WebMessage {
+  sub: WebSubscription;
+  payload: WebPushPayload;
+}
+
+/** Web push: a day is long enough for "needs your OK"; older news is stale. */
+const WEB_TTL_SEC = 24 * 3600;
+
 export class PushDispatcher {
   #queue: ExpoMessage[] = [];
+  #webQueue: WebMessage[] = [];
   #timer: NodeJS.Timeout | null = null;
   sent = 0;
   failed = 0;
@@ -145,6 +156,8 @@ export class PushDispatcher {
     readonly opts: { enabled: boolean; url: string; accessToken?: string },
     readonly exclude: Set<string> = new Set(),
     readonly fetchImpl: typeof fetch = fetch,
+    /** Browser subscriptions (webpush.ts): every notification also goes to the account's web subscriptions. */
+    readonly web: WebPush | null = null,
   ) {}
 
   handle = (ev: ChainEvent) => {
@@ -153,16 +166,53 @@ export class PushDispatcher {
       for (const { token } of this.store.pushTokens(n.to)) {
         this.#queue.push({ to: token, title: n.title, body: n.body, data: n.data, sound: "default", priority: "high" });
       }
+      if (this.web?.enabled) {
+        const payload = webPushPayload(n, this.web.appOrigin);
+        for (const sub of this.web.store.forAddresses(n.to)) this.#webQueue.push({ sub, payload });
+      }
     }
-    if (this.#queue.length && !this.#timer) this.#timer = setTimeout(() => void this.flush(), 300);
+    if ((this.#queue.length || this.#webQueue.length) && !this.#timer) this.#timer = setTimeout(() => void this.flush(), 300);
   };
 
   get pending() {
-    return this.#queue.length;
+    return this.#queue.length + this.#webQueue.length;
   }
 
   async flush() {
     this.#timer = null;
+    await Promise.all([this.#flushExpo(), this.#flushWeb()]);
+  }
+
+  /** Web push, 8 at a time. 404/410 mean the browser dropped the subscription: forget it. */
+  async #flushWeb() {
+    const web = this.web;
+    if (!web?.send) {
+      this.#webQueue.length = 0;
+      return;
+    }
+    const send = web.send;
+    while (this.#webQueue.length) {
+      const batch = this.#webQueue.splice(0, 8);
+      await Promise.all(
+        batch.map(async (m) => {
+          try {
+            await send(m.sub, JSON.stringify(m.payload), { TTL: WEB_TTL_SEC, urgency: "high" });
+            web.sent++;
+          } catch (e) {
+            web.failed++;
+            const status = sendErrorStatus(e);
+            if (status === 404 || status === 410) {
+              if (web.store.remove(m.sub.endpoint)) web.removed++;
+            } else {
+              log.warn("web push send failed", { status: status ?? null, host: hostOf(m.sub.endpoint), error: shortErr(e) });
+            }
+          }
+        }),
+      );
+    }
+  }
+
+  async #flushExpo() {
     while (this.#queue.length) {
       const batch = this.#queue.splice(0, 100);
       try {
@@ -192,3 +242,11 @@ export class PushDispatcher {
     }
   }
 }
+
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).hostname;
+  } catch {
+    return "?";
+  }
+};

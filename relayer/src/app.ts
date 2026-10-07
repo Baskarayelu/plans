@@ -20,6 +20,8 @@ import { RateLimiter } from "./ratelimit.js";
 import type { Relayer } from "./relay.js";
 import { normaliseSlotId, SLOT_TTL_MAX, SLOT_TTL_MIN, type SlotStore } from "./slots.js";
 import type { Store } from "./store.js";
+import { mountWebPushRoutes } from "./routes/webpush.js";
+import type { WebPush } from "./webpush.js";
 
 export interface AppServices {
   cfg: Pick<Config, "http" | "chainId" | "chainName" | "isMainnet" | "push"> & {
@@ -33,6 +35,8 @@ export interface AppServices {
   store: Store;
   fx: FxService;
   push: PushDispatcher;
+  /** Browser (VAPID) push; absent or disabled when WEB_PUSH_VAPID_* aren't set. */
+  webPush?: WebPush | null;
   listener?: Listener;
   faucet?: Faucet;
   demo?: DemoService;
@@ -102,7 +106,7 @@ export function createApp(s: AppServices) {
     "*",
     cors({
       origin: s.cfg.http.corsOrigins,
-      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowHeaders: ["content-type"],
       maxAge: 600,
     }),
@@ -144,7 +148,11 @@ export function createApp(s: AppServices) {
 
   /** Runtime endpoints for the app, so a new indexer URL needs no app rebuild. Public, no secrets. */
   app.get("/v1/config", (c) =>
-    c.json({ chainId: s.cfg.chainId, graphqlUrl: s.cfg.indexerGraphqlUrl ?? null }, 200, { "Cache-Control": "public, max-age=60" }),
+    c.json(
+      { chainId: s.cfg.chainId, graphqlUrl: s.cfg.indexerGraphqlUrl ?? null, webPushPublicKey: s.webPush?.enabled ? s.webPush.publicKey : null },
+      200,
+      { "Cache-Control": "public, max-age=60" },
+    ),
   );
 
   app.get("/v1/health", async (c) => {
@@ -174,7 +182,13 @@ export function createApp(s: AppServices) {
         lanes,
         contracts: s.relayer.contracts,
         listener: s.listener?.status() ?? null,
-        push: { enabled: s.cfg.push.enabled, sent: s.push.sent, failed: s.push.failed, queued: s.push.pending },
+        push: {
+          enabled: s.cfg.push.enabled,
+          sent: s.push.sent,
+          failed: s.push.failed,
+          queued: s.push.pending,
+          web: s.webPush ? { enabled: s.webPush.enabled, subscriptions: s.webPush.store.count(), sent: s.webPush.sent, failed: s.webPush.failed, removed: s.webPush.removed } : null,
+        },
         faucet: { enabled: !!s.faucet?.enabled },
         demo: { enabled: !!s.demo?.enabled },
         longStop: s.longStop ? { lastRunAt: s.longStop.lastRunAt, settled: s.longStop.settledCount } : null,
@@ -249,6 +263,8 @@ export function createApp(s: AppServices) {
     s.store.addPushToken(p.address, p.expoPushToken);
     return c.json({ ok: true, address: p.address });
   });
+
+  mountWebPushRoutes(app, s);
 
   app.get("/v1/tx/:hash", (c) => {
     const hash = c.req.param("hash");

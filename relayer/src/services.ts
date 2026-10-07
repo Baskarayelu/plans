@@ -17,6 +17,7 @@ import { LongStop } from "./longstop.js";
 import { PushDispatcher } from "./push.js";
 import { Relayer } from "./relay.js";
 import { Store } from "./store.js";
+import { WebPush } from "./webpush.js";
 
 export interface Services extends AppServices {
   listener?: Listener;
@@ -59,7 +60,8 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
   );
 
   const demo = new DemoService({ cfg: cfg.demo, chainId: cfg.chainId, isTestnet: !cfg.isMainnet, store, relayer, client, faucet });
-  const push = new PushDispatcher(store, cfg.push, demo.demoSet, opts.fetchImpl ?? fetch);
+  const webPush = new WebPush(store.db, cfg.webPush, undefined, cfg.webPush?.appOrigin);
+  const push = new PushDispatcher(store, cfg.push, demo.demoSet, opts.fetchImpl ?? fetch, webPush);
   const listener = cfg.listener.enabled
     ? new Listener(client, ws, store, relayer.contracts, { startBlock: cfg.listener.startBlock, chunk: cfg.listener.chunk, pollMs: cfg.listener.pollMs })
     : undefined;
@@ -84,6 +86,7 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
     store,
     fx,
     push,
+    webPush,
     listener,
     faucet,
     demo,

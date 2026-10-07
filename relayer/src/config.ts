@@ -155,6 +155,11 @@ const envSchema = z.object({
   PUSH_ENABLED: bool(true),
   EXPO_PUSH_URL: z.string().optional().default("https://exp.host/--/api/v2/push/send"),
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  // Browser push (VAPID). All three or none; generate with `npx web-push generate-vapid-keys`.
+  WEB_PUSH_VAPID_PUBLIC: z.string().optional(),
+  WEB_PUSH_VAPID_PRIVATE: z.string().optional(),
+  WEB_PUSH_SUBJECT: z.string().optional(),
+  WEB_PUSH_APP_ORIGIN: z.string().url().optional().default("https://plans.0xo.in"),
 
   DEMO_ENABLED: bool(false),
   DEMO_KEY_BEN: optKey,
@@ -213,6 +218,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
 
   const isMainnet = e.CHAIN_ID === 143;
+  const webPush = parseWebPush(e.WEB_PUSH_VAPID_PUBLIC, e.WEB_PUSH_VAPID_PRIVATE, e.WEB_PUSH_SUBJECT);
   const faucetAddress = e.FAUCET_ADDRESS ?? (known?.faucet ? getAddress(known.faucet) : undefined);
   // The faucet is never available on mainnet, whatever the env says.
   const faucetFlag = e.FAUCET_ENABLED?.trim();
@@ -270,6 +276,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       totalPerDay: e.FAUCET_TOTAL_PER_DAY,
     },
     push: { enabled: e.PUSH_ENABLED, url: e.EXPO_PUSH_URL, accessToken: e.EXPO_ACCESS_TOKEN },
+    /** VAPID keys for browser push; null leaves web push off (GET /v1/config publishes no key). */
+    webPush: webPush && { ...webPush, appOrigin: new URL(e.WEB_PUSH_APP_ORIGIN).origin },
     demo: {
       enabled: e.DEMO_ENABLED,
       keys: { ben: e.DEMO_KEY_BEN, asha: e.DEMO_KEY_ASHA, maya: e.DEMO_KEY_MAYA },
@@ -294,4 +302,18 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     slots: { putPerIpPerHour: e.SLOT_PUT_PER_IP_PER_HOUR },
     longStop: { enabled: e.LONGSTOP_ENABLED, intervalMs: e.LONGSTOP_INTERVAL_MS, graceDays: e.LONGSTOP_GRACE_DAYS },
   };
+}
+
+/** WEB_PUSH_VAPID_PUBLIC / _PRIVATE / WEB_PUSH_SUBJECT: all set (and well-formed) or all empty. Values are never echoed. */
+export function parseWebPush(pub?: string, priv?: string, subject?: string): { publicKey: string; privateKey: Secret<string>; subject: string } | null {
+  const [p, k, s] = [pub?.trim(), priv?.trim(), subject?.trim()];
+  if (!p && !k && !s) return null;
+  if (!p || !k || !s) throw new Error("Invalid configuration: set all of WEB_PUSH_VAPID_PUBLIC, WEB_PUSH_VAPID_PRIVATE and WEB_PUSH_SUBJECT, or none");
+  const b64 = (v: string, n: number) => /^[A-Za-z0-9_-]+$/.test(v) && Buffer.from(v, "base64url").length === n;
+  if (!b64(p, 65)) throw new Error("Invalid configuration: WEB_PUSH_VAPID_PUBLIC must be a base64url P-256 public key (65 bytes)");
+  if (!b64(k, 32)) throw new Error("Invalid configuration: WEB_PUSH_VAPID_PRIVATE must be a base64url P-256 private key (32 bytes, value hidden)");
+  if (!/^mailto:[^@\s]+@[^@\s]+$/.test(s) && !/^https:\/\/[^\s]+$/.test(s)) {
+    throw new Error("Invalid configuration: WEB_PUSH_SUBJECT must be a mailto: address or an https: URL");
+  }
+  return { publicKey: p, privateKey: new Secret(k), subject: s };
 }
