@@ -4,18 +4,33 @@ A group money pot for trips and plans. Friends in different countries join with 
 
 Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 
-## Status (6 Oct 2026)
+## Status (7 Oct 2026)
 
-**Built and tested; not yet deployed to Monad.** No contract addresses or transaction hashes exist yet. They will be listed here once the contracts are deployed and verified.
+**Live on Monad testnet; not yet on mainnet.** Mainnet comes after the feature set is frozen and a full testnet run has passed.
 
 | Part | Folder | State | Tests |
 |---|---|---|---|
-| Contracts | [`contracts/`](contracts) | Built and tested, not deployed | **178 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
+| Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **182 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
 | Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 44 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 44 |
-| Relayer | [`relayer/`](relayer) | Built and tested, not deployed | **85 passing** (unit, plus integration against anvil) |
+| Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app | **95 passing** (unit, plus integration against anvil) |
 | Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **21 passing** |
-| Android app | [`app/`](app) | Built and tested, not released | **137 passing**, plus a copy check that fails the build on crypto words |
+| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.1) (Monad testnet) | **137 passing**, plus a copy check that fails the build on crypto words |
 | Website and docs | [`site/`](site) | Live at https://plans.0xo.in | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
+
+## Monad testnet deployment (chain 10143)
+
+All five contracts are verified on MonadVision (Sourcify, exact match). Source of truth: [`contracts/deployments/10143.json`](contracts/deployments/10143.json).
+
+| Contract | Address | Deploy transaction |
+|---|---|---|
+| PlansFactory | `0x01F92d40b765516d54ED551da0DC56984CAA2e74` | `0xba15b4a00d7c8ff2bc0ef2891e54ddd573ccc0626879646da52b3bb1a6f73778` |
+| Pot (implementation) | `0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6` | created by the factory |
+| ClaimEscrow | `0x28F6E6095761f003ff413cD99922894bee6e73C7` | created by the factory |
+| KeyRegistry | `0xD5114ff91FD11B343c9193e9463020ca0D12d168` | `0x5ca4e39e1f6a10afce10c1dd82ab3db81e8abfe019823fea63152596e1cafd37` |
+| PlansSend | `0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C` | `0x84f213791b9ede5206bc26c54261fe4bd048e74e3ccc8ca91f33e60a856d433b` |
+| AUSD (Agora, testnet) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | — |
+
+Every gas limit was taken from Monad's own `eth_estimateGas` (see [`contracts/GAS-LIMITS.md`](contracts/GAS-LIMITS.md)).
 
 ## Run the tests
 
