@@ -29,8 +29,14 @@ cd "$ROOT/site"
 LOG="$(mktemp)"
 # The CLI sometimes loses its connection while the build continues ("fetch failed"); the deployment
 # URL is printed before that, so read it and wait on the deployment itself.
-npx vercel deploy --prod --yes 2>&1 | tee "$LOG" || true
-URL="$(grep -oE 'https://plans-0xo-[a-z0-9]+-[a-z0-9-]+\.vercel\.app' "$LOG" | tail -1)"
+URL=""
+for attempt in 1 2 3; do
+  npx vercel deploy --prod --yes 2>&1 | tee "$LOG" || true
+  URL="$(grep -oE 'https://plans-0xo-[a-z0-9]+-[a-z0-9-]+\.vercel\.app' "$LOG" | tail -1)"
+  [ -n "$URL" ] && break
+  echo "deploy: upload attempt $attempt failed before a deployment was created; retrying" >&2
+  sleep 15
+done
 rm -f "$LOG"
 [ -n "$URL" ] || { echo "deploy: no deployment URL from the Vercel CLI" >&2; exit 1; }
 echo "deploy: waiting for $URL"
