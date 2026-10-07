@@ -8,3 +8,4 @@ dist/
 *.keystore
 expo-env.d.ts
 coverage/
+google-services.json

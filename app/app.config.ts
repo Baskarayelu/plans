@@ -77,7 +77,8 @@ const scheme = isMainnet ? "plans" : "plans-test";
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: isMainnet ? "Plans" : "Plans Test",
-  slug: "plans",
+  // Expo project "baskar" (id below). The slug must match the Expo project; package and display names are separate.
+  slug: "baskar",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -85,6 +86,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   platforms: ["android"],
   android: {
+    // Firebase Cloud Messaging for Expo push on Android: add google-services.json here (not committed) to enable it.
+    ...(fs.existsSync(path.resolve(__dirname, "google-services.json")) ? { googleServicesFile: "./google-services.json" } : {}),
     package: packageName,
     versionCode: 1,
     adaptiveIcon: {
@@ -149,6 +152,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: { typedRoutes: false },
   extra: {
     plans,
-    eas: process.env.EXPO_PROJECT_ID ? { projectId: process.env.EXPO_PROJECT_ID } : undefined,
+    eas: { projectId: process.env.EXPO_PROJECT_ID ?? "0fa08a8e-1503-4b2a-984a-2001371c1e75" },
   },
 });
