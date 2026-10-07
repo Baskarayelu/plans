@@ -1,8 +1,10 @@
 /** Wires every component from a Config. Used by the server entrypoint and the integration tests. */
+import { IndexerKeepAlive } from "./keepalive.js";
 import { join } from "node:path";
 import { privateKeyToAccount } from "viem/accounts";
 import { createApp, type AppServices } from "./app.js";
 import { BlobStore } from "./blobs.js";
+import { SlotStore } from "./slots.js";
 import { makePublicClient, makeWsClient } from "./chain.js";
 import type { Config } from "./config.js";
 import { DemoService } from "./demo/demo.js";
@@ -62,6 +64,9 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
     : undefined;
   const longStop = new LongStop(store, relayer, client, cfg.longStop);
   const blobs = new BlobStore({ dir: opts.blobDir ?? cfg.blobs.dir, maxBytes: cfg.blobs.maxBytes, diskCapBytes: cfg.blobs.diskCapBytes });
+  const slots = new SlotStore({ dir: join(blobs.opts.dir, "slots"), diskCapBytes: cfg.blobs.diskCapBytes, otherUsedBytes: () => blobs.usedBytes });
+  let slotSweep: ReturnType<typeof setInterval> | undefined;
+  const keepAlive = new IndexerKeepAlive(cfg.indexerGraphqlUrl ?? null, undefined, opts.fetchImpl ?? fetch);
 
   if (listener) {
     listener.on(push.handle);
@@ -83,6 +88,7 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
     demo,
     longStop,
     blobs,
+    slots,
     version: "0.1.0",
     app: undefined as never,
     async start() {
@@ -94,11 +100,23 @@ export async function buildServices(cfg: Config, opts: { fetchImpl?: typeof fetc
       }
       demo.start();
       longStop.start();
+      keepAlive.start();
+      // Expired link slots are also deleted lazily on read; this keeps unread ones from piling up.
+      slotSweep = setInterval(() => {
+        try {
+          slots.sweep();
+        } catch (e) {
+          log.warn("slot sweep failed", { error: shortErr(e) });
+        }
+      }, 60 * 60 * 1000);
+      slotSweep.unref?.();
     },
     async stop() {
       listener?.stop();
+      if (slotSweep) clearInterval(slotSweep);
       demo.stop();
       longStop.stop();
+      keepAlive.stop();
       await push.flush().catch(() => undefined);
       store.close();
     },
