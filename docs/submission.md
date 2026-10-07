@@ -41,7 +41,7 @@ A group money pot for trips and plans: friends in different countries join with 
 ### Description
 
 <!-- field: Description | limit: 8000 -->
-Characters: 5217 / 8000
+Characters: 5208 / 8000
 ```text
 Plans is a group money pot for trips, festivals and anything friends plan together, including friends who live in different countries. It is a native Android app on Monad.
 
@@ -74,7 +74,7 @@ WHY MONAD (measured on mainnet, 5 Oct 2026, 20:18 to 20:28 UTC)
 - eth_sendRawTransactionSync returns the receipt in the same call, so the app can show "done" without polling.
 
 STATUS (7 Oct 2026)
-Done: specification and rule set; the five contracts with 178 passing tests (unit, fuzz, six invariants over 51,200 random calls each, and fork tests against real AUSD on Monad mainnet); gas for 44 actions checked exactly against live Monad mainnet; the relayer (78 tests); the Envio indexer (21 tests).
+Done: specification and rule set; six contracts with 250 passing tests (unit, fuzz, invariants, and fork tests against real AUSD on Monad mainnet); gas for 49 actions checked exactly against live Monad mainnet; the relayer (122 tests); the Envio indexer (26 tests); the Android app (173 tests).
 Live on Monad testnet: six contracts deployed and verified on MonadVision (including collect after settle-up and Chainlink CRE exchange-rate rounds), the relayer, and a downloadable Android test build. 256 end-to-end scenarios pass on a mainnet fork with real AUSD.
 Pending: the indexer going live, the web app, mainnet deployment and the stats page.
 Live on mainnet: nothing yet. This description is updated as each part ships, with contract addresses and transaction hashes.
