@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The one way to deploy plans.0xo.in (site + web app at /app):
-#   1. build the web app into site/public/app (skip with SKIP_APP_BUILD=1),
+# The one way to deploy plans.0xo.in (site + web app at /app). It deploys what is COMMITTED (HEAD),
+# from a clean checkout, never the working tree (which may hold someone's unfinished changes):
+#   1. build the web app into site/public/app of that checkout (skip with SKIP_APP_BUILD=1),
 #   2. deploy the site to Vercel production and wait until that deployment is Ready,
 #   3. confirm the public URL serves THIS build (site/public/app/build.json),
 #   4. run e2e/web/postdeploy.mjs against the public URL (Chrome and Safari, clean sessions, both
@@ -8,8 +9,16 @@
 # Extra arguments go to postdeploy.mjs (e.g. --signed-in). Exit code 1 if any step fails.
 #   scripts/deploy-site.sh [--signed-in] [--browsers chrome,safari]
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="${PLANS_ORIGIN:-https://plans.0xo.in}"
+
+# A clean checkout of HEAD, sharing the repo's installed dependencies and Vercel link.
+ROOT="$(mktemp -d)/plans"
+git -C "$REPO" worktree add --detach --quiet "$ROOT" HEAD
+trap 'git -C "$REPO" worktree remove --force "$ROOT" >/dev/null 2>&1 || true' EXIT
+for d in app site e2e/web; do ln -s "$REPO/$d/node_modules" "$ROOT/$d/node_modules"; done
+cp -R "$REPO/site/.vercel" "$ROOT/site/.vercel"
+echo "deploy: HEAD $(git -C "$ROOT" rev-parse --short HEAD) from a clean checkout"
 
 if [ "${SKIP_APP_BUILD:-0}" != "1" ]; then
   bash "$ROOT/app/scripts/build-web.sh" testnet
