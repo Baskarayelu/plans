@@ -4,8 +4,13 @@ pragma solidity 0.8.28;
 import {PlansBase} from "../utils/PlansBase.sol";
 import {PlansSigs} from "../utils/PlansSigs.sol";
 import {IAUSD, IPlansSend} from "../../src/interfaces/IPlansPeriphery.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {ClaimEscrow} from "../../src/ClaimEscrow.sol";
+import {FxReference} from "../../src/FxReference.sol";
 import {Pot} from "../../src/Pot.sol";
+import {PlansSend} from "../../src/PlansSend.sol";
+import {IFxReference} from "../../src/interfaces/IFxReference.sol";
+import {IPot} from "../../src/interfaces/IPot.sol";
 
 /// @notice Runs Plans against the real AUSD on a Monad fork.
 ///
@@ -30,6 +35,9 @@ abstract contract AUSDForkBase is PlansBase {
     function _rpcAlias() internal pure virtual returns (string memory);
     function _expectedChainId() internal pure virtual returns (uint256);
     function _ausd() internal pure virtual returns (address);
+    /// @dev Chainlink's MockKeystoneForwarder (the CRE simulation forwarder) on this chain.
+    function _simForwarder() internal pure virtual returns (address);
+    function _chainSelector() internal pure virtual returns (uint64);
 
     function setUp() public virtual override {
         if (vm.envOr("SKIP_FORK_TESTS", false)) vm.skip(true, "SKIP_FORK_TESTS is set");
@@ -61,6 +69,129 @@ abstract contract AUSDForkBase is PlansBase {
         vm.store(token, slot, bytes32(((before + amount) << 8) | (raw & 0xff)));
         vm.store(token, AUSD_TOTAL_SUPPLY_SLOT, bytes32(uint256(vm.load(token, AUSD_TOTAL_SUPPLY_SLOT)) + amount));
         assertEq(_balance(to), before + amount, "AUSD storage layout: balance slot");
+    }
+
+    /// @dev Sets or clears AUSD's own per-account frozen flag (low byte of the packed balance word).
+    function _setFrozen(address who, bool frozen) internal {
+        bytes32 slot = keccak256(abi.encode(who, AUSD_ERC20_BASE));
+        uint256 raw = uint256(vm.load(token, slot));
+        vm.store(token, slot, bytes32((raw & ~uint256(0xff)) | (frozen ? 1 : 0)));
+    }
+
+    // ─────────────── shared fork tests ───────────────
+
+    /// @notice F1 with the real AUSD freeze flag: a creditor frozen at settlement is skipped, the
+    /// claim is refused while frozen, and `collect` pays it (and only it) once AUSD unfreezes.
+    function test_fork_collectFrozenThenUnfrozenCreditor() public {
+        Pot pot = _createPot(0, _params(_balancedRules()), 20 * USD);
+        _join(pot, 1, 10 * USD);
+        _setFrozen(users[1], true);
+        vm.expectRevert(); // real AUSD refuses a transfer to a frozen account
+        IAUSD(token).transfer(users[1], 0);
+        _ackAll(pot);
+        pot.settle();
+        assertEq(_balance(users[0]), 20 * USD, "alice paid");
+        assertEq(pot.netOf(users[1]), int256(10 * USD), "bob's payout skipped and kept");
+        assertEq(_balance(address(pot)), 10 * USD);
+        _assertI1(pot);
+
+        vm.expectRevert(Pot.PayoutRefused.selector);
+        pot.collect(users[1]);
+
+        _setFrozen(users[1], false);
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        pot.collect(users[1]);
+        assertEq(_balance(users[1]), 10 * USD, "bob collected");
+        assertEq(_balance(users[0]), 20 * USD, "alice unchanged");
+        assertEq(_balance(stranger), 0);
+        assertEq(_balance(address(pot)), 0, "pot drained");
+        assertEq(pot.netOf(users[1]), 0);
+        _assertI1(pot);
+    }
+
+    /// @notice FxReference fed through Chainlink's real MockKeystoneForwarder on the fork, exactly as
+    /// `cre workflow simulate --broadcast` delivers: report() from the configured transmitter writes
+    /// a round; the same call from anyone else is refused by the tx.origin guard (the mock swallows
+    /// the revert and emits ReportProcessed(false)).
+    function test_fork_fxReferenceThroughSimulationForwarder() public {
+        address mock = _simForwarder();
+        assertGt(mock.code.length, 0, "MockKeystoneForwarder deployed");
+        address transmitter = makeAddr("cre transmitter");
+        FxReference fxr = new FxReference(makeAddr("fx owner"), mock, transmitter, _chainSelector());
+        uint64[] memory r = _fxRates();
+        bytes memory payload = abi.encode(
+            _chainSelector(), uint64(vm.getBlockTimestamp()), uint32(20261006), _fxCurrencies(), r, _fxMasks(r)
+        );
+        bytes memory raw = abi.encodePacked(
+            bytes1(0x01), keccak256("exec-1"), bytes4(0), bytes4(uint32(1)), bytes4(uint32(1))
+        );
+        raw = abi.encodePacked(raw, bytes32(uint256(0x1111)), bytes10("fxrefwf"), address(0xAAAA), bytes2(0x0001), payload);
+
+        // A stranger: not written.
+        address mallory = makeAddr("mallory");
+        vm.prank(mallory, mallory);
+        IMockForwarder(mock).report(address(fxr), raw, "", new bytes[](0));
+        assertEq(fxr.latestRoundId(), 0, "stranger's report refused");
+
+        // The configured transmitter: written.
+        vm.recordLogs();
+        vm.prank(transmitter, transmitter);
+        IMockForwarder(mock).report(address(fxr), raw, "", new bytes[](0));
+        assertEq(fxr.latestRoundId(), 1, "round written through the mock forwarder");
+        assertEq(fxr.rateOf(1, "GBP"), r[0]);
+        assertEq(fxr.rateOf(1, "INR"), r[2]);
+        bool sawRound;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == address(fxr) && logs[i].topics[0] == IFxReference.RoundWritten.selector) sawRound = true;
+        }
+        assertTrue(sawRound, "RoundWritten");
+
+        // Replaying the same report through the forwarder (which does not dedupe in the mock) is refused.
+        vm.prank(transmitter, transmitter);
+        IMockForwarder(mock).report(address(fxr), raw, "", new bytes[](0));
+        assertEq(fxr.latestRoundId(), 1, "replay refused");
+    }
+
+    /// @notice A send that names a fresh round records the reference rate; settlement records it too.
+    function test_fork_sendAndSettleWithFxRound() public {
+        uint64 id = _writeFxRound();
+        _fund(users[3], 9 * USD);
+        IPlansSend.SendMeta memory meta = IPlansSend.SendMeta({
+            to: users[11],
+            fromCountry: "GB",
+            toCountry: "IN",
+            fromCurrency: "GBP",
+            toCurrency: "INR",
+            fxRateE8: 127_50000000,
+            fxTimestamp: uint64(vm.getBlockTimestamp()),
+            fxRoundId: id,
+            memoHash: keccak256("fx"),
+            salt: keccak256("fx-salt")
+        });
+        Auth3009 memory auth = PlansSigs.receiveAuth(pks[3], token, address(sender), 9 * USD, keccak256(abi.encode(meta)));
+        (uint256 ref, int256 diff) = sender.previewReference(meta);
+        assertEq(ref, uint256(fx.rateOf(id, "GBP")) * 1e8 / fx.rateOf(id, "INR"));
+        vm.expectEmit(address(sender));
+        emit IPlansSend.Sent(
+            users[3], users[11], 9 * USD, "GB", "IN", "GBP", "INR", 127_50000000, meta.fxTimestamp, keccak256("fx"), id, ref, diff
+        );
+        sender.send(users[3], meta, auth);
+        assertEq(_balance(users[11]), 9 * USD);
+
+        Pot pot = _createPot(0, _params(_balancedRules()), 5 * USD);
+        _ackAll(pot);
+        vm.expectEmit(address(pot));
+        emit IPot.Settled(address(this), 5 * USD, 0, 0, id);
+        pot.settle();
+
+        vm.warp(vm.getBlockTimestamp() + 6 hours + 1);
+        meta.salt = keccak256("fx-salt-2");
+        _fund(users[3], 1 * USD);
+        auth = PlansSigs.receiveAuth(pks[3], token, address(sender), 1 * USD, keccak256(abi.encode(meta)));
+        vm.expectRevert(abi.encodeWithSelector(PlansSend.FxRoundStale.selector, id, fx.roundTime(id)));
+        sender.send(users[3], meta, auth);
     }
 
     // ─────────────── helpers ───────────────
@@ -109,6 +240,14 @@ contract ForkLifecycleMainnetTest is AUSDForkBase {
 
     function _ausd() internal pure override returns (address) {
         return 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a;
+    }
+
+    function _simForwarder() internal pure override returns (address) {
+        return 0x9eF6468C5f37b976E57d52054c693269479A784d;
+    }
+
+    function _chainSelector() internal pure override returns (uint64) {
+        return 8481857512324358265;
     }
 
     function test_fork_ausdDomain() public view {
@@ -246,6 +385,7 @@ contract ForkLifecycleMainnetTest is AUSDForkBase {
             toCurrency: "INR",
             fxRateE8: 112_50000000,
             fxTimestamp: uint64(vm.getBlockTimestamp()),
+            fxRoundId: 0,
             memoHash: keccak256("dinner"),
             salt: keccak256("send-salt")
         });
@@ -292,6 +432,14 @@ contract ForkLifecycleTestnetTest is AUSDForkBase {
         return 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC;
     }
 
+    function _simForwarder() internal pure override returns (address) {
+        return 0xB9F79d863261869B234c481D1f9A7af84AeAd192;
+    }
+
+    function _chainSelector() internal pure override returns (uint64) {
+        return 2183018362218727504;
+    }
+
     function test_fork_ausdDomain() public view {
         _assertDomain();
     }
@@ -307,6 +455,11 @@ contract ForkLifecycleTestnetTest is AUSDForkBase {
         assertEq(uint8(_status(pot, id)), uint8(ProposalStatus.Executed));
         _assertI1(pot);
     }
+}
+
+interface IMockForwarder {
+    function report(address receiver, bytes calldata rawReport, bytes calldata reportContext, bytes[] calldata signatures)
+        external;
 }
 
 interface IERC20Supply {

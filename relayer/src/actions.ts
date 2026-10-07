@@ -381,6 +381,14 @@ export const ACTIONS = {
     actor: (p) => p.member,
     deadline: (p) => p.auth.validBefore,
   }),
+  // After settlement, pays `member` (only) what the pot still owes them. Permissionless and
+  // unsigned like settle/execute: it can only ever pay `member`, so anyone may submit it.
+  collect: def({
+    target: "pot",
+    schema: z.object({ ...pot, member: zAddress }),
+    call: (p) => ({ abi: potAbi, functionName: "collect", args: [p.member] }),
+    actor: (p) => p.member,
+  }),
   registerKey: def({
     target: "keyRegistry",
     schema: z.object({ account: zAddress, pubKey: zBytes32, deadline: zUint(), sig: zSig }),
@@ -400,6 +408,10 @@ export const ACTIONS = {
         toCurrency: zCurrency,
         fxRateE8: zUint(64),
         fxTimestamp: zUint(64),
+        // FxReference round the app quoted from; 0 = no reference. Absent = 0 so older clients
+        // still validate. The 3009 nonce is keccak256(abi.encode(meta)) over every field, so the
+        // app must send exactly the fxRoundId it hashed (a mismatch reverts as a bad authorisation).
+        fxRoundId: zUint(64).default(0n),
         memoHash: zBytes32.default(ZERO_BYTES32),
         salt: zBytes32,
       }),

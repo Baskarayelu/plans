@@ -1,5 +1,5 @@
 /**
- * Typed ABIs, hand-copied from contracts/src/interfaces/*.sol (IPlansTypes, IPot, IPlansPeriphery).
+ * Typed ABIs, hand-copied from contracts/src/interfaces/*.sol (IPlansTypes, IPot, IPlansPeriphery, IFxReference).
  * Enums are uint8 on the ABI. Keep in sync with the interfaces; `pnpm sync-abi` additionally
  * pulls every custom error from contracts/out into src/abi.errors.generated.json for revert decoding.
  */
@@ -13,7 +13,7 @@ const structs = [
   "struct KeyReg { bytes32 pubKey; uint256 deadline; bytes signature; }",
   "struct Split { address[] members; uint32[] weights; }",
   "struct KeyWrap { address member; bytes wrap; }",
-  "struct SendMeta { address to; bytes2 fromCountry; bytes2 toCountry; bytes3 fromCurrency; bytes3 toCurrency; uint64 fxRateE8; uint64 fxTimestamp; bytes32 memoHash; bytes32 salt; }",
+  "struct SendMeta { address to; bytes2 fromCountry; bytes2 toCountry; bytes3 fromCurrency; bytes3 toCurrency; uint64 fxRateE8; uint64 fxTimestamp; uint64 fxRoundId; bytes32 memoHash; bytes32 salt; }",
 ] as const;
 
 export const potAbi = parseAbi([
@@ -43,10 +43,11 @@ export const potAbi = parseAbi([
   "event AcksReset(uint256 newAckEpoch)",
   "event Pulled(address indexed member, uint256 amount)",
   "event Payout(address indexed member, uint256 amount)",
+  "event Collected(address indexed member, address indexed by, uint256 amount)",
   "event DebtRecorded(address indexed member, uint256 amount)",
   "event DebtPaid(address indexed member, uint256 amount)",
   "event MemberExited(address indexed member, int256 netAtExit, uint256 paidOut, uint256 pulledIn)",
-  "event Settled(address indexed by, uint256 paidOut, uint256 pulledIn, uint256 unpaidClaims)",
+  "event Settled(address indexed by, uint256 paidOut, uint256 pulledIn, uint256 unpaidClaims, uint64 fxRoundId)",
   "event EscrowRefunded(uint256 indexed spendId, uint256 amount)",
   // functions
   "function join(address member, bytes2 country, uint256 nonce, uint256 deadline, bytes memberSig, bytes inviteSig, Auth3009 deposit, Permit2612 safetyNet, KeyReg keyReg)",
@@ -71,6 +72,7 @@ export const potAbi = parseAbi([
   "function ack(address member, uint256 nonce, uint256 deadline, bytes sig)",
   "function settle()",
   "function payDebt(address member, Auth3009 auth)",
+  "function collect(address member)",
   "function previewSpend(address proposer, uint8 kind, address payee, uint256 amount, uint8 category) view returns (uint8 approvalsRequired, bool ok, uint8 reason)",
   "function netOf(address member) view returns (int256)",
   "function isMember(address account) view returns (bool)",
@@ -78,8 +80,13 @@ export const potAbi = parseAbi([
   "function canSettle() view returns (bool)",
   "function settled() view returns (bool)",
   "function usedNonce(address member, uint256 nonce) view returns (bool)",
+  "function fxReference() view returns (address)",
+  "function MAX_FX_AGE() view returns (uint256)",
   // custom errors documented in docs/protocol.md
   "error SpendBlocked(uint8 reason)",
+  "error NotSettled()",
+  "error NothingToCollect()",
+  "error PayoutRefused()",
 ]);
 
 export const factoryAbi = parseAbi([
@@ -91,6 +98,7 @@ export const factoryAbi = parseAbi([
   "function ausd() view returns (address)",
   "function keyRegistry() view returns (address)",
   "function claimEscrow() view returns (address)",
+  "function fxReference() view returns (address)",
 ]);
 
 export const keyRegistryAbi = parseAbi([
@@ -112,8 +120,33 @@ export const claimEscrowAbi = parseAbi([
 
 export const plansSendAbi = parseAbi([
   ...structs,
-  "event Sent(address indexed from, address indexed to, uint256 amount, bytes2 fromCountry, bytes2 toCountry, bytes3 fromCurrency, bytes3 toCurrency, uint64 fxRateE8, uint64 fxTimestamp, bytes32 memoHash)",
+  "event Sent(address indexed from, address indexed to, uint256 amount, bytes2 fromCountry, bytes2 toCountry, bytes3 fromCurrency, bytes3 toCurrency, uint64 fxRateE8, uint64 fxTimestamp, bytes32 memoHash, uint64 fxRoundId, uint256 refRateE8, int256 fxDiffBps)",
   "function send(address from, SendMeta meta, Auth3009 auth)",
+  "function ausd() view returns (address)",
+  "function fxReference() view returns (address)",
+  "function MAX_FX_AGE() view returns (uint256)",
+  "function previewReference(SendMeta meta) view returns (uint256 refRateE8, int256 diffBps)",
+  "error FxRoundUnknown(uint64 roundId)",
+  "error FxRoundStale(uint64 roundId, uint64 scheduledTime)",
+  "error FxPairUnavailable(uint64 roundId, bytes3 fromCurrency, bytes3 toCurrency)",
+]);
+
+/**
+ * FxReference (contracts/src/interfaces/IFxReference.sol): reference FX rounds written by a
+ * Chainlink CRE workflow. The app only reads it. Rates are USD per 1 unit of the currency,
+ * 8 decimals, in the fixed order of `currencies()` (GBP, EUR, INR, NGN, JPY, CHF, AED, SGD);
+ * 0 = absent in that round. `rateOf(id, "USD")` is 1e8 for every round that exists.
+ */
+export const fxReferenceAbi = parseAbi([
+  "struct Round { uint64 roundId; uint64 scheduledTime; uint64 writtenAt; uint32 rateDate; uint8 sourceMask; bytes3[] currencies; uint64[] usdPerUnitE8; uint8[] sourceMasks; }",
+  "event RoundWritten(uint64 indexed roundId, uint64 scheduledTime, uint32 rateDate, uint8 sourceMask, uint64[] usdPerUnitE8, uint8[] sourceMasks)",
+  "function latestRound() view returns (Round)",
+  "function round(uint64 id) view returns (Round)",
+  "function rateOf(uint64 id, bytes3 ccy) view returns (uint64)",
+  "function latestRoundTime() view returns (uint64 roundId, uint64 scheduledTime)",
+  "function roundTime(uint64 id) view returns (uint64 scheduledTime)",
+  "function latestRoundId() view returns (uint64)",
+  "function currencies() view returns (bytes3[])",
 ]);
 
 export const ausdAbi = parseAbi([

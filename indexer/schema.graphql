@@ -7,7 +7,8 @@
 #   (startTime, endTime, expiresAt, frozenUntil, eta, expiry) are BigInt, exactly as emitted.
 # - Ids: Pot = pot address; Member/MemberBalance = "<pot>-<member>"; Spend = "<pot>-<spendId>";
 #   Dispute = "<pot>-<disputeId>"; RuleChange = "<pot>-<id>"; RulesVersion = "<pot>-<version>";
-#   Claim = "<escrow>-<claimId>"; per-event rows = "<block>-<logIndex>".
+#   Claim = "<escrow>-<claimId>"; FxRound = "<roundId>" (decimal); FxReferenceConfig = FxReference
+#   address; per-event rows = "<block>-<logIndex>".
 #
 # Two layers:
 #   1. Raw / lifecycle entities, one per onchain object or event.
@@ -85,6 +86,20 @@ enum DebtEventKind {
   Paid
 }
 
+enum PayoutSource {
+  "paid inside exit, settle, payDebt or a post-settlement refund distribution"
+  Automatic
+  "paid by Pot.collect(member) after settlement (a payout that was skipped earlier, e.g. AUSD refused the recipient)"
+  Collect
+}
+
+enum FxReferenceMode {
+  "forwarder = the chain's MockKeystoneForwarder; tx.origin must be simTransmitter"
+  Simulation
+  "forwarder = a KeystoneForwarder; report metadata must carry workflowId / workflowOwner"
+  Production
+}
+
 enum CorridorSource {
   Send
   SendLinkClaim
@@ -123,6 +138,7 @@ enum ActivityKind {
   DebtPaid
   MemberExited
   Settled
+  Collected
   EscrowRefunded
   KeyRegistered
   ClaimCreated
@@ -232,6 +248,8 @@ type Pot {
   totalPersonalSpent: BigInt!
   totalRefunded: BigInt!
   totalPaidOut: BigInt!
+  "subset of totalPaidOut paid through collect(member)"
+  totalCollected: BigInt!
   totalDebtRecorded: BigInt!
   contributionCount: Int!
   spendCount: Int!
@@ -535,8 +553,12 @@ type Payout {
   pot: Pot!
   account: Account!
   amount: BigInt!
-  "pot already settled when paid (debt distribution / post-settlement refund)"
+  "pot already settled when paid (debt distribution / post-settlement refund / collect)"
   afterSettlement: Boolean!
+  "Collect when the Collected event that follows this Payout in the same tx was seen"
+  source: PayoutSource!
+  "who called collect(member) (anyone may); null unless source = Collect"
+  collectedBy: Account
   timestamp: Int!
   txHash: String!
 }
@@ -568,6 +590,10 @@ type PotSettlement {
   paidOut: BigInt!
   pulledIn: BigInt!
   unpaidClaims: BigInt!
+  "FxReference round shown on the settlement (display label only; 0 = no fresh round)"
+  fxRoundId: BigInt!
+  "null when fxRoundId = 0"
+  fxRound: FxRound
   timestamp: Int!
   txHash: String!
 }
@@ -607,13 +633,89 @@ type Send {
   toCountry: String
   fromCurrency: String
   toCurrency: String
+  "applied rate (app supplied), toCurrency per 1 fromCurrency, 8 decimals"
   fxRateE8: BigInt!
   fxTimestamp: BigInt!
   memoHash: String!
+  "FxReference round the app quoted from; 0 = no FX reference"
+  fxRoundId: BigInt!
+  "null when fxRoundId = 0"
+  fxRound: FxRound
+  "the round's toCurrency per 1 fromCurrency, 8 decimals, floored (0 when fxRoundId = 0)"
+  refRateE8: BigInt!
+  "(fxRateE8 − refRateE8)·10000 / refRateE8, truncated toward zero; signed (0 when fxRoundId = 0)"
+  fxDiffBps: BigInt!
   isCrossBorder: Boolean!
   isInternal: Boolean!
   timestamp: Int! @index
   txHash: String!
+}
+
+# ───────────────────────────── FX reference (Chainlink CRE) ─────────────────────────────
+
+"One FxReference round (RoundWritten). Rates are USD per 1 unit of the currency, 8 decimals; 0 = absent this round. Reference data only: FX never changes an AUSD amount."
+type FxRound {
+  id: ID!
+  "FxReference contract address"
+  fxReference: String!
+  roundId: BigInt! @index
+  "the CRE cron trigger's scheduled time (unix seconds, as emitted); staleness is measured from this"
+  scheduledTime: BigInt!
+  "block timestamp of the write"
+  writtenAt: Int!
+  "newest source reference date, yyyymmdd"
+  rateDate: Int!
+  "OR of the per-currency source masks (bit 0 Frankfurter/ECB, bit 1 fawazahmed0 currency-api, bit 2 Frankfurter central-bank blend)"
+  sourceMask: Int!
+  "fixed report order: GBP, EUR, INR, NGN, JPY, CHF, AED, SGD"
+  currencies: [String!]!
+  usdPerUnitE8: [BigInt!]!
+  sourceMasks: [Int!]!
+  "number of currencies present (rate > 0) in this round"
+  presentCount: Int!
+  rateGBP: BigInt!
+  rateEUR: BigInt!
+  rateINR: BigInt!
+  rateNGN: BigInt!
+  rateJPY: BigInt!
+  rateCHF: BigInt!
+  rateAED: BigInt!
+  rateSGD: BigInt!
+  maskGBP: Int!
+  maskEUR: Int!
+  maskINR: Int!
+  maskNGN: Int!
+  maskJPY: Int!
+  maskCHF: Int!
+  maskAED: Int!
+  maskSGD: Int!
+  blockNumber: Int!
+  txHash: String!
+
+  sends: [Send!]! @derivedFrom(field: "fxRound")
+  settlements: [PotSettlement!]! @derivedFrom(field: "fxRound")
+}
+
+"FxReference configuration and latest round (one row per FxReference contract)."
+type FxReferenceConfig {
+  id: ID!
+  address: String!
+  mode: FxReferenceMode!
+  forwarder: String
+  "simulation mode only (null in production)"
+  simTransmitter: String
+  "production mode only (null in simulation)"
+  workflowId: String
+  workflowOwner: String
+  maxMoveBps: Int!
+  owner: String
+  pendingOwner: String
+  latestRound: FxRound
+  latestRoundId: BigInt!
+  latestScheduledTime: BigInt!
+  roundCount: Int!
+  updatedAt: Int!
+  updatedBlock: Int!
 }
 
 # ───────────────────────────── derived / aggregated ─────────────────────────────

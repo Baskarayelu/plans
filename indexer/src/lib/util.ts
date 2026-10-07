@@ -18,6 +18,12 @@ export const PAYEE_POLICIES = ["ANYONE", "MEMBERS_ONLY", "MEMBERS_AND_ALLOWLIST"
 export const SPEND_KINDS = ["PAY", "LINK", "PERSONAL"] as const;
 export const DISPUTE_OUTCOMES = ["None", "Keep", "Resplit", "SpenderCovers"] as const;
 
+/** FxReference report currencies, in the fixed order of RoundWritten.usdPerUnitE8 / sourceMasks. */
+export const FX_CURRENCIES = ["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"] as const;
+
+/** FxRound entity id ("<roundId>"; per chain like every entity). Undefined for round 0 (= no FX reference). */
+export const fxRoundEntityId = (roundId: bigint): string | undefined => (roundId > 0n ? roundId.toString() : undefined);
+
 /** Maximum members per pot (protocol MAX_MEMBERS); histogram arrays have MAX_MEMBERS + 1 slots. */
 export const MAX_MEMBERS = 50;
 

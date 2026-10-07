@@ -206,7 +206,7 @@ describe("ledger", () => {
     sim.pot(POT, "Payout", { member: ALICE, amount: 38_888_888n });
     sim.pot(POT, "Payout", { member: BOB, amount: 11_111_111n });
     sim.pot(POT, "DebtRecorded", { member: CARL, amount: USD(40) });
-    sim.pot(POT, "Settled", { by: DIA, paidOut: 49_999_999n, pulledIn: USD(50), unpaidClaims: 40_000_001n });
+    sim.pot(POT, "Settled", { by: DIA, paidOut: 49_999_999n, pulledIn: USD(50), unpaidClaims: 40_000_001n, fxRoundId: 0n });
     await sim.run();
     const pot = await sim.indexer.Pot.getOrThrow(POT);
     expect([pot.status, pot.balance, pot.settlementCount, pot.settledVolume]).toEqual(["Settled", 1n, 1, 49_999_999n]);

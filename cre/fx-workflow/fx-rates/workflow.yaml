@@ -1,0 +1,23 @@
+# ==========================================================================
+# CRE WORKFLOW SETTINGS FILE (plans-fx-rates)
+# ==========================================================================
+# Targets must exist in both this file and ../project.yaml.
+#   staging-settings    -> Monad testnet (10143), config.staging.json
+#   production-settings -> Monad mainnet (143),   config.production.json
+# The workflow is keyless: no secrets file.
+
+staging-settings:
+  user-workflow:
+    workflow-name: "plans-fx-rates-staging"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: ""
+
+production-settings:
+  user-workflow:
+    workflow-name: "plans-fx-rates-production"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.production.json"
+    secrets-path: ""

@@ -32,6 +32,7 @@ import {
   clampIndex,
   decodeCode,
   disputeEntityId,
+  fxRoundEntityId,
   lc,
   maxBig,
   memberId,
@@ -720,6 +721,9 @@ indexer.onEvent({ contract: "Pot", event: "Payout" }, async ({ event, context })
     account_id: mem.address,
     amount,
     afterSettlement: pot.status === "Settled",
+    // set to Collect by the Collected event that follows a collect() payout
+    source: "Automatic",
+    collectedBy_id: undefined,
     timestamp: s.m.ts,
     txHash: s.m.tx,
   });
@@ -780,7 +784,7 @@ indexer.onEvent({ contract: "Pot", event: "MemberExited" }, async ({ event, cont
 
 indexer.onEvent({ contract: "Pot", event: "Settled" }, async ({ event, context }) => {
   const s = new Store(context, metaOf(event));
-  const { by, paidOut, pulledIn, unpaidClaims } = event.params;
+  const { by, paidOut, pulledIn, unpaidClaims, fxRoundId } = event.params;
   const pot = await ensurePot(s, event.srcAddress);
   await ensureAccount(s, by);
   s.put("PotSettlement", {
@@ -790,6 +794,9 @@ indexer.onEvent({ contract: "Pot", event: "Settled" }, async ({ event, context }
     paidOut,
     pulledIn,
     unpaidClaims,
+    // display label only: the FxReference round fresh at settle time (0 = none)
+    fxRoundId,
+    fxRound_id: fxRoundEntityId(fxRoundId),
     timestamp: s.m.ts,
     txHash: s.m.tx,
   });
@@ -797,6 +804,28 @@ indexer.onEvent({ contract: "Pot", event: "Settled" }, async ({ event, context }
   pot.settledAt = s.m.ts;
   await bumpPot(s, pot, { settlements: 1, settledVolume: paidOut });
   await activity(s, "Settled", { pot, account: by, amount: paidOut });
+  s.flush();
+});
+
+// collect(member) after settlement pays one member through _tryPay, which emits Payout(member, amount)
+// and then, with no external call in between, Collected(member, by, amount). The ledger (withdrawn,
+// balance, totalPaidOut) already moved on that Payout, so this handler only labels it: no money here.
+indexer.onEvent({ contract: "Pot", event: "Collected" }, async ({ event, context }) => {
+  const s = new Store(context, metaOf(event));
+  const { member, by, amount } = event.params;
+  const pot = await ensurePot(s, event.srcAddress);
+  await ensureAccount(s, by);
+  const payoutId = `${s.m.block}-${s.m.logIndex - 1}`;
+  const payout = await s.get("Payout", payoutId);
+  if (payout && payout.pot_id === pot.id && payout.account_id === lc(member) && payout.amount === amount && payout.txHash === s.m.tx) {
+    payout.source = "Collect";
+    payout.collectedBy_id = lc(by);
+    s.put("Payout", payout);
+    pot.totalCollected += amount;
+  } else if (!context.isPreload) {
+    context.log.error(`Collected ${s.m.eventId}: no matching Payout at ${payoutId}; ledger unaffected`);
+  }
+  await activity(s, "Collected", { pot, account: member, counterparty: by, amount, ref: payoutId });
   s.flush();
 });
 

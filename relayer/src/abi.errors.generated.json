@@ -1,6 +1,21 @@
 [
   {
     "type": "error",
+    "name": "AccountFrozen",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AllowanceOverflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AllowanceUnderflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AlreadyAcked",
     "inputs": []
   },
@@ -26,6 +41,26 @@
   },
   {
     "type": "error",
+    "name": "AuthorizationAlreadyUsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthorizationExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthorizationNotYetValid",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerMustBePayee",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "CannotSettle",
     "inputs": []
   },
@@ -33,6 +68,17 @@
     "type": "error",
     "name": "ClaimExpired",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CurrencyMismatch",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -56,6 +102,11 @@
   },
   {
     "type": "error",
+    "name": "EmptyReport",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ETHTransferFailed",
     "inputs": []
   },
@@ -66,7 +117,76 @@
   },
   {
     "type": "error",
+    "name": "FutureReport",
+    "inputs": [
+      {
+        "name": "scheduledTime",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "FxPairUnavailable",
+    "inputs": [
+      {
+        "name": "roundId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "fromCurrency",
+        "type": "bytes3",
+        "internalType": "bytes3"
+      },
+      {
+        "name": "toCurrency",
+        "type": "bytes3",
+        "internalType": "bytes3"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "FxRoundStale",
+    "inputs": [
+      {
+        "name": "roundId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "scheduledTime",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "FxRoundUnknown",
+    "inputs": [
+      {
+        "name": "roundId",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "HasOpenItems",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientAllowance",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientBalance",
     "inputs": []
   },
   {
@@ -77,6 +197,16 @@
   {
     "type": "error",
     "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAuthorizationSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidConfig",
     "inputs": []
   },
   {
@@ -96,8 +226,34 @@
   },
   {
     "type": "error",
+    "name": "InvalidLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMetadata",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidOutcome",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidPermit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRateDate",
+    "inputs": [
+      {
+        "name": "rateDate",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
   },
   {
     "type": "error",
@@ -116,6 +272,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidSender",
+    "inputs": [
+      {
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidSignature",
     "inputs": []
   },
@@ -128,6 +295,55 @@
     "type": "error",
     "name": "InvalidStatus",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTransmitter",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidWorkflowId",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidWorkflowOwner",
+    "inputs": [
+      {
+        "name": "workflowOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "MissingSources",
+    "inputs": [
+      {
+        "name": "currency",
+        "type": "bytes3",
+        "internalType": "bytes3"
+      },
+      {
+        "name": "sourceMask",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ]
   },
   {
     "type": "error",
@@ -171,6 +387,16 @@
   },
   {
     "type": "error",
+    "name": "NothingToCollect",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToDispute",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotInSplit",
     "inputs": []
   },
@@ -196,12 +422,22 @@
   },
   {
     "type": "error",
-    "name": "NothingToDispute",
+    "name": "NotSettled",
     "inputs": []
   },
   {
     "type": "error",
     "name": "Overflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PayoutRefused",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Permit2AllowanceIsFixedAtInfinity",
     "inputs": []
   },
   {
@@ -222,6 +458,11 @@
   {
     "type": "error",
     "name": "Permit2LockdownFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PermitExpired",
     "inputs": []
   },
   {
@@ -247,6 +488,32 @@
   {
     "type": "error",
     "name": "ProposalNotExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RateMoveTooLarge",
+    "inputs": [
+      {
+        "name": "currency",
+        "type": "bytes3",
+        "internalType": "bytes3"
+      },
+      {
+        "name": "previousE8",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "newE8",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "RecipientRejected",
     "inputs": []
   },
   {
@@ -282,12 +549,33 @@
   },
   {
     "type": "error",
+    "name": "StaleReport",
+    "inputs": [
+      {
+        "name": "scheduledTime",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "lastScheduledTime",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "TooEarly",
     "inputs": []
   },
   {
     "type": "error",
     "name": "TooManyEntries",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TotalSupplyOverflow",
     "inputs": []
   },
   {
@@ -307,8 +595,24 @@
   },
   {
     "type": "error",
+    "name": "Unauthorized",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "VotingClosed",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WrongChain",
+    "inputs": [
+      {
+        "name": "chainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
   },
   {
     "type": "error",

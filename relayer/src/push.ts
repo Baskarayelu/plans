@@ -93,8 +93,14 @@ export function notificationsFor(ev: ChainEvent, store: Store, exclude: Set<stri
     }
     case "Contributed":
       return [{ to: without(active(), a.member), title: "Money added", body: `${formatUsd(a.amount)} was added to the pot.`, data }];
-    case "Settled":
-      return [{ to: without(store.members(pot, false).map((m) => m.member)), title: "Plan settled", body: "Everyone has been settled up.", data }];
+    case "Settled": {
+      // unpaidClaims > 0: a payout was refused (e.g. a frozen account); that member can `collect` later.
+      const unpaid = a.unpaidClaims !== undefined && BigInt(a.unpaidClaims) > 0n;
+      const body = unpaid ? "The plan is settled. Some payouts are still owed and can be collected later." : "Everyone has been settled up.";
+      return [{ to: without(store.members(pot, false).map((m) => m.member)), title: "Plan settled", body, data }];
+    }
+    // Pot.collect emits Payout then Collected for the same money: the Payout push covers it, so
+    // Collected sends nothing (no double "You got paid").
     case "Payout":
       return [{ to: without([a.member]), title: "You got paid", body: `${formatUsd(a.amount)} from the plan is in your balance.`, data }];
     case "Sent":

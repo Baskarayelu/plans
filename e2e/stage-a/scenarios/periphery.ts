@@ -63,6 +63,7 @@ export async function peripheryScenarios({ R, env, A }: T): Promise<Later> {
       toCurrency: codeToBytes("INR", 3),
       fxRateE8: BigInt(q.body.rateE8),
       fxTimestamp: BigInt(q.body.timestamp),
+      fxRoundId: 0n,
       memoHash: keccak256(memo),
       salt: randomHex32(),
     };
@@ -71,8 +72,8 @@ export async function peripheryScenarios({ R, env, A }: T): Promise<Later> {
     sendParams = await build.send(ctx, A.gina, amount, meta);
     const r = s.ok(await api.relay("send", sendParams), "Sent");
     const ev = findEvent(r, "Sent")!.args;
-    s.eq([getAddress(ev.from), getAddress(ev.to), ev.amount, ev.fromCountry, ev.toCountry, ev.fromCurrency, ev.toCurrency, ev.fxRateE8, ev.memoHash],
-      [A.gina.address, A.frank.address, amount.toString(), "0x4742", "0x494e", "0x474250", "0x494e52", "10650000000", meta.memoHash], "Sent args");
+    s.eq([getAddress(ev.from), getAddress(ev.to), ev.amount, ev.fromCountry, ev.toCountry, ev.fromCurrency, ev.toCurrency, ev.fxRateE8, ev.memoHash, ev.fxRoundId, ev.refRateE8, ev.fxDiffBps],
+      [A.gina.address, A.frank.address, amount.toString(), "0x4742", "0x494e", "0x474250", "0x494e52", "10650000000", meta.memoHash, "0", "0", "0"], "Sent args (no FX round: reference fields 0)");
     s.eq((await ausdBal(env, A.frank.address)) - f0, amount, "recipient delta");
     s.eq(g0 - (await ausdBal(env, A.gina.address)), amount, "sender delta");
     const tx = await api.get(`/v1/tx/${r.body.txHash}`);

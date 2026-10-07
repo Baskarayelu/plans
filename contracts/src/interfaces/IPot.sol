@@ -87,11 +87,15 @@ interface IPot is IPlansTypes {
     event Acked(address indexed member, uint256 ackEpoch);
     event AcksReset(uint256 newAckEpoch);
     event Pulled(address indexed member, uint256 amount); // collected through the safety-net allowance
-    event Payout(address indexed member, uint256 amount); // exit, settlement or debt distribution
+    event Payout(address indexed member, uint256 amount); // exit, settlement, debt distribution or collect
+    /// @dev `collect` paid `member` (alongside its `Payout`); `by` is whoever submitted it.
+    event Collected(address indexed member, address indexed by, uint256 amount);
     event DebtRecorded(address indexed member, uint256 amount);
     event DebtPaid(address indexed member, uint256 amount);
     event MemberExited(address indexed member, int256 netAtExit, uint256 paidOut, uint256 pulledIn);
-    event Settled(address indexed by, uint256 paidOut, uint256 pulledIn, uint256 unpaidClaims);
+    /// @dev `fxRoundId` is the FxReference round that was fresh (at most MAX_FX_AGE old) at settlement,
+    /// 0 if none was. It labels the settlement for display; it changes no amount.
+    event Settled(address indexed by, uint256 paidOut, uint256 pulledIn, uint256 unpaidClaims, uint64 fxRoundId);
     /// @dev A LINK spend's claim expired and its money came back. Before settlement the spend's
     /// shares are reversed pro rata; after settlement the refund is distributed to positive nets.
     event EscrowRefunded(uint256 indexed spendId, uint256 amount);
@@ -211,6 +215,11 @@ interface IPot is IPlansTypes {
 
     /// @notice Pays some or all of a recorded debt and distributes it to members still owed.
     function payDebt(address member, Auth3009 calldata auth) external;
+
+    /// @notice After settlement, pays `member` (and only `member`) what the pot still owes them:
+    /// their whole positive net when the pot holds at least the sum of all positive nets, otherwise
+    /// `net * balance / Σ positive nets` (floored). Anyone may call. Reverts when nothing can be paid.
+    function collect(address member) external;
 
     /// @notice Called by ClaimEscrow when a LINK spend's claim is refunded to this pot.
     function onEscrowRefund(uint256 spendId, uint256 amount) external;

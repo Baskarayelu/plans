@@ -1,0 +1,8 @@
+{
+  "schedule": "0 */30 * * * *",
+  "chainName": "monad-mainnet",
+  "chainSelector": "8481857512324358265",
+  "receiverAddress": "",
+  "gasLimit": "",
+  "maxSpreadBps": 200
+}

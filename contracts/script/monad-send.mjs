@@ -10,8 +10,12 @@
 //   - prints it (`check`) or signs and sends it (`send`) with eth_sendRawTransactionSync, falling
 //     back to eth_sendRawTransaction + receipt polling.
 // The gas limit forge put in the dry-run file (from its local Ethereum-priced simulation) is never
-// used. After `send` it checks code at every predicted address and the factory's wiring, then writes
-// deployments/<chainid>.json.
+// used. After `send` it checks code at every predicted address and the wiring (factory, PlansSend,
+// Pot implementation and FxReference), then writes deployments/<chainid>.json.
+//
+// FxReference's constructor arguments (owner, CRE simulation forwarder, simulation transmitter, CCIP
+// chain selector) are decoded from its initcode and printed by `check`; the forwarder and chain
+// selector must be Chainlink's published values for the chain or the plan is refused.
 //
 //   node script/monad-send.mjs check --chain 10143
 //   node script/monad-send.mjs send  --chain 10143 --confirm <fingerprint printed by check>
@@ -35,23 +39,41 @@ if (!existsSync(VIEM)) {
 }
 const V = await import(pathToFileURL(path.join(VIEM, 'index.js')).href);
 const { privateKeyToAccount } = await import(pathToFileURL(path.join(VIEM, 'accounts', 'index.js')).href);
-const { keccak256, toHex, getAddress, getContractAddress, parseTransaction, encodeFunctionData, decodeFunctionResult, parseAbi, formatEther, slice, size } = V;
+const { keccak256, toHex, getAddress, getContractAddress, parseTransaction, encodeFunctionData, decodeFunctionResult, decodeAbiParameters, parseAbi, formatEther, slice, size, zeroAddress } = V;
 
 export const CREATE2_DEPLOYER = '0x4e59b44847b379578588920cA78FbF26c0B4956C';
 export const MONAD_RPC = { 143: 'https://rpc.monad.xyz', 10143: 'https://testnet-rpc.monad.xyz' };
 export const MONAD_MIN_BASE_FEE = 100_000_000_000n; // 100 gwei
 export const SALTS = {
+  fxReference: keccak256(toHex('plans.v1.FxReference')),
   keyRegistry: keccak256(toHex('plans.v1.KeyRegistry')),
   plansFactory: keccak256(toHex('plans.v1.PlansFactory')),
   plansSend: keccak256(toHex('plans.v1.PlansSend')),
 };
-const DEPLOYMENT_FIELDS = ['chainId', 'ausd', 'keyRegistry', 'plansSend', 'plansFactory', 'claimEscrow', 'potImplementation'];
+/** Chainlink CRE on Monad: the simulation forwarder (MockKeystoneForwarder) and the CCIP chain selector. */
+export const CRE = {
+  143: { simForwarder: '0x9eF6468C5f37b976E57d52054c693269479A784d', chainSelector: 8481857512324358265n },
+  10143: { simForwarder: '0xB9F79d863261869B234c481D1f9A7af84AeAd192', chainSelector: 2183018362218727504n },
+};
+const DEPLOYMENT_FIELDS = ['chainId', 'ausd', 'keyRegistry', 'fxReference', 'plansSend', 'plansFactory', 'claimEscrow', 'potImplementation'];
+const ADDRESS_FIELDS = ['keyRegistry', 'fxReference', 'plansSend', 'plansFactory', 'claimEscrow', 'potImplementation'];
 const FACTORY_ABI = parseAbi([
   'function ausd() view returns (address)',
   'function keyRegistry() view returns (address)',
   'function claimEscrow() view returns (address)',
   'function potImplementation() view returns (address)',
+  'function fxReference() view returns (address)',
 ]);
+const PLANS_SEND_ABI = parseAbi(['function ausd() view returns (address)', 'function fxReference() view returns (address)']);
+const POT_ABI = parseAbi(['function ausd() view returns (address)', 'function keyRegistry() view returns (address)', 'function claimEscrow() view returns (address)', 'function fxReference() view returns (address)', 'function factory() view returns (address)']);
+const FX_ABI = parseAbi([
+  'function owner() view returns (address)',
+  'function forwarder() view returns (address)',
+  'function SIM_FORWARDER() view returns (address)',
+  'function simTransmitter() view returns (address)',
+  'function CHAIN_SELECTOR() view returns (uint64)',
+]);
+const FX_CTOR = [{ type: 'address', name: 'owner' }, { type: 'address', name: 'simForwarder' }, { type: 'address', name: 'simTransmitter' }, { type: 'uint64', name: 'chainSelector' }];
 
 const lc = (s) => String(s).toLowerCase();
 const hex = (n) => '0x' + BigInt(n).toString(16);
@@ -189,10 +211,28 @@ export function loadPlan(json, chainId) {
     };
   });
   const byName = Object.fromEntries(txs.map((t) => [t.name, t.predicted]));
-  for (const [name, field] of [['KeyRegistry', 'keyRegistry'], ['PlansSend', 'plansSend'], ['PlansFactory', 'plansFactory']]) {
+  for (const [name, field] of [['KeyRegistry', 'keyRegistry'], ['FxReference', 'fxReference'], ['PlansSend', 'plansSend'], ['PlansFactory', 'plansFactory']]) {
     if (byName[name] && lc(byName[name]) !== lc(deployment[field])) throw new Error(`${name}: tx address ${byName[name]} != Deployment.${field} ${deployment[field]}`);
   }
-  return { chainId: Number(chainId), deployment, txs };
+  const fxTx = txs.find((t) => t.name === 'FxReference');
+  const fx = fxTx ? fxConfigFromInitcode(slice(fxTx.data, 32), chainId) : null;
+  return { chainId: Number(chainId), deployment, txs, fx };
+}
+
+/**
+ * Decodes FxReference's constructor arguments (the last 4 words of its initcode) and checks them:
+ * the simulation forwarder and the chain selector must be Chainlink's values for this chain, and the
+ * owner and transmitter must be set. Returns { owner, simForwarder, simTransmitter, chainSelector }.
+ */
+export function fxConfigFromInitcode(initcode, chainId) {
+  if (size(initcode) < 128) throw new Error('FxReference initcode has no constructor arguments');
+  const [owner, simForwarder, simTransmitter, chainSelector] = decodeAbiParameters(FX_CTOR, slice(initcode, size(initcode) - 128));
+  const want = CRE[Number(chainId)];
+  if (!want) throw new Error(`no Chainlink CRE values for chain ${chainId}`);
+  if (lc(simForwarder) !== lc(want.simForwarder)) throw new Error(`FxReference simForwarder ${simForwarder} is not Chainlink's MockKeystoneForwarder ${want.simForwarder} on chain ${chainId}`);
+  if (chainSelector !== want.chainSelector) throw new Error(`FxReference chainSelector ${chainSelector} != ${want.chainSelector} for chain ${chainId}`);
+  if (lc(owner) === lc(zeroAddress) || lc(simTransmitter) === lc(zeroAddress)) throw new Error('FxReference owner and simTransmitter must be set (FX_OWNER / FX_SIM_TRANSMITTER)');
+  return { owner: getAddress(owner), simForwarder: getAddress(simForwarder), simTransmitter: getAddress(simTransmitter), chainSelector };
 }
 
 /** Identifies (chain, deployer, transactions). `send` must be given the value `check` printed. */
@@ -280,7 +320,7 @@ export async function buildReport({ rpc, rpcUrl, plan, from, tipWei }) {
   const totalLimit = pending.reduce((s, r) => s + (r.quote?.gasLimit ?? 0n), 0n);
   const totalMax = pending.reduce((s, r) => s + (r.maxCost ?? 0n), 0n);
   const totalCost = pending.reduce((s, r) => s + (r.cost ?? 0n), 0n);
-  return { chainId: plan.chainId, rpcUrl, from, balance, nonce, fees: f, rows, pending, totalLimit, totalMax, totalCost, fingerprint: fingerprint(plan, from), errors: rows.filter((r) => r.error) };
+  return { chainId: plan.chainId, rpcUrl, from, balance, nonce, fees: f, rows, pending, totalLimit, totalMax, totalCost, fingerprint: fingerprint(plan, from), errors: rows.filter((r) => r.error), fx: plan.fx };
 }
 
 export function printReport(r, out = console.log) {
@@ -308,6 +348,12 @@ export function printReport(r, out = console.log) {
       out(`      Monad estimate  ${num(t.quote.estimate)}`);
       out(`      gas limit       ${num(t.quote.gasLimit)}`);
       out(`      max cost        ${mon(t.maxCost)}  (gas limit x maxFee; Monad charges the full limit, ~${mon(t.cost)} at the current base fee)`);
+    }
+    if (t.name === 'FxReference' && r.fx) {
+      out(`      fx owner        ${r.fx.owner}  (can switch simulation/production mode and the move limit; never touches funds)`);
+      out(`      fx forwarder    ${r.fx.simForwarder}  (Chainlink CRE MockKeystoneForwarder: simulation mode)`);
+      out(`      fx transmitter  ${r.fx.simTransmitter}  (the only tx.origin allowed to deliver rounds in simulation mode)`);
+      out(`      fx chain sel.   ${r.fx.chainSelector}`);
     }
   });
   out('');
@@ -364,19 +410,38 @@ export async function sendRaw(rpc, raw, state = { sync: true }, waitOpts = {}) {
   return { receipt: await waitReceipt(rpc, hash, waitOpts.timeoutMs, waitOpts.sleepMs), hash, sync: false };
 }
 
-/** Code at every address, and the factory's wiring. Throws on any mismatch. */
-export async function verifyDeployment(rpc, d) {
-  for (const k of ['keyRegistry', 'plansSend', 'plansFactory', 'claimEscrow', 'potImplementation']) {
+async function read(rpc, to, abi, fn) {
+  const r = await rpc('eth_call', [{ to, data: encodeFunctionData({ abi, functionName: fn }) }, 'latest']);
+  return decodeFunctionResult({ abi, functionName: fn, data: r });
+}
+
+/**
+ * Code at every address, and the wiring: the factory, PlansSend and the Pot implementation all point
+ * at the same AUSD, KeyRegistry, ClaimEscrow and FxReference, and FxReference has the constructor
+ * arguments `check` printed. Throws on any mismatch.
+ */
+export async function verifyDeployment(rpc, d, fx) {
+  for (const k of ADDRESS_FIELDS) {
     if (!(await hasCode(rpc, d[k]))) throw new Error(`verify: no code at ${k} ${d[k]}`);
   }
-  for (const fn of ['ausd', 'keyRegistry', 'claimEscrow', 'potImplementation']) {
-    const r = await rpc('eth_call', [{ to: d.plansFactory, data: encodeFunctionData({ abi: FACTORY_ABI, functionName: fn }) }, 'latest']);
-    const got = decodeFunctionResult({ abi: FACTORY_ABI, functionName: fn, data: r });
-    if (lc(got) !== lc(d[fn])) throw new Error(`verify: factory.${fn}() = ${got}, expected ${d[fn]}`);
+  const expect = async (label, to, abi, fn, want) => {
+    const got = await read(rpc, to, abi, fn);
+    if (typeof want === 'bigint' ? got !== want : lc(got) !== lc(want)) throw new Error(`verify: ${label}.${fn}() = ${got}, expected ${want}`);
+  };
+  for (const fn of ['ausd', 'keyRegistry', 'claimEscrow', 'potImplementation', 'fxReference']) await expect('factory', d.plansFactory, FACTORY_ABI, fn, d[fn]);
+  await expect('plansSend', d.plansSend, PLANS_SEND_ABI, 'ausd', d.ausd);
+  await expect('plansSend', d.plansSend, PLANS_SEND_ABI, 'fxReference', d.fxReference);
+  for (const fn of ['ausd', 'keyRegistry', 'claimEscrow', 'fxReference']) await expect('potImplementation', d.potImplementation, POT_ABI, fn, d[fn]);
+  await expect('potImplementation', d.potImplementation, POT_ABI, 'factory', d.plansFactory);
+  if (fx) {
+    await expect('fxReference', d.fxReference, FX_ABI, 'SIM_FORWARDER', fx.simForwarder);
+    await expect('fxReference', d.fxReference, FX_ABI, 'CHAIN_SELECTOR', fx.chainSelector);
+    // owner / forwarder / transmitter may have been changed by the owner since a first deployment;
+    // report rather than fail on those.
   }
 }
 
-export function writeDeployments(dir, d, sent, deployer) {
+export function writeDeployments(dir, d, sent, deployer, fx) {
   mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${d.chainId}.json`);
   let previous = [];
@@ -390,6 +455,8 @@ export function writeDeployments(dir, d, sent, deployer) {
     chainId: d.chainId,
     claimEscrow: d.claimEscrow,
     create2Deployer: CREATE2_DEPLOYER,
+    fxReference: d.fxReference,
+    ...(fx ? { fxConfig: { owner: fx.owner, simForwarder: fx.simForwarder, simTransmitter: fx.simTransmitter, chainSelector: fx.chainSelector.toString() } } : {}),
     keyRegistry: d.keyRegistry,
     plansFactory: d.plansFactory,
     plansSend: d.plansSend,
@@ -430,9 +497,9 @@ export async function runSend({ rpc, rpcUrl, plan, account, tipWei, confirm, dep
     out(`  ${t.name}: deployed at ${t.predicted} in ${hash} (block ${BigInt(receipt.blockNumber)}, gas used ${num(receipt.gasUsed)}${sync ? ', sync' : ''})`);
     sent.push({ contract: t.name, address: t.predicted, hash, blockNumber: Number(BigInt(receipt.blockNumber)), estimate: quote.estimate.toString(), gasLimit: quote.gasLimit.toString(), gasUsed: BigInt(receipt.gasUsed).toString() });
   }
-  await verifyDeployment(rpc, plan.deployment);
-  out('  verified: code at all 5 addresses, factory wiring matches');
-  const file = writeDeployments(deploymentsDir, plan.deployment, sent, account.address);
+  await verifyDeployment(rpc, plan.deployment, plan.fx);
+  out('  verified: code at all 6 addresses; factory, PlansSend, Pot implementation and FxReference wiring matches');
+  const file = writeDeployments(deploymentsDir, plan.deployment, sent, account.address, plan.fx);
   out(`  wrote ${path.relative(process.cwd(), file) || file}`);
   return { sent, file };
 }

@@ -1,5 +1,5 @@
 /**
- * Test environment: a fresh anvil fork of Monad mainnet (chain 143, real AUSD), the five Plans
+ * Test environment: a fresh anvil fork of Monad mainnet (chain 143, real AUSD), the six Plans
  * contracts deployed exactly as contracts/script/Deploy.s.sol does (canonical CREATE2 deployer,
  * same salts), actors funded with real AUSD through AUSD's ERC-7201 storage, and the relayer
  * (relayer/dist) started against the fork.
@@ -46,9 +46,13 @@ export const AUSD_TOTAL_SUPPLY_SLOT: Hex = "0x455730fed596673e69db1907be2e521374
 /** Same salts as Deploy.s.sol. */
 export const SALTS = {
   keyRegistry: keccak256(stringToHex("plans.v1.KeyRegistry")),
+  fxReference: keccak256(stringToHex("plans.v1.FxReference")),
   plansSend: keccak256(stringToHex("plans.v1.PlansSend")),
   plansFactory: keccak256(stringToHex("plans.v1.PlansFactory")),
 };
+/** Chainlink CRE on Monad mainnet: the simulation forwarder (MockKeystoneForwarder) and the CCIP chain selector. */
+export const SIM_FORWARDER: Address = "0x9eF6468C5f37b976E57d52054c693269479A784d";
+export const CHAIN_SELECTOR = 8481857512324358265n;
 
 export const FORK_URL = process.env.FORK_URL ?? "https://rpc.monad.xyz";
 
@@ -221,6 +225,9 @@ export async function setAusdFrozen(a: Anvil, who: Address, frozen: boolean) {
 export interface Deployment {
   ausd: Address;
   keyRegistry: Address;
+  fxReference: Address;
+  fxOwner: Address;
+  fxTransmitter: Address;
   plansSend: Address;
   plansFactory: Address;
   claimEscrow: Address;
@@ -235,26 +242,34 @@ export interface Deployment {
  * `forge script --broadcast`) keeps the run from writing contracts/deployments/143-anvil.json or
  * touching contracts/broadcast/Deploy.s.sol/143, which the mainnet `check`/`send` flow reads.
  */
-export async function deployPlans(a: Anvil): Promise<Deployment> {
+export async function deployPlans(a: Anvil, fx: { owner: Address; transmitter: Address }): Promise<Deployment> {
   const deployer = privateKeyToAccount(generatePrivateKey());
   await setMon(a, deployer.address, 100n * 10n ** 18n);
   const code = await a.pub.getCode({ address: CREATE2_DEPLOYER });
   if (!code || code === "0x") throw new Error("canonical CREATE2 deployer missing on the fork");
+  const mock = await a.pub.getCode({ address: SIM_FORWARDER });
+  if (!mock || mock === "0x") throw new Error("Chainlink MockKeystoneForwarder missing on the fork");
 
   const kr = artifact("KeyRegistry");
+  const fr = artifact("FxReference");
   const ps = artifact("PlansSend");
   const pf = artifact("PlansFactory");
   const initKR = kr.bytecode;
-  const initPS = encodeDeployData({ abi: ps.abi, bytecode: ps.bytecode, args: [AUSD] });
   const predict = (salt: Hex, init: Hex) => getContractAddress({ opcode: "CREATE2", from: CREATE2_DEPLOYER, salt, bytecode: init });
   const keyRegistry = predict(SALTS.keyRegistry, initKR);
-  const initPF = encodeDeployData({ abi: pf.abi, bytecode: pf.bytecode, args: [AUSD, keyRegistry] });
+  // FxReference in simulation mode, exactly as Deploy.s.sol builds it for chain 143 (owner and
+  // transmitter are this run's throwaway keys).
+  const initFX = encodeDeployData({ abi: fr.abi, bytecode: fr.bytecode, args: [fx.owner, SIM_FORWARDER, fx.transmitter, CHAIN_SELECTOR] });
+  const fxReference = predict(SALTS.fxReference, initFX);
+  const initPS = encodeDeployData({ abi: ps.abi, bytecode: ps.bytecode, args: [AUSD, fxReference] });
+  const initPF = encodeDeployData({ abi: pf.abi, bytecode: pf.bytecode, args: [AUSD, keyRegistry, fxReference] });
   const plansSend = predict(SALTS.plansSend, initPS);
   const plansFactory = predict(SALTS.plansFactory, initPF);
 
   const txs: Deployment["txs"] = [];
   for (const [name, salt, init, addr] of [
     ["KeyRegistry", SALTS.keyRegistry, initKR, keyRegistry],
+    ["FxReference", SALTS.fxReference, initFX, fxReference],
     ["PlansSend", SALTS.plansSend, initPS, plansSend],
     ["PlansFactory", SALTS.plansFactory, initPF, plansFactory],
   ] as const) {
@@ -276,8 +291,11 @@ export async function deployPlans(a: Anvil): Promise<Deployment> {
   if (potImplementation !== getContractAddress({ from: plansFactory, nonce: 2n })) throw new Error("Pot implementation not at factory nonce 2");
   if ((await read("ausd")).toLowerCase() !== AUSD.toLowerCase()) throw new Error("factory.ausd() mismatch");
   if ((await read("keyRegistry")).toLowerCase() !== keyRegistry.toLowerCase()) throw new Error("factory.keyRegistry() mismatch");
+  if ((await read("fxReference")).toLowerCase() !== fxReference.toLowerCase()) throw new Error("factory.fxReference() mismatch");
+  const sendFx = (await a.pub.readContract({ address: plansSend, abi: ps.abi, functionName: "fxReference" })) as Address;
+  if (sendFx.toLowerCase() !== fxReference.toLowerCase()) throw new Error("plansSend.fxReference() mismatch");
   const deployBlock = await a.pub.getBlockNumber();
-  return { ausd: AUSD, keyRegistry, plansSend, plansFactory, claimEscrow, potImplementation, deployBlock, txs };
+  return { ausd: AUSD, keyRegistry, fxReference, fxOwner: fx.owner, fxTransmitter: fx.transmitter, plansSend, plansFactory, claimEscrow, potImplementation, deployBlock, txs };
 }
 
 // ───────────── mock FX source (frankfurter.app shape), so /v1/fx is deterministic and offline ─────────────
@@ -349,6 +367,7 @@ export async function startRelayer(opts: {
     PLANS_SEND_ADDRESS: opts.dep.plansSend,
     KEY_REGISTRY_ADDRESS: opts.dep.keyRegistry,
     CLAIM_ESCROW_ADDRESS: opts.dep.claimEscrow,
+    FX_REFERENCE_ADDRESS: opts.dep.fxReference,
     AUSD_ADDRESS: opts.dep.ausd,
     RELAYER_KEYS: laneKeys.join(","),
     DATA_DIR: dataDir,

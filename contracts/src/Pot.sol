@@ -7,6 +7,7 @@ import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IPot} from "./interfaces/IPot.sol";
 import {IAUSD, IClaimEscrow, IKeyRegistry} from "./interfaces/IPlansPeriphery.sol";
+import {IFxReference} from "./interfaces/IFxReference.sol";
 import {AuthLib} from "./libraries/AuthLib.sol";
 import {AUSDLib} from "./libraries/AUSDLib.sol";
 
@@ -25,8 +26,9 @@ import {AUSDLib} from "./libraries/AUSDLib.sol";
 /// Member indices are positions in `_members` and never change; exited members keep their slot.
 /// `_activeMask`, `_metMinMask`, `_ackedMask` and `_unfreezeMask` are bitmaps over those indices.
 ///
-/// The pot only calls AUSD, its own ClaimEscrow and KeyRegistry, and ERC-1271 signers (by
-/// staticcall), none of which can call back into it, so it needs no reentrancy guard.
+/// The pot only calls AUSD, its own ClaimEscrow and KeyRegistry, ERC-1271 signers (by
+/// staticcall) and FxReference (by staticcall, at settlement), none of which can call back into
+/// it, so it needs no reentrancy guard.
 contract Pot is IPot, EIP712 {
     using SafeTransferLib for address;
 
@@ -38,6 +40,11 @@ contract Pot is IPot, EIP712 {
     uint256 public constant DISPUTE_PERIOD = 48 hours;
     uint256 public constant FREEZE_DURATION = 24 hours;
     uint256 public constant LINK_EXPIRY = 7 days;
+    /// @notice An FxReference round older than this (by its scheduled time) is not recorded at settlement.
+    uint256 public constant MAX_FX_AGE = 6 hours;
+    /// @dev Gas forwarded to the FxReference read in `settle`. The read is two storage loads (about
+    /// 17k on Monad when cold); the cap keeps a misbehaving callee from consuming the settlement's gas.
+    uint256 internal constant FX_READ_GAS = 100_000;
 
     /// @dev `SpendBlocked` reason codes, in the order `propose` checks them (docs/protocol.md).
     uint8 internal constant OK = 0;
@@ -138,6 +145,9 @@ contract Pot is IPot, EIP712 {
     error DebtNotDue();
     error InvalidRefund();
     error InsufficientGas();
+    error NotSettled();
+    error NothingToCollect();
+    error PayoutRefused();
 
     // ───────────────────────────── storage types ─────────────────────────────
 
@@ -204,6 +214,8 @@ contract Pot is IPot, EIP712 {
     address public immutable ausd;
     IKeyRegistry public immutable keyRegistry;
     IClaimEscrow public immutable claimEscrow;
+    /// @notice Reference FX rounds; read once at settlement to label it. address(0) = none.
+    IFxReference public immutable fxReference;
 
     // ───────────── storage page 0 (slots 0-127): everything ordinary actions touch ─────────────
 
@@ -250,13 +262,15 @@ contract Pot is IPot, EIP712 {
     /// @param ausd_ The AUSD token.
     /// @param keyRegistry_ The KeyRegistry used for bundled key registrations.
     /// @param claimEscrow_ The ClaimEscrow that holds LINK spends.
+    /// @param fxReference_ The FxReference read at settlement (address(0) for none).
     /// @dev Deployed by the factory's constructor, so `factory = msg.sender`. The implementation
     /// itself is marked initialised and can never hold a plan.
-    constructor(address ausd_, address keyRegistry_, address claimEscrow_) {
+    constructor(address ausd_, address keyRegistry_, address claimEscrow_, address fxReference_) {
         factory = msg.sender;
         ausd = ausd_;
         keyRegistry = IKeyRegistry(keyRegistry_);
         claimEscrow = IClaimEscrow(claimEscrow_);
+        fxReference = IFxReference(fxReference_);
         _initialized = true;
     }
 
@@ -845,7 +859,34 @@ contract Pot is IPot, EIP712 {
             if (net > 0) unpaidClaims += uint256(net);
             else if (net < 0) emit DebtRecorded(_members[i].account, uint256(-net));
         }
-        emit Settled(msg.sender, paidOut, pulledIn, unpaidClaims);
+        emit Settled(msg.sender, paidOut, pulledIn, unpaidClaims, _freshFxRound());
+    }
+
+    /// @inheritdoc IPot
+    /// @dev Closes the gap where a payout skipped at settlement (or in a later distribution), for
+    /// example because AUSD refused the recipient at that moment, had no way out of a settled pot.
+    /// Only `member` is paid and only `member`'s net changes, so no other member can block it or be
+    /// affected by it. The amount is the member's pro-rata share of what the pot holds now, which is
+    /// the full net when the pot covers every positive net. A transfer AUSD refuses reverts
+    /// (`PayoutRefused`) and leaves the claim in place; a transfer starved of gas reverts
+    /// `InsufficientGas` (see `_revertIfOutOfGas`), so either the member is paid or nothing changes.
+    function collect(address member) external {
+        if (!settled) revert NotSettled();
+        (uint256 i, bool found) = _indexOf(member);
+        if (!found) revert NotMember();
+        int256 net = _members[i].net;
+        if (net <= 0) revert NothingToCollect();
+        uint256 credit;
+        uint256 n = memberCount;
+        for (uint256 k; k < n; ++k) {
+            int256 c = _members[k].net;
+            if (c > 0) credit += uint256(c);
+        }
+        uint256 balance = ausd.balanceOf(address(this));
+        uint256 amount = balance >= credit ? uint256(net) : uint256(net) * balance / credit;
+        if (amount == 0) revert NothingToCollect();
+        if (!_tryPay(i, amount)) revert PayoutRefused();
+        emit Collected(member, msg.sender, amount);
     }
 
     /// @inheritdoc IPot
@@ -1130,6 +1171,37 @@ contract Pot is IPot, EIP712 {
     /// payout or pull while the rest of the call succeeds, so it reverts the whole call instead.
     function _revertIfOutOfGas(uint256 gasBefore) internal view {
         if (gasleft() <= gasBefore / 63) revert InsufficientGas();
+    }
+
+    /// @dev The latest FxReference round if it is at most MAX_FX_AGE old, else 0. Never reverts
+    /// because of FxReference: a missing contract, a failed read or malformed return data all give
+    /// 0. Only a read starved of gas by the submitter's gas limit reverts (`InsufficientGas`), like
+    /// the payouts, so the recorded round cannot be suppressed by picking a gas limit.
+    function _freshFxRound() internal view returns (uint64) {
+        address fx = address(fxReference);
+        if (fx == address(0)) return 0;
+        bytes4 selector = IFxReference.latestRoundTime.selector;
+        uint256 gasBefore = gasleft();
+        bool ok;
+        uint256 roundId;
+        uint256 scheduledTime;
+        assembly ("memory-safe") {
+            let m := mload(0x40)
+            mstore(m, selector)
+            ok := staticcall(FX_READ_GAS, fx, m, 4, m, 0x40)
+            if lt(returndatasize(), 0x40) { ok := 0 }
+            roundId := mload(m)
+            scheduledTime := mload(add(m, 0x20))
+        }
+        if (!ok) {
+            _revertIfOutOfGas(gasBefore);
+            return 0;
+        }
+        if (roundId == 0 || roundId > type(uint64).max || scheduledTime == 0 || scheduledTime > type(uint64).max) {
+            return 0;
+        }
+        if (block.timestamp > scheduledTime + MAX_FX_AGE) return 0;
+        return uint64(roundId);
     }
 
     /// @dev Pays `amount` out pro rata to members with a positive net (floored).

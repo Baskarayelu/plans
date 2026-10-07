@@ -8,6 +8,7 @@ function sent(sim: Sim, from: string, to: string, amount: bigint, fc: string, tc
   return sim.tx().ev("PlansSend", "Sent", SEND, {
     from, to, amount, fromCountry: cc(fc), toCountry: cc(tc),
     fromCurrency: cc("GBP"), toCurrency: cc("INR"), fxRateE8: 11_000_000_000n, fxTimestamp: BigInt(sim.ts), memoHash: "0x" + "00".repeat(32),
+    fxRoundId: 0n, refRateE8: 0n, fxDiffBps: 0n,
   });
 }
 
@@ -44,7 +45,7 @@ describe("corridors", () => {
     sim.pot(POT, "Pulled", { member: CARL, amount: USD(60) });
     sim.pot(POT, "Payout", { member: ALICE, amount: USD(70) });
     sim.pot(POT, "DebtRecorded", { member: BOB, amount: USD(30) });
-    sim.pot(POT, "Settled", { by: ALICE, paidOut: USD(70), pulledIn: USD(60), unpaidClaims: USD(30) });
+    sim.pot(POT, "Settled", { by: ALICE, paidOut: USD(70), pulledIn: USD(60), unpaidClaims: USD(30), fxRoundId: 0n });
     // 7. Bob pays his debt (IN → GB)
     sim.tx();
     sim.pot(POT, "DebtPaid", { member: BOB, amount: USD(30) });

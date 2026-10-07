@@ -8,7 +8,7 @@
 
 Monad charges the full gas **limit**, has no refunds, and prices cold state differently from Ethereum (see [GAS.md](GAS.md)).
 
-Audited 2026-10-07. The audit covers every place in the repo that sets or implies a transaction gas limit: `contracts/`, `relayer/`, `indexer/`, `app/`, `marketing/tools`, `site/`, `brand/`, `scripts/` and `app-e2e-tools/`. Line numbers refer to the code after the fixes.
+Audited 2026-10-07. The audit covers every place in the repo that sets or implies a transaction gas limit: `contracts/`, `relayer/`, `indexer/`, `app/`, `cre/`, `e2e/`, `marketing/tools`, `site/`, `brand/`, `scripts/` and `app-e2e-tools/`. Line numbers refer to the code after the fixes. Rows 20–22 were added with FxReference and the CRE workflow (same day).
 
 ## Summary
 
@@ -33,6 +33,9 @@ Audited 2026-10-07. The audit covers every place in the repo that sets or implie
 | 17 | `app/` (`src/lib/chain/rpc.ts`, `src/lib/chain/actions.ts`, `modules/`, `plugins/`) | **never sends a transaction** | – | OK | Verified: no `signTransaction`, `sendTransaction`, `writeContract` or `eth_send*` anywhere in the app. `rpc.ts` is read-only (`readContract`). `actions.ts` signs EIP-712 / ERC-3009 messages and POSTs them to the relayer's `/v1/relay`, which sets the gas. |
 | 18 | `indexer/` (Envio handlers, `scripts/sync-abis.mjs`, `queries/run.mjs`) | none | – | OK | – |
 | 19 | `marketing/tools/` (`record-site.mjs`, `render-cast.mjs`, `day-*.sh`), `site/`, `brand/scripts/`, `scripts/`, `app-e2e-tools/` | none | – | OK | – |
+| 20 | `cre/fx-workflow/fx-rates/main.ts` (`evmClient.writeReport`, `gasConfig.gasLimit`) | Monad (the CRE forwarder transaction: in simulation, `cre workflow simulate --broadcast` sends it from `CRE_ETH_PRIVATE_KEY`) | `config.gasLimit`, which `parseConfig` refuses to run without and which only row 21 writes | OK (new) | – |
+| 21 | `cre/fx-workflow/scripts/gas-limit.mjs` | Monad, **read-only** (`eth_estimateGas`, `eth_simulateV1`, `eth_call`) | Monad `eth_estimateGas` of `MockKeystoneForwarder.report(...)` from the transmitter as the starting point, then an `eth_simulateV1` search for the smallest gas whose logs include FxReference's `RoundWritten`, + 10 %, rounded up to 1,000 | OK (new) | The search matters: the mock forwarder swallows a failing `onReport`, so the outer transaction "succeeds" at gas levels where the round is not written, and a bare estimate can land there |
+| 22 | `e2e/stage-a/scenarios/fx.ts` (FX rounds seeded through the mock forwarder) | **local anvil fork only** | smallest gas at which anvil's `debug_traceCall` shows `onReport` succeeding, + 10 % | OK: not a Monad transaction (`sendLocal` refuses anything but a local anvil) | – |
 
 ## Details
 
@@ -57,7 +60,7 @@ That is 2.40 M gas (≈ 0.30 MON at 127 gwei) that forge would have charged for 
 - For each transaction whose address has no code yet, it calls `eth_estimateGas` on the Monad RPC from the deployer, with no state override. It sets `gasLimit = ceil1000(ceil(estimate × 1.1))`.
 - In `send` mode it requires the fingerprint that `check` printed. It refuses a non-Monad chain id and an anvil, hardhat or ganache node. It refuses to start if the balance is below the total `limit × maxFee`.
 - It re-estimates each transaction right before signing, then signs and sends with `eth_sendRawTransactionSync`, falling back to `eth_sendRawTransaction` plus receipt polling. It checks the receipt status and the code at the predicted address.
-- At the end it verifies all five addresses and the factory's `ausd()`, `keyRegistry()`, `claimEscrow()` and `potImplementation()`, then writes `deployments/<chainid>.json`.
+- At the end it verifies all six addresses and the wiring (the factory's `ausd()`, `keyRegistry()`, `claimEscrow()`, `potImplementation()` and `fxReference()`; PlansSend's and the Pot implementation's references; FxReference's forwarder and chain selector), then writes `deployments/<chainid>.json`.
 
 The key comes from `PLANS_DEPLOYER_KEY` or from `DEPLOYER` in `../secrets/keys.env`. It is never printed.
 
@@ -86,6 +89,10 @@ Before the fix, the relayer already estimated on Monad, but nothing forced it to
 
 **Estimator and try/catch payouts** (see STATIC-ANALYSIS.md). `eth_estimateGas` returns the *lowest* gas at which a transaction succeeds. Before the Pot fix, a payout in `Pot._tryPay`/`_pull` that ran out of gas was swallowed by its try/catch. So for `payDebt` and escrow refunds after settlement, there was a gas range in which the transaction succeeded with a payout skipped. An estimator's search could land in that range, and so could anyone choosing the limit on purpose. `Pot` now reverts with `InsufficientGas()` when the caught failure left at most 1/63 of the gas it started with. The lowest succeeding gas is therefore always one where the payout went through, and estimator-derived limits are safe for these actions. GAS.md's live search avoids this independently: it counts a probe as a success only if it emits the same events as on anvil.
 
+### 20–21. The CRE workflow's write
+
+The CRE CLI's `--broadcast` simulation (and a deployed DON) sends the forwarder transaction with the `gasLimit` in the workflow's `gasConfig`. That number must come from Monad's estimator like every other limit, so the workflow has no default: `parseConfig` refuses an empty `gasLimit`, and `scripts/gas-limit.mjs --write` fills it from a live, read-only Monad measurement of the exact forwarder call (`--preview` overlays FxReference's code before it is deployed and refuses `--write`). `contracts/script/monad-gas.mjs` measures the same delivery on mainnet state for GAS.md: 232,014 gas (first round) and 182,757 (later rounds) minimum, suggested 256,000 / 202,000; the workflow script measured 238,378 minimum on testnet with simulator-shaped calldata (report context and signatures included), giving 263,000.
+
 ### 11–13. Measurement tooling
 
 - `monad-gas.mjs` sends transactions **only to a local anvil fork**, to collect Ethereum traces that `monad-model.mjs` re-prices. Their limit (2 × anvil's estimate, at most 29 M) is never used on Monad. The script now checks that the node is anvil before its first send.
@@ -97,7 +104,7 @@ Before the fix, the relayer already estimated on Monad, but nothing forced it to
 | Test | What fails it |
 |---|---|
 | `relayer/test/unit/monad-gas.test.ts` | Runs the real `Relayer`, `LanePool` and `Faucet` on a real viem client whose transport is a fake Monad RPC. The fake logs every `eth_estimateGas` (params and a fresh pseudo-random result) and every raw transaction. For `settle`, `execute`, `ausdTransfer`, `faucetRequest`, a faucet `drip`, and 6 concurrent relays across 2 lanes, it checks that each sent transaction's `gas` equals `ceil(estimate × 1.1) + 10,000`, where the estimate was made in the same request for the same sender, target and calldata at `latest`. It also checks that a cap rejects without sending, and that `submit` refuses a bigint, a look-alike, a forged constructor call, and a limit for a different calldata, target, value, lane or RPC. |
-| `relayer/test/unit/gas-sources.test.ts` | Static scan of `relayer/src`, `contracts/script` and `contracts/tools`. It fails on any `gas:`, `gasLimit:` or `gas_limit:` key, and on any send primitive (`signTransaction`, `sendTransaction`, `writeContract`, `deployContract`, `eth_send*`, `startBroadcast`/`broadcast`, `--gas-limit`, `--gas-estimate-multiplier`), unless it is one of the reviewed lines in its allowlist. Each allowlist entry has a reason, and stale entries fail too. |
+| `relayer/test/unit/gas-sources.test.ts` | Static scan of `relayer/src`, `contracts/script`, `contracts/tools`, `cre/fx-workflow/fx-rates` and `cre/fx-workflow/scripts`. It fails on any `gas:`, `gasLimit:` or `gas_limit:` key, and on any send primitive (`signTransaction`, `sendTransaction`, `writeContract`, `deployContract`, `eth_send*`, `startBroadcast`/`broadcast`, `--gas-limit`, `--gas-estimate-multiplier`), unless it is one of the reviewed lines in its allowlist. Each allowlist entry has a reason, and stale entries fail too. |
 | `relayer/test/unit/lanes.test.ts`, `gas.test.ts` | Updated: lanes get their limits from `MonadGasEstimator`, and the old "capped at the cap" test now asserts the opposite (no clamp). |
 | `contracts/script/monad-send.test.mjs` (`npm --prefix tools test`) | With a mocked Monad RPC, checks that every signed transaction's gas equals `gasLimitFromEstimate()` of the `eth_estimateGas` made just before it, for that exact sender, target and calldata, with no state override. It also checks that `check` sends nothing and prints every required field, that forge's dry-run gas never appears, that already-deployed transactions are skipped (and a second run sends nothing), and the `eth_sendRawTransaction` fallback. It checks refusals for: a wrong `--confirm`, an unfunded deployer, an anvil node, the wrong chain, a tampered or non-CREATE2 plan, and a forged or mismatched quote. It also checks that the deployer key is loaded without being exposed. |
 

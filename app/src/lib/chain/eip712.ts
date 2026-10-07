@@ -156,14 +156,22 @@ export type CreatePotParams = {
 export type Split = { members: readonly Address[]; weights: readonly number[] };
 export type KeyWrapEntry = { member: Address; wrap: Hex };
 
+/**
+ * PlansSend.SendMeta, in the contract's field order (the 3009 nonce is keccak256(abi.encode(meta)),
+ * so the order is part of the signature): to, fromCountry, toCountry, fromCurrency, toCurrency,
+ * fxRateE8, fxTimestamp, fxRoundId, memoHash, salt.
+ */
 export type SendMeta = {
   to: Address;
   fromCountry: Hex;
   toCountry: Hex;
   fromCurrency: Hex;
   toCurrency: Hex;
+  /** applied rate: toCurrency per 1 fromCurrency, 8 decimals */
   fxRateE8: bigint;
   fxTimestamp: bigint;
+  /** FxReference round the quote came from; 0n = no onchain reference */
+  fxRoundId: bigint;
   memoHash: Hex;
   salt: Hex;
 };
@@ -223,7 +231,11 @@ export const claimAuthNonce = (claimSigner: Address, expiry: bigint, fromCountry
     encodeAbiParameters([{ type: "address" }, { type: "uint64" }, { type: "bytes2" }, { type: "bytes32" }], [claimSigner, expiry, fromCountry, salt]),
   );
 
-/** PlansSend.send: the 3009 nonce = keccak256(abi.encode(meta)). */
+/**
+ * PlansSend.send: the 3009 nonce = keccak256(abi.encode(meta)). The tuple type comes from the ABI
+ * (`send`'s SendMeta input), so encoding follows the struct's field order, not the object's key
+ * order. Send the relayer exactly the meta hashed here (same fxRoundId), or the send reverts.
+ */
 export const sendAuthNonce = (meta: SendMeta): Hex => keccak256(encodeAbiParameters([sendMetaInput], [meta as never]));
 
 // ─────────────── builders: Pot ───────────────

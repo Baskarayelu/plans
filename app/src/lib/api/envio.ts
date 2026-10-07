@@ -149,8 +149,28 @@ export type KeyWrapRow = { member_id: string; by_id: string; wrap: string; times
 export type ActivityRow = { id: string; kind: string; account_id?: string | null; pot_id?: string | null; counterparty?: string | null; amount?: string | null; ref?: string | null; timestamp: number; txHash: string };
 export type FreezeRow = { by_id: string; until: string; timestamp: number; liftedAt?: number | null };
 export type AckRow = { account_id: string; ackEpoch: string; timestamp: number };
-export type PayoutRow = { account_id: string; amount: string; afterSettlement: boolean; timestamp: number; txHash: string };
-export type SettlementRow = { by_id: string; paidOut: string; pulledIn: string; unpaidClaims: string; timestamp: number; txHash: string };
+export type PayoutRow = {
+  account_id: string;
+  amount: string;
+  afterSettlement: boolean;
+  /** "Collect" when paid by Pot.collect(member) after settlement */
+  source?: "Automatic" | "Collect";
+  /** who submitted the collect (anyone may); null unless source = "Collect" */
+  collectedBy_id?: string | null;
+  timestamp: number;
+  txHash: string;
+};
+export type SettlementRow = {
+  by_id: string;
+  paidOut: string;
+  pulledIn: string;
+  /** > 0 when a payout was skipped (e.g. AUSD refused it); members can collect it later */
+  unpaidClaims: string;
+  /** FxReference round fresh at settlement (display label only); "0" = none */
+  fxRoundId?: string;
+  timestamp: number;
+  txHash: string;
+};
 
 export type PlanDetail = PotRow & {
   members: MemberRow[];
@@ -207,9 +227,9 @@ export const Q_PLAN_DETAIL = `query PlanDetail($pot: String!, $chainId: Int!) {
     keyWraps(order_by: { timestamp: asc }) { member_id by_id wrap timestamp }
     freezes(order_by: { timestamp: desc }, limit: 3) { by_id until timestamp liftedAt }
     acks(order_by: { timestamp: desc }) { account_id ackEpoch timestamp }
-    payouts(order_by: { timestamp: desc }) { account_id amount afterSettlement timestamp txHash }
+    payouts(order_by: { timestamp: desc }) { account_id amount afterSettlement source collectedBy_id timestamp txHash }
     pulls { account_id amount }
-    settlements { by_id paidOut pulledIn unpaidClaims timestamp txHash }
+    settlements { by_id paidOut pulledIn unpaidClaims fxRoundId timestamp txHash }
   }
 }`;
 
@@ -227,15 +247,17 @@ export const Q_PLAN_ACTIVITY = `query PlanActivity($pot: String!, $chainId: Int!
   }
 }`;
 
+const SEND_FIELDS = `id from_id to_id amount fromCountry toCountry fromCurrency toCurrency fxRateE8 fxTimestamp fxRoundId refRateE8 fxDiffBps memoHash timestamp txHash`;
+
 export const Q_ACCOUNT_ACTIVITY = `query AccountActivity($account: String!, $chainId: Int!, $limit: Int = 60) {
   Activity(where: { account_id: { _eq: $account }, chainId: { _eq: $chainId } }, order_by: [{ timestamp: desc }, { id: desc }], limit: $limit) {
     id kind pot_id counterparty amount ref timestamp txHash
   }
   sendsIn: Send(where: { to_id: { _eq: $account }, chainId: { _eq: $chainId } }, order_by: { timestamp: desc }, limit: 30) {
-    id from_id to_id amount fromCountry toCountry fromCurrency toCurrency fxRateE8 fxTimestamp memoHash timestamp txHash
+    ${SEND_FIELDS}
   }
   sendsOut: Send(where: { from_id: { _eq: $account }, chainId: { _eq: $chainId } }, order_by: { timestamp: desc }, limit: 30) {
-    id from_id to_id amount fromCountry toCountry fromCurrency toCurrency fxRateE8 fxTimestamp memoHash timestamp txHash
+    ${SEND_FIELDS}
   }
   claimsIn: Claim(where: { recipient_id: { _eq: $account }, chainId: { _eq: $chainId } }, order_by: { claimedAt: desc }, limit: 20) {
     id claimId source amount fromCountry toCountry status createdAt claimedAt txHash
@@ -248,7 +270,73 @@ export const Q_ACCOUNT_ACTIVITY = `query AccountActivity($account: String!, $cha
   }
 }`;
 
-export type SendRow = { id: string; from_id: string; to_id: string; amount: string; fromCountry?: string | null; toCountry?: string | null; fromCurrency?: string | null; toCurrency?: string | null; fxRateE8: string; fxTimestamp: string; memoHash: string; timestamp: number; txHash: string };
+export type SendRow = {
+  id: string;
+  from_id: string;
+  to_id: string;
+  amount: string;
+  fromCountry?: string | null;
+  toCountry?: string | null;
+  fromCurrency?: string | null;
+  toCurrency?: string | null;
+  /** applied rate (signed by the sender): toCurrency per 1 fromCurrency, 8 decimals */
+  fxRateE8: string;
+  fxTimestamp: string;
+  /** FxReference round the quote came from; "0" = none */
+  fxRoundId?: string;
+  /** the round's toCurrency per 1 fromCurrency, 8 decimals, floored; "0" without a round */
+  refRateE8?: string;
+  /** (fxRateE8 - refRateE8) * 10000 / refRateE8, truncated toward zero, signed; "0" without a round */
+  fxDiffBps?: string;
+  memoHash: string;
+  timestamp: number;
+  txHash: string;
+};
+
+/** One FxReference round (indexer entity FxRound, id = roundId). Rates: USD per 1 unit, 8 decimals; "0" = absent. */
+export type FxRoundRow = {
+  id: string;
+  fxReference: string;
+  roundId: string;
+  /** CRE cron scheduled time (unix seconds, BigInt as string); staleness is measured from this */
+  scheduledTime: string;
+  writtenAt: number;
+  /** yyyymmdd */
+  rateDate: number;
+  sourceMask: number;
+  rateGBP: string;
+  rateEUR: string;
+  rateINR: string;
+  rateNGN: string;
+  rateJPY: string;
+  rateCHF: string;
+  rateAED: string;
+  rateSGD: string;
+  blockNumber: number;
+  txHash: string;
+};
+
+const FX_ROUND_FIELDS = `id fxReference roundId scheduledTime writtenAt rateDate sourceMask rateGBP rateEUR rateINR rateNGN rateJPY rateCHF rateAED rateSGD blockNumber txHash`;
+
+export const Q_LATEST_FX_ROUND = `query LatestFxRound($chainId: Int!) {
+  FxRound(where: { chainId: { _eq: $chainId } }, order_by: { roundId: desc }, limit: 1) { ${FX_ROUND_FIELDS} }
+}`;
+
+export const Q_FX_ROUND = `query FxRoundById($roundId: numeric!, $chainId: Int!) {
+  FxRound(where: { roundId: { _eq: $roundId }, chainId: { _eq: $chainId } }, limit: 1) { ${FX_ROUND_FIELDS} }
+}`;
+
+export const FX_ROUND_CURRENCIES = ["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"] as const;
+
+/** USD per 1 unit (8 decimals) by ISO code from an FxRound row; currencies absent from the round are left out. */
+export function fxRoundRates(r: FxRoundRow): Record<string, bigint> {
+  const out: Record<string, bigint> = {};
+  for (const c of FX_ROUND_CURRENCIES) {
+    const v = BigInt(r[`rate${c}`] ?? "0");
+    if (v > 0n) out[c] = v;
+  }
+  return out;
+}
 export type ClaimRow = { id: string; claimId: string; source?: string; claimSigner?: string; amount: string; expiry?: string; fromCountry?: string | null; toCountry?: string | null; status: "Open" | "Claimed" | "Refunded"; createdAt: number; claimedAt?: number | null; refundedAt?: number | null; recipient_id?: string | null; sourceAccount_id?: string | null; sourcePot_id?: string | null; spend_id?: string | null; txHash: string };
 
 export const Q_SPEND_DETAIL = `query SpendDetail($spend: String!, $chainId: Int!) {
@@ -314,5 +402,7 @@ export const fetchSpendDetail = async (spendEntityId: string) =>
     }>(Q_SPEND_DETAIL, { spend: lc(spendEntityId) })
   ).Spend[0] ?? null;
 export const fetchClaimBySigner = async (signer: string) => (await gql<{ Claim: ClaimRow[] }>(Q_CLAIM_BY_SIGNER, { signer: lc(signer) })).Claim[0] ?? null;
+export const fetchLatestFxRound = async () => (await gql<{ FxRound: FxRoundRow[] }>(Q_LATEST_FX_ROUND, {})).FxRound[0] ?? null;
+export const fetchFxRound = async (roundId: bigint | string) => (await gql<{ FxRound: FxRoundRow[] }>(Q_FX_ROUND, { roundId: String(roundId) })).FxRound[0] ?? null;
 export const fetchAccountKeys = async (accounts: string[]) =>
   (await gql<{ Account: { id: string; key?: string | null; country?: string | null }[] }>(Q_ACCOUNT_KEYS, { accounts: accounts.map(lc) })).Account;

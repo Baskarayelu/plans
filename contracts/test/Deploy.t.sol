@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {Deploy} from "../script/Deploy.s.sol";
 import {ClaimEscrow} from "../src/ClaimEscrow.sol";
+import {FxReference} from "../src/FxReference.sol";
 import {KeyRegistry} from "../src/KeyRegistry.sol";
 import {PlansFactory} from "../src/PlansFactory.sol";
 import {PlansSend} from "../src/PlansSend.sol";
@@ -20,8 +21,16 @@ contract DeployTest is Test {
 
     Deploy internal script;
 
+    address internal constant FX_OWNER = address(0xF0);
+
     function setUp() public {
         script = new Deploy();
+        // forge-lint: disable-next-line(unsafe-cheatcode)
+        vm.setEnv("FX_OWNER", vm.toString(FX_OWNER));
+    }
+
+    function _fx() internal view returns (Deploy.FxConfig memory) {
+        return script.fxConfigFor(block.chainid);
     }
 
     function _etchDeployer() internal {
@@ -29,10 +38,12 @@ contract DeployTest is Test {
     }
 
     function _assertDeployment(Deploy.Deployment memory d, address ausd) internal view {
-        Deploy.Deployment memory p = script.predict(ausd);
+        Deploy.FxConfig memory fxc = _fx();
+        Deploy.Deployment memory p = script.predict(ausd, fxc);
         assertEq(d.chainId, block.chainid, "chainId");
         assertEq(d.ausd, ausd, "ausd");
         assertEq(d.keyRegistry, p.keyRegistry, "keyRegistry address");
+        assertEq(d.fxReference, p.fxReference, "fxReference address");
         assertEq(d.plansSend, p.plansSend, "plansSend address");
         assertEq(d.plansFactory, p.plansFactory, "plansFactory address");
         assertEq(d.claimEscrow, p.claimEscrow, "claimEscrow address");
@@ -52,6 +63,7 @@ contract DeployTest is Test {
         assertEq(factory.keyRegistry(), d.keyRegistry);
         assertEq(factory.claimEscrow(), d.claimEscrow);
         assertEq(factory.potImplementation(), d.potImplementation);
+        assertEq(factory.fxReference(), d.fxReference);
         assertEq(d.claimEscrow, vm.computeCreateAddress(d.plansFactory, 1), "escrow = factory CREATE nonce 1");
         assertEq(d.potImplementation, vm.computeCreateAddress(d.plansFactory, 2), "pot impl = factory CREATE nonce 2");
 
@@ -64,9 +76,19 @@ contract DeployTest is Test {
         assertEq(impl.ausd(), ausd);
         assertEq(address(impl.keyRegistry()), d.keyRegistry);
         assertEq(address(impl.claimEscrow()), d.claimEscrow);
+        assertEq(address(impl.fxReference()), d.fxReference);
         assertGt(d.potImplementation.code.length, 24_576, "Pot runtime is above EIP-170");
 
         assertEq(PlansSend(d.plansSend).ausd(), ausd);
+        assertEq(PlansSend(d.plansSend).fxReference(), d.fxReference);
+
+        FxReference fxr = FxReference(d.fxReference);
+        assertEq(fxr.owner(), fxc.owner, "fx owner");
+        assertEq(fxr.forwarder(), fxc.simForwarder, "fx starts on the simulation forwarder");
+        assertEq(fxr.SIM_FORWARDER(), fxc.simForwarder);
+        assertEq(fxr.simTransmitter(), fxc.simTransmitter, "fx sim transmitter");
+        assertEq(fxr.CHAIN_SELECTOR(), fxc.chainSelector, "fx chain selector");
+        assertEq(fxr.latestRoundId(), 0);
         assertGt(d.keyRegistry.code.length, 0);
     }
 
@@ -74,7 +96,7 @@ contract DeployTest is Test {
         _etchDeployer();
         address ausd = address(new MockAUSD());
 
-        Deploy.Deployment memory d = script.deploy(ausd);
+        Deploy.Deployment memory d = script.deploy(ausd, _fx());
         _assertDeployment(d, ausd);
 
         // The implementation can never be initialised: it is marked initialised and only the
@@ -88,8 +110,8 @@ contract DeployTest is Test {
     function test_deploy_isIdempotent() public {
         _etchDeployer();
         address ausd = address(new MockAUSD());
-        Deploy.Deployment memory first = script.deploy(ausd);
-        Deploy.Deployment memory second = script.deploy(ausd);
+        Deploy.Deployment memory first = script.deploy(ausd, _fx());
+        Deploy.Deployment memory second = script.deploy(ausd, _fx());
         assertEq(abi.encode(first), abi.encode(second));
         _assertDeployment(second, ausd);
     }
@@ -97,18 +119,20 @@ contract DeployTest is Test {
     function test_deploy_addressesDoNotDependOnSender() public {
         _etchDeployer();
         address ausd = address(new MockAUSD());
-        Deploy.Deployment memory expected = script.predict(ausd);
+        Deploy.Deployment memory expected = script.predict(ausd, _fx());
         Deploy other = new Deploy();
+        Deploy.FxConfig memory c = _fx();
         vm.prank(makeAddr("someone else"));
-        Deploy.Deployment memory d = other.deploy(ausd);
+        Deploy.Deployment memory d = other.deploy(ausd, c);
         assertEq(abi.encode(d), abi.encode(expected));
     }
 
     function test_deploy_revertsWithoutCreate2Deployer() public {
         vm.etch(script.CREATE2_DEPLOYER(), "");
         address ausd = address(new MockAUSD());
+        Deploy.FxConfig memory c = _fx();
         vm.expectRevert(Deploy.NoCreate2Deployer.selector);
-        script.deploy(ausd);
+        script.deploy(ausd, c);
     }
 
     function test_ausdFor() public {

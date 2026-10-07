@@ -1,0 +1,9 @@
+.env
+*.env
+node_modules/
+fx-rates/node_modules/
+fx-rates/*.js
+fx-rates/*.wasm
+fx-rates/.workflow-temp-*
+fx-rates/dist/
+binary.wasm.br.b64

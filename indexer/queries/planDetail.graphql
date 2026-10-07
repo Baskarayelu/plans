@@ -95,6 +95,30 @@ query PlanDetail($pot: String!, $chainId: Int!) {
       votesKeep
       openedAt
     }
+    totalCollected
+    settlements(order_by: { timestamp: desc }) {
+      by_id
+      paidOut
+      pulledIn
+      unpaidClaims
+      fxRoundId
+      fxRound {
+        roundId
+        scheduledTime
+        rateDate
+      }
+      timestamp
+      txHash
+    }
+    payouts(order_by: { timestamp: desc }) {
+      account_id
+      amount
+      afterSettlement
+      source
+      collectedBy_id
+      timestamp
+      txHash
+    }
     ruleChanges(where: { status: { _neq: "Applied" } }) {
       id
       ruleChangeId

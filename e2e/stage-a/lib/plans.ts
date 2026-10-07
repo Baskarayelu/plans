@@ -48,6 +48,32 @@ export const ABI = {
   escrow: artifact("ClaimEscrow").abi,
   keyRegistry: artifact("KeyRegistry").abi,
   plansSend: artifact("PlansSend").abi,
+  fxReference: artifact("FxReference").abi,
+  forwarder: [
+    {
+      type: "function",
+      name: "report",
+      stateMutability: "nonpayable",
+      inputs: [
+        { name: "receiver", type: "address" },
+        { name: "rawReport", type: "bytes" },
+        { name: "reportContext", type: "bytes" },
+        { name: "signatures", type: "bytes[]" },
+      ],
+      outputs: [],
+    },
+    {
+      type: "event",
+      name: "ReportProcessed",
+      anonymous: false,
+      inputs: [
+        { name: "receiver", type: "address", indexed: true },
+        { name: "workflowExecutionId", type: "bytes32", indexed: true },
+        { name: "reportId", type: "bytes2", indexed: true },
+        { name: "result", type: "bool", indexed: false },
+      ],
+    },
+  ] as const,
   ausd: [
     { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
     { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "o", type: "address" }, { name: "s", type: "address" }], outputs: [{ type: "uint256" }] },

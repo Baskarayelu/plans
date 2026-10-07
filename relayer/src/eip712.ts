@@ -11,7 +11,7 @@ import {
   type Hex,
   type LocalAccount,
 } from "viem";
-import { factoryAbi, potAbi } from "./abi.js";
+import { factoryAbi, plansSendAbi, potAbi } from "./abi.js";
 
 export const potDomain = (chainId: number, pot: Address) =>
   ({ name: "Plans Pot", version: "1", chainId, verifyingContract: pot }) as const;
@@ -125,6 +125,21 @@ export interface Split {
 const createPotParamsInput = getAbiItem({ abi: factoryAbi, name: "createPot" }).inputs[1];
 const rulesInput = getAbiItem({ abi: potAbi, name: "proposeRules" }).inputs[1];
 const wrapsInput = getAbiItem({ abi: potAbi, name: "postKeyWraps" }).inputs[1];
+const sendMetaInput = getAbiItem({ abi: plansSendAbi, name: "send" }).inputs[1];
+
+/** PlansSend.SendMeta (field order matters: the 3009 nonce is keccak256(abi.encode(meta))). */
+export interface SendMeta {
+  to: Address;
+  fromCountry: Hex;
+  toCountry: Hex;
+  fromCurrency: Hex;
+  toCurrency: Hex;
+  fxRateE8: bigint;
+  fxTimestamp: bigint;
+  fxRoundId: bigint; // 0 = no FxReference round
+  memoHash: Hex;
+  salt: Hex;
+}
 
 export const hashSplit = (s: Split) =>
   keccak256(encodeAbiParameters([{ type: "address[]" }, { type: "uint32[]" }], [s.members, s.weights]));
@@ -136,6 +151,8 @@ export const hashAllowlist = (add: readonly Address[], remove: readonly Address[
 export const hashWraps = (wraps: readonly { member: Address; wrap: Hex }[]) =>
   keccak256(encodeAbiParameters([wrapsInput], [wraps as never]));
 export const hashMemo = (memo: Hex) => keccak256(memo);
+/** PlansSend.send: the ERC-3009 nonce = keccak256(abi.encode(meta)). */
+export const hashSendMeta = (meta: SendMeta) => keccak256(encodeAbiParameters([sendMetaInput], [meta as never]));
 
 /** ISO 3166 alpha-2 / ISO 4217 code to bytesN hex ("GB" -> 0x4742). */
 export function asciiToBytes(code: string): Hex {

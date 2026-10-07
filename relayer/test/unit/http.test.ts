@@ -12,17 +12,32 @@ import { Store } from "../../src/store.js";
 const KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
 const FACTORY = "0xFAc7000000000000000000000000000000000001";
 
-function build(over: { ipPerMin?: number; isMainnet?: boolean; bodyLimit?: number } = {}) {
+const FX = "0xF000000000000000000000000000000000000001";
+const now = () => BigInt(Math.floor(Date.now() / 1000));
+const ccy = (c: string) => `0x${Buffer.from(c).toString("hex")}`;
+const ROUND = () => ({
+  roundId: 12n,
+  scheduledTime: now() - 600n,
+  writtenAt: now() - 590n,
+  rateDate: 20261007,
+  sourceMask: 7,
+  currencies: ["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"].map(ccy),
+  usdPerUnitE8: [134_000_000n, 116_000_000n, 1_130_000n, 0n, 0n, 0n, 0n, 0n],
+  sourceMasks: [3, 3, 7, 0, 0, 0, 0, 0],
+});
+
+function build(over: { ipPerMin?: number; isMainnet?: boolean; bodyLimit?: number; fxReference?: string; round?: () => unknown } = {}) {
   const client = {
     getChainId: async () => 10143,
     getBlockNumber: async () => 123n,
     getBalance: async () => 10n ** 19n,
     getTransactionCount: async () => 0,
-    readContract: vi.fn(async () => false), // factory.isPot → false
+    // factory.isPot → false; FxReference.latestRound → over.round()
+    readContract: vi.fn(async (x: { functionName: string }) => (x.functionName === "latestRound" && over.round ? over.round() : false)),
   };
   const store = new Store(":memory:");
   const pool = new LanePool(client as never, [new Secret(KEY)], { chainId: 10143, priorityFeeWei: 1n, maxFeeWei: 10n ** 12n, minBalanceWei: 1n });
-  const relayer = new Relayer(client as never, pool, { factory: FACTORY }, { marginBps: 1000, marginFixed: 0, caps: {} }, store);
+  const relayer = new Relayer(client as never, pool, { factory: FACTORY, fxReference: over.fxReference as never }, { marginBps: 1000, marginFixed: 0, caps: {} }, store);
   const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ base: "GBP", date: "2026-10-05", rates: { USD: 1.34 } })));
   const fx = new FxService({ url: "https://x/latest", cacheMs: 600_000 }, privateKeyToAccount(KEY), fetchImpl as never);
   const services: AppServices = {
@@ -115,6 +130,49 @@ describe("HTTP API", () => {
     expect(j.rateE8).toBe("134000000");
     expect(j.signature).toMatch(/^0x/);
     expect((await app.request("/v1/fx?from=G&to=USD")).status).toBe(400);
+  });
+
+  it("serves the latest onchain FxReference round, read-only and cached", async () => {
+    const { app, client } = build({ fxReference: FX, round: ROUND });
+    const r = await app.request("/v1/fx/round");
+    expect(r.status).toBe(200);
+    const j = (await r.json()) as Record<string, unknown>;
+    expect(j).toMatchObject({
+      fxReference: FX,
+      roundId: "12",
+      rateDate: 20261007,
+      sourceMask: 7,
+      usdPerUnitE8: { GBP: "134000000", EUR: "116000000", INR: "1130000" },
+      sourceMasks: { GBP: 3, EUR: 3, INR: 7 },
+      maxAgeSec: 21600,
+      fresh: true,
+    });
+    expect(j.usdPerUnitE8).not.toHaveProperty("NGN"); // absent this round
+    expect(j.ageSec).toBeGreaterThanOrEqual(600);
+    await app.request("/v1/fx/round");
+    const reads = client.readContract.mock.calls.filter((c) => (c[0] as { functionName: string }).functionName === "latestRound");
+    expect(reads).toHaveLength(1); // cached
+    expect(reads[0][0]).toMatchObject({ address: FX, functionName: "latestRound" });
+  });
+
+  it("reports a stale or missing round and 404s without an FxReference", async () => {
+    const stale = build({ fxReference: FX, round: () => ({ ...ROUND(), scheduledTime: now() - 7n * 3600n }) });
+    expect(await (await stale.app.request("/v1/fx/round")).json()).toMatchObject({ roundId: "12", fresh: false });
+    const empty = build({ fxReference: FX, round: () => ({ ...ROUND(), roundId: 0n, scheduledTime: 0n, writtenAt: 0n, rateDate: 0, sourceMask: 0, currencies: [], usdPerUnitE8: [], sourceMasks: [] }) });
+    expect(await (await empty.app.request("/v1/fx/round")).json()).toMatchObject({ roundId: "0", ageSec: null, fresh: false, usdPerUnitE8: {} });
+    const none = await build().app.request("/v1/fx/round");
+    expect(none.status).toBe(404);
+    expect(((await none.json()) as { error: { code: string } }).error.code).toBe("FX_REFERENCE_DISABLED");
+  });
+
+  it("validates the collect action before touching the chain", async () => {
+    const { app, client } = build();
+    const bad = await post(app, "/v1/relay", { action: "collect", params: { pot: "0x1111111111111111111111111111111111111111" } });
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: { issues: { path: string }[] } }).error.issues.map((i) => i.path)).toContain("params.member");
+    const r = await post(app, "/v1/relay", { action: "collect", params: { pot: "0x1111111111111111111111111111111111111111", member: "0x2222222222222222222222222222222222222222" } });
+    expect(r.status).toBe(403); // the allowlist still applies: not a factory pot
+    expect(client.readContract).toHaveBeenCalledWith(expect.objectContaining({ functionName: "isPot" }));
   });
 
   it("disables the faucet on mainnet and demo when not configured", async () => {

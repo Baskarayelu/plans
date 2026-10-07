@@ -67,6 +67,23 @@ describe("notification routing", () => {
     expect(notificationsFor(ev("SpendExecuted", { id: 9n, amount: 100_000n }), s)[0].to).toEqual([A, B]);
   });
 
+  it("handles the new Settled shape and doesn't double-notify a collect", () => {
+    const s = setup();
+    const settled = (unpaidClaims: bigint) => ev("Settled", { by: A, paidOut: 1n, pulledIn: 0n, unpaidClaims, fxRoundId: 3n });
+    expect(notificationsFor(settled(0n), s)[0]).toMatchObject({ title: "Plan settled", body: "Everyone has been settled up." });
+    expect(notificationsFor(settled(1_000_000n), s)[0].body).toMatch(/still owed/);
+    // collect emits Payout(member) then Collected(member, by): one "You got paid", to the member only
+    expect(notificationsFor(ev("Payout", { member: B, amount: 1_000_000n }), s)[0]).toMatchObject({ to: [B], title: "You got paid", body: "$1.00 from the plan is in your balance." });
+    expect(notificationsFor(ev("Collected", { member: B, by: C, amount: 1_000_000n }), s)).toEqual([]);
+  });
+
+  it("routes the new Sent shape (FX round fields) to the recipient", () => {
+    const s = setup();
+    const n = notificationsFor(ev("Sent", { from: A, to: B, amount: 1_000_000n, fxRoundId: 2n, refRateE8: 11_858_407_079n, fxDiffBps: -49n }, C), s);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toMatchObject({ to: [B], body: "+$1.00" });
+  });
+
   it("routes Sent to the recipient and Claimed to the link creator", () => {
     const s = setup();
     expect(notificationsFor(ev("Sent", { from: A, to: B, amount: 2_030_000n }, C), s)[0]).toMatchObject({ to: [B], body: "+$2.03" });

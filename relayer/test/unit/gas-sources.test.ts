@@ -3,7 +3,8 @@
  * eth_simulateV1 on a Monad RPC), never from a constant, a third-party quote or forge's local
  * Ethereum-priced simulation (see ../../../contracts/GAS-LIMITS.md).
  *
- * This scans every source file in relayer/src, contracts/script and contracts/tools for
+ * This scans every source file in relayer/src, contracts/script, contracts/tools and the CRE workflow
+ * (cre/fx-workflow/fx-rates, cre/fx-workflow/scripts) for
  *   1. a `gas:` / `gasLimit:` / `gas_limit:` key (object literal, call option, type annotation), and
  *   2. a transaction-sending primitive (signTransaction, sendTransaction, writeContract,
  *      deployContract, eth_send*, forge's startBroadcast/broadcast, --gas-limit flags),
@@ -17,7 +18,7 @@ import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const REPO = resolve(import.meta.dirname, "../../..");
-const ROOTS = ["relayer/src", "contracts/script", "contracts/tools"];
+const ROOTS = ["relayer/src", "contracts/script", "contracts/tools", "cre/fx-workflow/fx-rates", "cre/fx-workflow/scripts"];
 const EXT = /\.(ts|mts|js|mjs|cjs|sol)$/;
 
 const GAS_KEY = /(^|[^A-Za-z0-9_$\-])["']?(gas|gasLimit|gas_limit)["']?\s*:(?!:)/;
@@ -58,6 +59,15 @@ const ALLOWED: Allowed[] = [
   { file: "contracts/script/monad-gas.mjs", line: "const rec = { label, group, table, note, hash, from: RELAYER.address, to, data, gasLimit: gas, ethEstimate, gasUsed: BigInt(receipt.gasUsed), receipt };", why: "measurement record of the anvil tx" },
   { file: "contracts/script/monad-gas.mjs", line: "const block = { stateOverrides: ov, calls: gases.map((g) => ({ ...base, gas: hex(g) })) };", why: "eth_simulateV1 search probe on Monad (read-only): this IS the Monad simulation that finds the minimal limit" },
   { file: "contracts/tools/live-check.mjs", line: "console.log(`model min gas == live min gas: ${match.length} / ${checked.length}`);", why: "log text" },
+  // ── cre/fx-workflow: the CRE writeReport limit comes only from scripts/gas-limit.mjs (Monad eth_estimateGas + eth_simulateV1 search) ──
+  { file: "cre/fx-workflow/fx-rates/main.ts", line: "gasConfig: { gasLimit: cfg.gasLimit },", why: "the writeReport limit: config.gasLimit, which parseConfig refuses unless set, and which only scripts/gas-limit.mjs writes (Monad estimator)" },
+  { file: "cre/fx-workflow/fx-rates/src/config.ts", line: "gasLimit: string", why: "type of the config field" },
+  { file: "cre/fx-workflow/fx-rates/src/config.ts", line: "gasLimit: c.gasLimit,", why: "passes the validated config value through; no default" },
+  { file: "cre/fx-workflow/scripts/gas-limit.mjs", line: "const calls = gases.map((g) => ({ from: transmitter, to: forwarder, data: txData(), gas: hex(g), maxFeePerGas: hex(10n ** 12n), maxPriorityFeePerGas: '0x0' }))", why: "eth_simulateV1 search probes on Monad (read-only): finds the smallest gas whose logs include RoundWritten" },
+  { file: "cre/fx-workflow/scripts/gas-limit.mjs", line: "const r = await rpc('eth_simulateV1', [{ blockStateCalls: [{ stateOverrides: ov, calls: [{ from: transmitter, to: receiver, data, gas: hex(CRE_MAX_TX_GAS) }] }] }, 'latest'])", why: "read-only diagnostic simulation that decodes onReport's revert; no limit is taken from it" },
+  { file: "cre/fx-workflow/scripts/gas-limit.mjs", line: "gasLimit: gasLimit.toString(),", why: "prints the Monad-derived limit" },
+  { file: "cre/fx-workflow/scripts/gas-limit.mjs", line: "if (balance < fee) log(`WARNING: transmitter balance ${mon(balance)} is below one write's fee (${mon(fee)}); fund it before --broadcast.`)", why: "log text (the word 'broadcast')" },
+  { file: "cre/fx-workflow/scripts/gas-limit.mjs", line: "const next = { ...config, gasLimit: gasLimit.toString() }", why: "--write: stores the Monad-derived limit in the workflow config" },
 ];
 
 function* walk(dir: string): Generator<string> {

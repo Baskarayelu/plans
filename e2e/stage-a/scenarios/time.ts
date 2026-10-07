@@ -163,7 +163,7 @@ export async function timeScenarios(t: T, A_: PotA, O: Others, _later: Later) {
     await s.rejects(async () => api.relay("join", await build.join(ctx, pot, kim, A_.invite)), { status: 422, code: "ALREADY_MEMBER" }, pot);
   });
   await R.run("payDebt by an exited member before settlement", "flow", "kim is sent 20 (PlansSend), pays her debt; DebtPaid; money stays in the pot", async (s) => {
-    const meta = { to: kim.address, fromCountry: codeToBytes("GB", 2), toCountry: codeToBytes("GB", 2), fromCurrency: codeToBytes("GBP", 3), toCurrency: codeToBytes("GBP", 3), fxRateE8: 100000000n, fxTimestamp: 0n, memoHash: `0x${"00".repeat(32)}` as Hex, salt: randomHex32() };
+    const meta = { to: kim.address, fromCountry: codeToBytes("GB", 2), toCountry: codeToBytes("GB", 2), fromCurrency: codeToBytes("GBP", 3), toCurrency: codeToBytes("GBP", 3), fxRateE8: 100000000n, fxTimestamp: 0n, fxRoundId: 0n, memoHash: `0x${"00".repeat(32)}` as Hex, salt: randomHex32() };
     s.ok(await api.relay("send", await build.send(ctx, frank, USD(20), meta)), "Sent");
     const b0 = await ausdBal(env, pot);
     s.ok(await api.relay("payDebt", await build.payDebt(ctx, pot, kim, USD(20))), "DebtPaid");
@@ -297,7 +297,7 @@ async function potGEnding(t: T, g: NonNullable<Others["G"]>) {
   });
   await R.run("creditor empties her wallet with PlansSend (fresh balance slot for the gas test)", "flow", "Sent; ivy holds 0", async (s) => {
     const all = await ausdBal(env, ivy.address);
-    const meta = { to: frank.address, fromCountry: codeToBytes("IN", 2), toCountry: codeToBytes("GB", 2), fromCurrency: codeToBytes("INR", 3), toCurrency: codeToBytes("GBP", 3), fxRateE8: 0n, fxTimestamp: 0n, memoHash: `0x${"00".repeat(32)}` as Hex, salt: randomHex32() };
+    const meta = { to: frank.address, fromCountry: codeToBytes("IN", 2), toCountry: codeToBytes("GB", 2), fromCurrency: codeToBytes("INR", 3), toCurrency: codeToBytes("GBP", 3), fxRateE8: 0n, fxTimestamp: 0n, fxRoundId: 0n, memoHash: `0x${"00".repeat(32)}` as Hex, salt: randomHex32() };
     s.ok(await api.relay("send", await build.send(ctx, ivy, all, meta)), "Sent");
     s.eq(await ausdBal(env, ivy.address), 0n, "ivy balance");
   });

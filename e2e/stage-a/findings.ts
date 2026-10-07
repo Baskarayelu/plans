@@ -14,10 +14,10 @@ export interface Finding {
 export const FINDINGS: Finding[] = [
   {
     id: "F1",
-    title: "[Open] A payout skipped at settlement can never be collected; the money stays locked in the settled pot",
+    title: "[Fixed 7 Oct] A payout skipped at settlement can never be collected; the money stays locked in the settled pot",
     where: "contracts/src/Pot.sol `settle()` / `_tryPay()` / `_distribute()` (and docs/protocol.md, Ending, step 4)",
     severity: "Medium (funds stuck; needs AUSD to refuse the recipient at that moment, e.g. an Agora freeze)",
-    scenario: "`pot H: frozen creditor` → \"settle while a creditor is frozen by AUSD\" (row notes show the follow-up attempts)",
+    scenario: "`pot H: frozen creditor` → \"settle while two creditors are frozen by AUSD\", then the `collect` rows (frozen, unfrozen, always refused, nothing owed, not a member, not settled)",
     body: `
 **What happens.** \`settle()\` pays each creditor with \`_tryPay\`, which swallows a refused transfer so one recipient cannot block everyone (protocol.md: "a payout whose transfer fails ... is skipped and stays as that member's claim"). On the fork, with real AUSD, bob's account is frozen through AUSD's own flag, the pot settles, alice is paid 20, and bob's 10 is skipped: \`netOf(bob) = +10\`, the pot holds 10, \`Settled.unpaidClaims = 10\`. Then bob is unfrozen. There is no function that pays a positive net after settlement. \`settle\` returns \`CannotSettle\`, \`exit\` returns \`PotSettled\`, and \`payDebt\` is only for negative nets. The only code paths that ever pay a creditor again are \`_distribute\` from someone else's \`payDebt\` or from an escrow refund. With no debtors and no open links, nothing ever runs them, so bob's 10 AUSD is locked in the pot permanently. The same applies to a creditor skipped inside \`_distribute\`.
 
@@ -41,7 +41,9 @@ function collect(address member) external {
     if (amount == 0 || !_tryPay(i, amount)) revert InvalidAmount(); // still refused: try later
 }
 \`\`\`
-Pro rata keeps it fair when the pot is also short for other creditors. Add the relayer action (\`collect\`, target pot, no signature needed) and a protocol.md line. If the team would rather not add a function, at least document that a refused payout is lost.`,
+Pro rata keeps it fair when the pot is also short for other creditors. Add the relayer action (\`collect\`, target pot, no signature needed) and a protocol.md line. If the team would rather not add a function, at least document that a refused payout is lost.
+
+**Fix (7 Oct).** \`Pot.collect(address member)\` (contracts/src/Pot.sol): after settlement anyone may call it; it pays only \`member\`, the full net when the pot holds at least the sum of positive nets, else \`net × balance / Σ positive nets\` (floored). A transfer AUSD still refuses reverts \`PayoutRefused\` and keeps the claim; a gas-starved transfer reverts \`InsufficientGas\`. It emits \`Payout\` and \`Collected(member, by, amount)\`. The relayer relays it as the unsigned action \`collect\` {pot, member}, with plain-English errors (\`NOT_SETTLED\`, \`NOTHING_TO_COLLECT\`, \`PAYOUT_REFUSED\`). The scenario now freezes two creditors (bob and rex) at settlement, shows \`collect\` refused while bob is frozen, pays bob once AUSD unfreezes him (submitted by a relayer lane, rex still frozen, alice untouched), and shows rex, whom AUSD refuses for the whole run, keeps his claim without blocking anyone.`,
   },
   {
     id: "R1",

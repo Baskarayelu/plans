@@ -6,8 +6,11 @@
 // What it does (see GAS.md "Method" for details):
 //   1. forge build, and forge test --gas-report → tools/gas-report.txt (appendix).
 //   2. Starts an anvil fork of Monad mainnet (code size limit disabled, steps tracing on).
-//   3. Deploys KeyRegistry, PlansFactory, PlansSend (+ a standalone Pot implementation and ClaimEscrow)
-//      and runs the whole Plans lifecycle with real AUSD, recording every transaction.
+//   3. Deploys KeyRegistry, FxReference, PlansFactory, PlansSend (+ a standalone Pot implementation and
+//      ClaimEscrow) and runs the whole Plans lifecycle with real AUSD, recording every transaction.
+//      FxReference rounds are delivered through Chainlink's real MockKeystoneForwarder on the fork,
+//      exactly as `cre workflow simulate --broadcast` delivers them (the relayer EOA is the
+//      configured simulation transmitter).
 //   4. Re-prices each recorded transaction's struct-log trace with Monad's MONAD_TEN rules
 //      (tools/monad-model.mjs).
 //   5. Ground truth: replays every recorded transaction on the LIVE Monad mainnet RPC, read-only,
@@ -53,6 +56,13 @@ const CFG = {
 
 const AUSD = '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a';
 const CHAIN_ID = 143;
+/** Chainlink CRE MockKeystoneForwarder on Monad mainnet and the CCIP chain selector. */
+const SIM_FORWARDER = '0x9eF6468C5f37b976E57d52054c693269479A784d';
+const CHAIN_SELECTOR = 8481857512324358265n;
+const FX_CCYS = ['0x474250', '0x455552', '0x494e52', '0x4e474e', '0x4a5059', '0x434846', '0x414544', '0x534744']; // GBP EUR INR NGN JPY CHF AED SGD
+const FX_RATES = [132_765_000n, 112_690_000n, 1_037_000n, 75_600n, 632_500n, 120_400_000n, 27_229_000n, 78_300_000n];
+const FX_MASKS = [3, 3, 3, 6, 3, 3, 6, 3];
+const FORWARDER_ABI = parseAbi(['function report(address receiver, bytes rawReport, bytes reportContext, bytes[] signatures)']);
 const USD = 1_000_000n;
 const DAY = 86400n;
 
@@ -416,6 +426,13 @@ async function findAusdBalanceBase() {
   throw new Error('could not find the AUSD balance slot');
 }
 
+/** Sets AUSD's per-account frozen flag (the low bits under the shifted balance). */
+async function setFrozen(addr, frozen) {
+  const slot = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'bytes32' }], [addr, BAL_BASE]));
+  const raw = BigInt(await anvil('eth_getStorageAt', [AUSD, slot, 'latest']));
+  await anvil('anvil_setStorageAt', [AUSD, slot, pad32((raw & ~0xffn) | (frozen ? 1n : 0n))]);
+}
+
 let BAL_SHIFT = null; // AUSD packs the balance above some low flag bits; found on first use
 async function fundAusd(addr, amount) {
   const slot = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'bytes32' }], [addr, BAL_BASE]));
@@ -574,17 +591,53 @@ async function deploy() {
   const addr = (r) => r.receipt.contractAddress;
   const A = [{ type: 'address' }];
   C.keyRegistry = addr(await send({ label: 'deploy KeyRegistry', group: 'Deploy', data: ART.KeyRegistry.bytecode }));
-  C.factory = addr(await send({ label: 'deploy PlansFactory (deploys ClaimEscrow + Pot impl)', group: 'Deploy', data: ctorData(ART.PlansFactory, [...A, ...A], [AUSD, C.keyRegistry]) }));
-  C.send = addr(await send({ label: 'deploy PlansSend', group: 'Deploy', data: ctorData(ART.PlansSend, A, [AUSD]) }));
+  // FxReference in simulation mode on the real mock forwarder; the relayer EOA is the transmitter.
+  C.fx = addr(await send({ label: 'deploy FxReference', group: 'Deploy', data: ctorData(ART.FxReference, [...A, ...A, ...A, { type: 'uint64' }], [RELAYER.address, SIM_FORWARDER, RELAYER.address, CHAIN_SELECTOR]) }));
+  C.factory = addr(await send({ label: 'deploy PlansFactory (deploys ClaimEscrow + Pot impl)', group: 'Deploy', data: ctorData(ART.PlansFactory, [...A, ...A, ...A], [AUSD, C.keyRegistry, C.fx]) }));
+  C.send = addr(await send({ label: 'deploy PlansSend', group: 'Deploy', data: ctorData(ART.PlansSend, [...A, ...A], [AUSD, C.fx]) }));
   C.escrow = await call(C.factory, ART.PlansFactory.abi, 'claimEscrow');
   C.potImpl = await call(C.factory, ART.PlansFactory.abi, 'potImplementation');
-  await send({ label: 'deploy Pot implementation (standalone)', group: 'Deploy', data: ctorData(ART.Pot, [...A, ...A, ...A], [AUSD, C.keyRegistry, C.escrow]) });
+  await send({ label: 'deploy Pot implementation (standalone)', group: 'Deploy', data: ctorData(ART.Pot, [...A, ...A, ...A, ...A], [AUSD, C.keyRegistry, C.escrow, C.fx]) });
   await send({ label: 'deploy ClaimEscrow (standalone)', group: 'Deploy', data: ctorData(ART.ClaimEscrow, A, [AUSD]) });
+}
+
+/**
+ * One FxReference round, delivered the way `cre workflow simulate --broadcast` does it: the
+ * transmitter calls MockKeystoneForwarder.report(receiver, rawReport, "", []), and the mock calls
+ * FxReference.onReport(metadata, payload). rawReport = version | executionId | timestamp | donId |
+ * donConfigVersion | workflowCid | workflowName | workflowOwner | reportId | payload.
+ */
+async function writeFxRound({ scheduledTime, rates = FX_RATES, label, table = true }) {
+  const payload = encodeAbiParameters(
+    [{ type: 'uint64' }, { type: 'uint64' }, { type: 'uint32' }, { type: 'bytes3[]' }, { type: 'uint64[]' }, { type: 'uint8[]' }],
+    [CHAIN_SELECTOR, scheduledTime, 20261006, FX_CCYS, rates, FX_MASKS],
+  );
+  const raw =
+    '0x01' +
+    randWord('exec').slice(2) +
+    '00000064' +
+    '00000001' +
+    '00000001' +
+    '11'.repeat(32) +
+    Buffer.from('5bf1e3a0b2').toString('hex').padEnd(20, '0') +
+    'aa'.repeat(20) +
+    '0001' +
+    payload.slice(2);
+  const before = await call(C.fx, ART.FxReference.abi, 'latestRoundId');
+  const rec = await send({ label, table, group: 'FxReference', to: SIM_FORWARDER, data: enc(FORWARDER_ABI, 'report', [C.fx, raw, '0x', []]) });
+  const after = await call(C.fx, ART.FxReference.abi, 'latestRoundId');
+  if (after !== before + 1n) throw new Error(`${label}: the mock forwarder did not deliver the round (FxReference reverted)`);
+  return after;
 }
 
 async function scenario() {
   await deploy();
   const [u0, u1, u2, u3, u4, u5, u6] = U;
+
+  // ── FxReference: first round (fresh slots everywhere), then a steady-state round ──
+  const t0 = await nowTs();
+  await writeFxRound({ scheduledTime: t0 - 120n, label: 'FxReference round (first; CRE sim forwarder report, 8 currencies)' });
+  const fxRound = await writeFxRound({ scheduledTime: t0 - 60n, rates: FX_RATES.map((r) => r + r / 200n), label: 'FxReference round (next; CRE sim forwarder report, 8 currencies)' });
 
   // ── Pot A: the main lifecycle, Balanced preset, 4 members ──
   const A = await createPot(u0, { rules: BALANCED(), label: 'createPot (no deposit / permit / key)' });
@@ -614,10 +667,13 @@ async function scenario() {
 
   // Periphery
   {
-    const meta = { to: u6.address, fromCountry: COUNTRY.GB, toCountry: COUNTRY.IN, fromCurrency: '0x474250', toCurrency: '0x494e52', fxRateE8: 11_250_000_000n, fxTimestamp: await nowTs(), memoHash: randWord('memo'), salt: randWord('salt') };
+    const meta = { to: u6.address, fromCountry: COUNTRY.GB, toCountry: COUNTRY.IN, fromCurrency: '0x474250', toCurrency: '0x494e52', fxRateE8: 11_250_000_000n, fxTimestamp: await nowTs(), fxRoundId: 0n, memoHash: randWord('memo'), salt: randWord('salt') };
     const nonce = keccak256(encodeAbiParameters([TUPLES.sendMeta], [meta]));
     const auth = await auth3009(u5, C.send, 25n * USD, nonce);
     await send({ label: 'PlansSend.send', group: 'Periphery', to: C.send, data: enc(ART.PlansSend.abi, 'send', [u5.address, meta, auth]) });
+    const metaFx = { ...meta, to: u3.address, fxRateE8: 12_750_000_000n, fxRoundId: fxRound, salt: randWord('salt') };
+    const authFx = await auth3009(u5, C.send, 25n * USD, keccak256(encodeAbiParameters([TUPLES.sendMeta], [metaFx])));
+    await send({ label: 'PlansSend.send (with an FX round: reference rate + difference)', group: 'Periphery', to: C.send, data: enc(ART.PlansSend.abi, 'send', [u5.address, metaFx, authFx]) });
     const expiry = (await nowTs()) + 7n * DAY;
     const salt = randWord('salt');
     const n2 = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'uint64' }, { type: 'bytes2' }, { type: 'bytes32' }], [CLAIM_KEYS[2].address, expiry, COUNTRY.GB, salt]));
@@ -676,13 +732,25 @@ async function scenario() {
     await anyone(P, 'settle', [], { label: `settle (${n} members)`, table: true });
     settlePots[n] = P;
   }
+  // ── collect: a creditor frozen by AUSD at settlement, collected after unfreezing ──
+  {
+    const P = await createPot(U[0], { rules: SETTLE_RULES(), deposit: 40n * USD, label: 'createPot collect', table: false });
+    await join(P, U[1], { deposit: 30n * USD });
+    await join(P, U[2], { deposit: 20n * USD });
+    for (const m of P.members) await ack(P, m);
+    await setFrozen(U[1].address, true);
+    await anyone(P, 'settle', [], { label: 'settle (3 members, one creditor frozen: payout skipped)' });
+    if ((await call(P.address, ART.Pot.abi, 'netOf', [U[1].address])) !== 30n * USD) throw new Error('expected the frozen creditor to keep a 30 claim');
+    await setFrozen(U[1].address, false);
+    await anyone(P, 'collect', [U[1].address], { label: 'collect (skipped payout, after AUSD unfreezes)', table: true });
+  }
   {
     const P = settlePots[6];
     const debtor = U[5];
     const net = await call(P.address, ART.Pot.abi, 'netOf', [debtor.address]);
     if (net >= 0n) throw new Error('expected a debt in the 6-member pot');
     const auth = await auth3009(debtor, P.address, -net);
-    await send({ label: 'payDebt (after settle; 6-member pot)', to: P.address, data: potCall('payDebt', [debtor.address, auth]) });
+    await send({ label: 'payDebt (after settle; 6-member pot)', table: true, to: P.address, data: potCall('payDebt', [debtor.address, auth]) });
   }
 
   // ── Time-warped steps on Pot A ──
@@ -747,8 +815,12 @@ function overridesFor(rec) {
   return ov;
 }
 
-const sameLogs = (a, b) =>
-  a.length === b.length && a.every((x, i) => lc(x.address) === lc(b[i].address) && x.topics.length === b[i].topics.length && x.topics.every((t, j) => lc(t) === lc(b[i].topics[j])));
+// A creation's own events (e.g. FxReference's constructor) come from the created address, which
+// depends on the sender's nonce and so differs between anvil and the live replay: `created` maps
+// the anvil address to "whatever this simulation created".
+const sameLogs = (a, b, created) =>
+  a.length === b.length &&
+  a.every((x, i) => (lc(x.address) === lc(b[i].address) || (created && lc(b[i].address) === lc(created))) && x.topics.length === b[i].topics.length && x.topics.every((t, j) => lc(t) === lc(b[i].topics[j])));
 
 async function liveCheck(rec, liveHead) {
   const ov = overridesFor(rec);
@@ -769,7 +841,7 @@ async function liveCheck(rec, liveHead) {
     if (timeOverride) block.blockOverrides = timeOverride;
     const r = await live('eth_simulateV1', [{ blockStateCalls: [block] }, 'latest']);
     return r[0].calls.map((c) => {
-      const ok = c.status === '0x1' && sameLogs(c.logs ?? [], anvilLogs);
+      const ok = c.status === '0x1' && sameLogs(c.logs ?? [], anvilLogs, rec.to ? null : rec.receipt.contractAddress);
       if (ok && !(c.logs ?? []).every((l, i) => lc(l.data) === lc(anvilLogs[i].data))) dataMismatch = true;
       return { ok, status: c.status, error: c.error?.message };
     });
@@ -842,7 +914,7 @@ function runForge() {
 function parseGasReport() {
   const file = path.join(TOOLS, 'gas-report.txt');
   if (!existsSync(file)) return null;
-  const want = { 'src/Pot.sol:Pot': 'Pot', 'src/PlansFactory.sol:PlansFactory': 'PlansFactory', 'src/ClaimEscrow.sol:ClaimEscrow': 'ClaimEscrow', 'src/KeyRegistry.sol:KeyRegistry': 'KeyRegistry', 'src/PlansSend.sol:PlansSend': 'PlansSend' };
+  const want = { 'src/Pot.sol:Pot': 'Pot', 'src/PlansFactory.sol:PlansFactory': 'PlansFactory', 'src/ClaimEscrow.sol:ClaimEscrow': 'ClaimEscrow', 'src/KeyRegistry.sol:KeyRegistry': 'KeyRegistry', 'src/PlansSend.sol:PlansSend': 'PlansSend', 'src/FxReference.sol:FxReference': 'FxReference' };
   const out = {};
   let curName = null;
   let inFns = false;
@@ -945,7 +1017,7 @@ function writeReport(meta, gasReport) {
   p();
   p('## Method');
   p();
-  p('1. **Lifecycle on an anvil fork.** `anvil --fork-url https://rpc.monad.xyz --disable-code-size-limit --steps-tracing --hardfork prague` (the Pot runtime is ~29 KB, over EIP-170). The script deploys KeyRegistry, PlansFactory (whose constructor deploys ClaimEscrow and the Pot implementation) and PlansSend from `out/`, plus a standalone Pot implementation and ClaimEscrow for their creation cost, and runs every action against **real AUSD** (accounts funded by writing AUSD\'s balance mapping, whose base slot the script finds by tracing `balanceOf`). Signatures are built exactly as in `test/utils/PlansSigs.sol` (EIP-712; AUSD ERC-3009 `receiveWithAuthorization` bytes-signature variant and ERC-2612 `permit`, domain `{name: "Agora Dollar", version: "1"}`). Nonces are random 256-bit values, as `docs/protocol.md` tells apps to use. Memos and key wraps use realistic ciphertext sizes (48–120 bytes). Every transaction is sent by one relayer EOA.');
+  p('1. **Lifecycle on an anvil fork.** `anvil --fork-url https://rpc.monad.xyz --disable-code-size-limit --steps-tracing --hardfork prague` (the Pot runtime is ~30 KB, over EIP-170). The script deploys KeyRegistry, FxReference, PlansFactory (whose constructor deploys ClaimEscrow and the Pot implementation) and PlansSend from `out/`, plus a standalone Pot implementation and ClaimEscrow for their creation cost, and runs every action against **real AUSD** (accounts funded by writing AUSD\'s balance mapping, whose base slot the script finds by tracing `balanceOf`). Signatures are built exactly as in `test/utils/PlansSigs.sol` (EIP-712; AUSD ERC-3009 `receiveWithAuthorization` bytes-signature variant and ERC-2612 `permit`, domain `{name: "Agora Dollar", version: "1"}`). Nonces are random 256-bit values, as `docs/protocol.md` tells apps to use. Memos and key wraps use realistic ciphertext sizes (48–120 bytes). Every transaction is sent by one relayer EOA. FxReference rounds go through Chainlink\'s real MockKeystoneForwarder on the fork (`report(receiver, rawReport, "", [])`, the path a CRE CLI simulation takes when it delivers onchain), with the relayer EOA as the configured simulation transmitter; the settles read the fresh round, and the collect row is a creditor frozen through AUSD\'s own flag at settlement and unfrozen before collecting.');
   p('2. **Re-pricing** (`tools/monad-model.mjs`). For each transaction the script fetches `debug_traceTransaction` struct logs (stack on, memory off) and the `prestateTracer` prestate (original slot values), then walks the opcodes keeping a frame stack: storage context per frame (CALL/STATICCALL → callee, DELEGATECALL/CALLCODE → caller; the pot clone DELEGATECALLs into the implementation, so the clone\'s storage is charged against the clone address), EIP-2929 warm accounts (`tx.origin`, `tx.to`/created address, precompiles 0x01–0x11 and 0x100, coinbase; created addresses), Ethereum warm slots, Monad warm `(account, page)` and written pages, per-page state-growth high-water marks, current slot values, and the EIP-3529 refund counter. All of it is journaled and rolled back when a frame reverts (e.g. the try/catch around `permit` and the pulls in `settle`), matching MIP-8 ("if a call reverts, the counters … and sets … must revert"). Frame success is read from the CALL/CREATE result the caller sees.');
   p('   - `ethExec = intrinsic + Σ frame gas consumed` (from the trace, plus the 200 gas/byte code deposit for creations). Self-check: `ethExec − min(refund, ethExec/5)` equals the receipt\'s `gasUsed` for every transaction, and the model\'s own Ethereum SLOAD/SSTORE/account-access/memory costs match each step\'s `gasCost`.');
   p('   - `monadExec = ethExec + Σ (Monad − Ethereum)` over: SLOAD (8,100 first touch of the page, else 100 vs 2,100/100 per slot); SSTORE (100 + 8,000 page load if the page is cold + 2,800 on the first value-changing write to the page + 17,000 when the page\'s net new-slot count reaches a new high, vs EIP-2200/2929 costs); cold account access +7,500 (BALANCE, EXTCODE*, CALL*, DELEGATECALL, STATICCALL, SELFDESTRUCT); precompiles (ecRecover 3,000 → 6,000; ecAdd, ecMul, pairing, point evaluation per the table below); memory expansion (Ethereum `3w + w²/512` → Monad `floor(w/2)` per frame). **Ethereum refunds are not subtracted** (Monad has none).');
@@ -1009,7 +1081,7 @@ function writeReport(meta, gasReport) {
 
 async function main() {
   runForge();
-  ART = { Pot: artifact('Pot'), PlansFactory: artifact('PlansFactory'), ClaimEscrow: artifact('ClaimEscrow'), KeyRegistry: artifact('KeyRegistry'), PlansSend: artifact('PlansSend') };
+  ART = { Pot: artifact('Pot'), PlansFactory: artifact('PlansFactory'), ClaimEscrow: artifact('ClaimEscrow'), KeyRegistry: artifact('KeyRegistry'), PlansSend: artifact('PlansSend'), FxReference: artifact('FxReference') };
   const initP = ART.Pot.abi.find((x) => x.type === 'function' && x.name === 'initialize').inputs[1];
   const wrapsP = ART.Pot.abi.find((x) => x.type === 'function' && x.name === 'postKeyWraps').inputs[1];
   const sendP = ART.PlansSend.abi.find((x) => x.type === 'function' && x.name === 'send').inputs[1];

@@ -5,6 +5,8 @@ import {ClaimEscrow} from "../../src/ClaimEscrow.sol";
 import {Pot} from "../../src/Pot.sol";
 import {PlansBase} from "../utils/PlansBase.sol";
 import {PlansSigs} from "../utils/PlansSigs.sol";
+import {MockAUSD} from "../mocks/MockAUSD.sol";
+import {PotHandler} from "./PotHandler.sol";
 
 /// @notice Deterministic versions of the trickier sequences the invariant handler explores.
 contract PotRegressionsTest is PlansBase {
@@ -175,5 +177,53 @@ contract PotRegressionsTest is PlansBase {
         assertEq(uint8(st), uint8(ProposalStatus.Executed));
         assertEq(approvals, 2);
         _assertI1(pot);
+    }
+
+    /// The refund after a clean settle that reaches a frozen creditor: the payout is skipped (the
+    /// money stays as that member's claim, no dust), and `collect` pays it once AUSD unfreezes.
+    function test_linkRefundAfterCleanSettle_frozenCreditorCollects() public {
+        Pot pot = _potWith(3, _balancedRules(), 100 * USD);
+        _propose(pot, 0, SpendKind.LINK, claimKey, 24 * USD, 7, _users(3), _ones(3));
+        uint256 claimId = escrow.claimCount();
+        _ackAll(pot);
+        pot.settle();
+        _allNetsZero(pot);
+        MockAUSD(token).setFrozen(users[1], true);
+        (,,, uint64 expiry,,) = escrow.claimInfo(claimId);
+        vm.warp(uint256(expiry) + 1);
+        escrow.refund(claimId);
+        assertEq(pot.netOf(users[1]), int256(8 * USD), "frozen creditor's refund share kept");
+        assertEq(_balance(address(pot)), 8 * USD);
+        _assertI1(pot);
+        MockAUSD(token).setFrozen(users[1], false);
+        pot.collect(users[1]);
+        assertEq(_balance(address(pot)), 0);
+        _allNetsZero(pot);
+        assertEq(_balance(users[1]), 100 * USD);
+    }
+
+    /// The invariant handler's collect action is really exercised: driving it through settlements
+    /// with frozen creditors produces successful collects and no violations.
+    function test_handler_collectIsExercised() public {
+        PotHandler h = new PotHandler();
+        uint256 collects;
+        for (uint256 run; run < 40 && collects == 0; ++run) {
+            uint256 seed = uint256(keccak256(abi.encode("collect-coverage", run)));
+            for (uint256 k; k < 60; ++k) {
+                uint256 x = uint256(keccak256(abi.encode(seed, k)));
+                uint256 pick = x % 10;
+                // Like the invariant runner, a reverting action (e.g. minting to a frozen account) is skipped.
+                if (pick < 2) try h.proposeSmall(x, x >> 1) {} catch {}
+                else if (pick < 3) try h.contribute(x) {} catch {}
+                else if (pick < 5) try h.freezeAusd(x) {} catch {}
+                else if (pick < 7) try h.settlePot(x) {} catch {}
+                else if (pick < 8) try h.refundLink(x) {} catch {}
+                else if (pick < 9) try h.payDebt(x) {} catch {}
+                else try h.collectPayout(x) {} catch {}
+            }
+            collects = h.ghostCollects();
+        }
+        assertGt(collects, 0, "no collect succeeded");
+        assertEq(h.ghostCollectViolations(), 0, h.lastCollectViolation());
     }
 }

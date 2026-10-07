@@ -3,8 +3,9 @@
  * so the app can show it as "the reference rate" and put it on the PlansSend receipt.
  * AUSD is treated as USD.
  */
-import type { LocalAccount } from "viem";
+import { hexToString, type Address, type Hex, type LocalAccount, type PublicClient } from "viem";
 import { z } from "zod";
+import { fxReferenceAbi } from "./abi.js";
 import { RelayError } from "./errors.js";
 
 export const fxQuerySchema = z.object({
@@ -117,4 +118,72 @@ export class FxService {
     const signature = await this.signer.signMessage!({ message });
     return { ...body, rate: String(rate), signer: this.signer.address, message, signature };
   }
+}
+
+// ─────────────── onchain FxReference (read-only) ───────────────
+
+export interface FxRoundView {
+  fxReference: Address;
+  roundId: string; // "0" when no round has been written
+  scheduledTime: number;
+  writtenAt: number;
+  rateDate: number; // yyyymmdd
+  sourceMask: number;
+  /** USD per 1 unit, 8 decimals, by ISO code; only currencies present in the round */
+  usdPerUnitE8: Record<string, string>;
+  sourceMasks: Record<string, number>;
+  /** seconds since scheduledTime, at the time of the read */
+  ageSec: number | null;
+  /** PlansSend / Pot accept a round for at most this long after its scheduledTime */
+  maxAgeSec: number;
+  fresh: boolean;
+}
+
+/** FxReference.MAX_FX_AGE / PlansSend.MAX_FX_AGE (6 h). */
+export const MAX_FX_AGE_SEC = 6 * 3600;
+
+const bytes3ToCode = (h: Hex) => {
+  try {
+    return hexToString(h).replace(/\0/g, "");
+  } catch {
+    return h;
+  }
+};
+
+/** FxReference.latestRound() as JSON. One eth_call; never sends anything. */
+export async function readLatestFxRound(client: Pick<PublicClient, "readContract">, fxReference: Address, nowSec = Math.floor(Date.now() / 1000)): Promise<FxRoundView> {
+  const r = (await client.readContract({ address: fxReference, abi: fxReferenceAbi, functionName: "latestRound" })) as {
+    roundId: bigint;
+    scheduledTime: bigint;
+    writtenAt: bigint;
+    rateDate: number;
+    sourceMask: number;
+    currencies: readonly Hex[];
+    usdPerUnitE8: readonly bigint[];
+    sourceMasks: readonly number[];
+  };
+  const usdPerUnitE8: Record<string, string> = {};
+  const sourceMasks: Record<string, number> = {};
+  r.currencies.forEach((c, i) => {
+    const rate = r.usdPerUnitE8[i] ?? 0n;
+    if (rate === 0n) return;
+    const code = bytes3ToCode(c);
+    usdPerUnitE8[code] = rate.toString();
+    sourceMasks[code] = Number(r.sourceMasks[i] ?? 0);
+  });
+  const scheduledTime = Number(r.scheduledTime);
+  const ageSec = r.roundId === 0n ? null : Math.max(0, nowSec - scheduledTime);
+  return {
+    fxReference,
+    roundId: r.roundId.toString(),
+    scheduledTime,
+    writtenAt: Number(r.writtenAt),
+    rateDate: Number(r.rateDate),
+    sourceMask: Number(r.sourceMask),
+    usdPerUnitE8,
+    sourceMasks,
+    ageSec,
+    maxAgeSec: MAX_FX_AGE_SEC,
+    fresh: ageSec !== null && ageSec <= MAX_FX_AGE_SEC,
+  };
 }

@@ -25,7 +25,7 @@ contract PotInvariants is Test {
         ausd = h.ausd();
         escrow = h.claimEscrow();
 
-        bytes4[] memory s = new bytes4[](26);
+        bytes4[] memory s = new bytes4[](28);
         s[0] = PotHandler.joinMember.selector;
         s[1] = PotHandler.contribute.selector;
         s[2] = PotHandler.approveSafetyNet.selector;
@@ -52,6 +52,8 @@ contract PotInvariants is Test {
         s[23] = PotHandler.refundLink.selector;
         s[24] = PotHandler.warpTime.selector;
         s[25] = PotHandler.replay.selector;
+        s[26] = PotHandler.freezeAusd.selector;
+        s[27] = PotHandler.collectPayout.selector;
         targetContract(address(h));
         targetSelector(FuzzSelector({addr: address(h), selectors: s}));
     }
@@ -61,20 +63,23 @@ contract PotInvariants is Test {
         assertEq(_sumNet(), int256(ausd.balanceOf(address(pot))), "I1");
     }
 
-    /// A settle where every debtor's allowance and balance covered their debt leaves the pot at
-    /// exactly 0 with every net 0 (also checked by the handler right after `settle`). It stays
-    /// exact afterwards: an escrow refund is the only later money movement, and its reversal makes
-    /// the positive nets sum to exactly the refund (every net was 0), so the floored pro-rata
-    /// payout `amount * net / credit` equals each `net` and no dust can remain.
+    /// A settle where every debtor's allowance and balance covered their debt (and no member with
+    /// a nonzero net was frozen by AUSD) leaves the pot at exactly 0 with every net 0 (checked by the
+    /// handler right after `settle`). Afterwards the pot owes exactly what it holds, with no dust:
+    /// nobody owes anything, and the balance equals the positive nets, which can only be refunds whose
+    /// payout AUSD refused (a frozen creditor) and that are waiting for `collect`.
     function invariant_cleanSettleDrainsPot() public view {
         assertEq(h.ghostCleanSettleViolations(), 0, "clean settle left money or nets");
         if (!h.ghostCleanSettle()) return;
         assertTrue(pot.settled(), "settled");
-        assertEq(ausd.balanceOf(address(pot)), 0, "pot balance after clean settle");
         address[] memory all = pot.members();
+        uint256 owed;
         for (uint256 i; i < all.length; ++i) {
-            assertEq(pot.netOf(all[i]), 0, "net after clean settle");
+            int256 net = pot.netOf(all[i]);
+            assertGe(net, 0, "no debt after clean settle");
+            owed += uint256(net);
         }
+        assertEq(ausd.balanceOf(address(pot)), owed, "pot holds exactly the outstanding claims");
     }
 
     /// Every executed spend was allowed by the rules, budgets, caps, payee policy, freeze, schedule
@@ -116,6 +121,13 @@ contract PotInvariants is Test {
         assertEq(ausd.balanceOf(address(escrow)), open, "escrow balance == open claims");
     }
 
+    /// `collect` only ever pays the named member, exactly `net` when the pot covers every positive
+    /// net and `floor(net * balance / Σ positive nets)` otherwise, only after settlement; a refused
+    /// collect changes nothing, and one that should pay never fails.
+    function invariant_collectPaysOnlyMemberProRata() public view {
+        assertEq(h.ghostCollectViolations(), 0, h.lastCollectViolation());
+    }
+
     /// No AUSD is created or lost: pot + escrow + every actor == everything minted.
     function invariant_ausdConserved() public view {
         address[] memory a = h.actors();
@@ -127,7 +139,7 @@ contract PotInvariants is Test {
     }
 
     function afterInvariant() external view {
-        string[26] memory names = [
+        string[28] memory names = [
             "joinMember",
             "contribute",
             "approveSafetyNet",
@@ -153,13 +165,16 @@ contract PotInvariants is Test {
             "claimLink",
             "refundLink",
             "warpTime",
-            "replay"
+            "replay",
+            "freezeAusd",
+            "collectPayout"
         ];
         for (uint256 i; i < names.length; ++i) {
             console2.log(names[i], h.callCount(i), h.okCount(i));
         }
         console2.log("executions", h.ghostExecutions(), "settled", h.ghostSettled() ? 1 : 0);
         console2.log("clean settle", h.ghostCleanSettle() ? 1 : 0, "post-settle refunds", h.ghostPostSettleRefunds());
+        console2.log("collects", h.ghostCollects(), "collected", h.ghostCollectedAmount());
     }
 
     function _sumNet() internal view returns (int256 sum) {

@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {IPlansTypes} from "../../src/interfaces/IPlansTypes.sol";
 import {IAUSD} from "../../src/interfaces/IPlansPeriphery.sol";
 import {ClaimEscrow} from "../../src/ClaimEscrow.sol";
+import {FxReference} from "../../src/FxReference.sol";
 import {KeyRegistry} from "../../src/KeyRegistry.sol";
 import {PlansFactory} from "../../src/PlansFactory.sol";
 import {PlansSend} from "../../src/PlansSend.sol";
@@ -23,6 +24,13 @@ abstract contract PlansBase is Test, IPlansTypes {
     PlansFactory internal factory;
     ClaimEscrow internal escrow;
     PlansSend internal sender;
+    FxReference internal fx;
+    /// @dev Stand-ins for the CRE simulation forwarder and the wallet that runs the simulation.
+    address internal fxForwarder = address(0xF0F0);
+    address internal fxTransmitter = address(0x7A7A);
+    address internal fxOwner = address(0x0F0F);
+    uint64 internal constant FX_CHAIN_SELECTOR = 31337;
+    uint64 internal _fxScheduled;
 
     uint256 internal invitePk;
     address internal inviteSigner;
@@ -33,9 +41,10 @@ abstract contract PlansBase is Test, IPlansTypes {
     function setUp() public virtual {
         token = _deployToken();
         registry = new KeyRegistry();
-        factory = new PlansFactory(token, address(registry));
+        fx = new FxReference(fxOwner, fxForwarder, fxTransmitter, FX_CHAIN_SELECTOR);
+        factory = new PlansFactory(token, address(registry), address(fx));
         escrow = ClaimEscrow(factory.claimEscrow());
-        sender = new PlansSend(token);
+        sender = new PlansSend(token, address(fx));
         (inviteSigner, invitePk) = makeAddrAndKey("invite");
         for (uint256 i; i < N_USERS; ++i) {
             (address user, uint256 pk) = makeAddrAndKey(string.concat("user", vm.toString(i)));
@@ -54,6 +63,67 @@ abstract contract PlansBase is Test, IPlansTypes {
 
     function _balance(address account) internal view returns (uint256) {
         return IAUSD(token).balanceOf(account);
+    }
+
+    // ─────────────── FX rounds ───────────────
+
+    /// @dev Realistic USD-per-unit rates (8 decimals) for GBP, EUR, INR, NGN, JPY, CHF, AED, SGD.
+    function _fxRates() internal pure returns (uint64[] memory r) {
+        r = new uint64[](8);
+        r[0] = 132_765_000; // GBP 1.32765
+        r[1] = 112_690_000; // EUR
+        r[2] = 1_037_000; // INR 0.01037
+        r[3] = 75_600; // NGN 0.000756
+        r[4] = 632_500; // JPY 0.006325
+        r[5] = 120_400_000; // CHF
+        r[6] = 27_229_000; // AED
+        r[7] = 78_300_000; // SGD
+    }
+
+    function _fxMasks(uint64[] memory rates) internal pure returns (uint8[] memory m) {
+        m = new uint8[](rates.length);
+        for (uint256 i; i < rates.length; ++i) {
+            if (rates[i] != 0) m[i] = (i == 3 || i == 6) ? 0x06 : 0x03; // NGN, AED: CB blend + currency-api
+        }
+    }
+
+    /// @dev FxReference's fixed currency list, built locally so that encoding a report makes no
+    /// external call (which would consume a pending prank or expectRevert).
+    function _fxCurrencies() internal pure returns (bytes3[] memory c) {
+        c = new bytes3[](8);
+        (c[0], c[1], c[2], c[3]) = (bytes3("GBP"), bytes3("EUR"), bytes3("INR"), bytes3("NGN"));
+        (c[4], c[5], c[6], c[7]) = (bytes3("JPY"), bytes3("CHF"), bytes3("AED"), bytes3("SGD"));
+    }
+
+    function _fxReport(uint64 scheduledTime, uint64[] memory rates, uint8[] memory masks)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(FX_CHAIN_SELECTOR, scheduledTime, uint32(20261006), _fxCurrencies(), rates, masks);
+    }
+
+    /// @dev Delivers a report the way the simulation forwarder does (msg.sender forwarder, tx.origin transmitter).
+    function _deliverFx(bytes memory report) internal {
+        vm.prank(fxForwarder, fxTransmitter);
+        fx.onReport(_fxMetadata(), report);
+    }
+
+    function _fxMetadata() internal pure returns (bytes memory) {
+        return abi.encodePacked(bytes32(uint256(0x1111)), bytes10("fxrefwf"), address(0xAAAA), bytes2(0x0001));
+    }
+
+    /// @dev Writes a round scheduled now (strictly after the previous one) and returns its id.
+    function _writeFxRound(uint64[] memory rates) internal returns (uint64 id) {
+        uint64 t = uint64(vm.getBlockTimestamp());
+        if (t <= _fxScheduled) t = _fxScheduled + 1;
+        _fxScheduled = t;
+        _deliverFx(_fxReport(t, rates, _fxMasks(rates)));
+        id = fx.latestRoundId();
+    }
+
+    function _writeFxRound() internal returns (uint64) {
+        return _writeFxRound(_fxRates());
     }
 
     // ─────────────── params ───────────────

@@ -2,7 +2,7 @@
 import { indexer } from "envio";
 import { activity, dailyStats, ensureAccount, fundedAction, globalStats, recordFlow, updateUser } from "../lib/domain.js";
 import { Store } from "../lib/store.js";
-import { decodeCode, metaOf } from "../lib/util.js";
+import { decodeCode, fxRoundEntityId, metaOf } from "../lib/util.js";
 
 indexer.onEvent({ contract: "PlansSend", event: "Sent" }, async ({ event, context }) => {
   const s = new Store(context, metaOf(event));
@@ -28,6 +28,11 @@ indexer.onEvent({ contract: "PlansSend", event: "Sent" }, async ({ event, contex
     fxRateE8: p.fxRateE8,
     fxTimestamp: p.fxTimestamp,
     memoHash: p.memoHash,
+    // FxReference round the app quoted from (0 = none); the contract computed refRateE8 / fxDiffBps from it.
+    fxRoundId: p.fxRoundId,
+    fxRound_id: fxRoundEntityId(p.fxRoundId),
+    refRateE8: p.refRateE8,
+    fxDiffBps: p.fxDiffBps,
     isCrossBorder,
     isInternal,
     timestamp: s.m.ts,

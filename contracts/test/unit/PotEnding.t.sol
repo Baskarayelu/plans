@@ -83,7 +83,7 @@ contract PotEndingTest is PlansBase {
         vm.expectEmit(address(pot));
         emit IPot.Payout(users[1], 50 * USD);
         vm.expectEmit(address(pot));
-        emit IPot.Settled(address(this), 100 * USD, 0, 0);
+        emit IPot.Settled(address(this), 100 * USD, 0, 0, 0);
         pot.settle();
         assertTrue(pot.settled());
         assertEq(_balance(address(pot)), 0);
@@ -106,7 +106,7 @@ contract PotEndingTest is PlansBase {
         vm.expectEmit(address(pot));
         emit IPot.Payout(users[0], 60 * USD);
         vm.expectEmit(address(pot));
-        emit IPot.Settled(address(this), 60 * USD, 60 * USD, 0);
+        emit IPot.Settled(address(this), 60 * USD, 60 * USD, 0, 0);
         pot.settle();
         assertEq(_balance(address(pot)), 0);
         assertEq(pot.netOf(users[0]), 0);

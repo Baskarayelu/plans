@@ -34,6 +34,8 @@ interface IPlansFactory is IPlansTypes {
     function ausd() external view returns (address);
     function keyRegistry() external view returns (address);
     function claimEscrow() external view returns (address);
+    /// @notice The FxReference the pots read at settlement.
+    function fxReference() external view returns (address);
 }
 
 /// @notice Address → X25519 public key used to seal group keys to a member.
@@ -93,12 +95,17 @@ interface IPlansSend is IPlansTypes {
         bytes2 toCountry;
         bytes3 fromCurrency; // ISO 4217, e.g. "GBP"
         bytes3 toCurrency;
-        uint64 fxRateE8; // reference units of toCurrency per 1 fromCurrency, 8 decimals
+        uint64 fxRateE8; // applied rate shown to the sender: units of toCurrency per 1 fromCurrency, 8 decimals
         uint64 fxTimestamp;
+        uint64 fxRoundId; // FxReference round the app quoted from; 0 = no FX reference
         bytes32 memoHash;
         bytes32 salt;
     }
 
+    /// @dev `fxRateE8` is the applied rate the sender signed. When `fxRoundId != 0`, `refRateE8` is
+    /// the FxReference round's rate for fromCurrency -> toCurrency (8 decimals) and `fxDiffBps` is
+    /// (fxRateE8 - refRateE8) * 10,000 / refRateE8, rounded toward zero; both are 0 without a round.
+    /// None of these change `amount`, which is the AUSD that moved.
     event Sent(
         address indexed from,
         address indexed to,
@@ -109,12 +116,22 @@ interface IPlansSend is IPlansTypes {
         bytes3 toCurrency,
         uint64 fxRateE8,
         uint64 fxTimestamp,
-        bytes32 memoHash
+        bytes32 memoHash,
+        uint64 fxRoundId,
+        uint256 refRateE8,
+        int256 fxDiffBps
     );
 
     /// @notice Pulls with receiveWithAuthorization (to = this contract) and forwards to meta.to.
-    /// The 3009 nonce must equal keccak256(abi.encode(meta)), binding recipient and receipt fields.
+    /// The 3009 nonce must equal keccak256(abi.encode(meta)), binding recipient and receipt fields
+    /// (the applied rate and the FX round included).
+    /// If `meta.fxRoundId != 0` the round must exist in FxReference, be at most MAX_FX_AGE old (by its
+    /// scheduled time) and have both currencies, or the send reverts. The FX fields are for display
+    /// and transparency only: the AUSD amount moved is always `auth.value`.
     function send(address from, SendMeta calldata meta, Auth3009 calldata auth) external;
+
+    function ausd() external view returns (address);
+    function fxReference() external view returns (address);
 }
 
 /// @notice Minimal AUSD surface used by Plans (ERC-20 + ERC-2612 + ERC-3009 bytes-signature variant).

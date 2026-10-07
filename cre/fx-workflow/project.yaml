@@ -1,0 +1,16 @@
+# ==========================================================================
+# CRE PROJECT SETTINGS FILE (Plans FX reference)
+# ==========================================================================
+# Run every `cre` command from this directory (cre/fx-workflow).
+# Monad testnet needs CRE CLI >= 1.30.0 and @chainlink/cre-sdk >= 1.19.0;
+# Monad mainnet needs CLI >= 1.29.0 and SDK >= 1.18.0.
+
+staging-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: https://testnet-rpc.monad.xyz
+
+production-settings:
+  rpcs:
+    - chain-name: monad-mainnet
+      url: https://rpc.monad.xyz

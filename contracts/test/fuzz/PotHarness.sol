@@ -5,7 +5,7 @@ import {Pot} from "../../src/Pot.sol";
 
 /// @notice Exposes Pot's internal split math and packing for fuzzing.
 contract PotHarness is Pot {
-    constructor() Pot(address(0), address(0), address(0)) {}
+    constructor() Pot(address(0), address(0), address(0), address(0)) {}
 
     function parts(uint256 amount, uint256[] memory w) external pure returns (uint256[] memory) {
         return _parts(amount, w);

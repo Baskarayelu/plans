@@ -18,6 +18,8 @@ export interface Contracts {
   keyRegistry?: Address;
   claimEscrow?: Address;
   plansSend?: Address;
+  /** FxReference (read-only: GET /v1/fx/round). Falls back to factory.fxReference(). */
+  fxReference?: Address;
   ausd?: Address;
 }
 
@@ -60,14 +62,14 @@ export class Relayer {
     this.estimator = new MonadGasEstimator(pool.client, gas);
   }
 
-  /** Fill in KeyRegistry / ClaimEscrow / AUSD from the factory when not configured. */
+  /** Fill in KeyRegistry / ClaimEscrow / AUSD / FxReference from the factory when not configured. */
   async init() {
     const f = this.contracts.factory;
     if (!f) {
       log.warn("FACTORY_ADDRESS not set: pot and createPot actions are disabled");
       return;
     }
-    const read = async (fn: "keyRegistry" | "claimEscrow" | "ausd") => {
+    const read = async (fn: "keyRegistry" | "claimEscrow" | "ausd" | "fxReference") => {
       try {
         return (await this.client.readContract({ address: f, abi: factoryAbi, functionName: fn })) as Address;
       } catch (e) {
@@ -78,6 +80,9 @@ export class Relayer {
     this.contracts.keyRegistry ??= await read("keyRegistry");
     this.contracts.claimEscrow ??= await read("claimEscrow");
     this.contracts.ausd ??= await read("ausd");
+    this.contracts.fxReference ??= await read("fxReference");
+    // A factory deployed without an FxReference reports address(0): treat it as "not configured".
+    if (this.contracts.fxReference && /^0x0{40}$/i.test(this.contracts.fxReference)) this.contracts.fxReference = undefined;
   }
 
   async isPot(pot: Address): Promise<boolean> {

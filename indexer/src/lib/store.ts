@@ -17,6 +17,8 @@ import type {
   DisputeVote,
   EvmOnEventContext,
   Freeze,
+  FxReferenceConfig,
+  FxRound,
   GlobalStats,
   KeyWrap,
   Member,
@@ -53,6 +55,8 @@ export type EntityMap = {
   Dispute: Dispute;
   DisputeVote: DisputeVote;
   Freeze: Freeze;
+  FxReferenceConfig: FxReferenceConfig;
+  FxRound: FxRound;
   GlobalStats: GlobalStats;
   KeyWrap: KeyWrap;
   Member: Member;

@@ -6,7 +6,10 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
 /// @notice Test double for AUSD: 6 decimals, ERC-2612 permit and the bytes-signature ERC-3009
 /// variants, with AUSD's EIP-712 domain { name: "Agora Dollar", version: "1" }.
-/// `setFrozen` mimics an issuer freeze so tests can exercise failed transfers.
+/// `setFrozen` mimics an issuer freeze so tests can exercise failed transfers. Two more refusal
+/// modes model tokens that misbehave for one recipient: `setAlwaysReverts` (every transfer to it
+/// reverts, whatever happens later) and `setReturnsFalse` (a transfer to it returns false and moves
+/// nothing).
 contract MockAUSD is ERC20 {
     bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = keccak256(
         "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
@@ -21,11 +24,14 @@ contract MockAUSD is ERC20 {
     error CallerMustBePayee();
     error InvalidAuthorizationSignature();
     error AccountFrozen();
+    error RecipientRejected();
 
     event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
 
     mapping(address => mapping(bytes32 => bool)) public authorizationState;
     mapping(address => bool) public frozen;
+    mapping(address => bool) public alwaysReverts;
+    mapping(address => bool) public returnsFalse;
 
     function name() public pure override returns (string memory) {
         return "AUSD";
@@ -45,6 +51,19 @@ contract MockAUSD is ERC20 {
 
     function setFrozen(address account, bool isFrozen) external {
         frozen[account] = isFrozen;
+    }
+
+    function setAlwaysReverts(address account, bool on) external {
+        alwaysReverts[account] = on;
+    }
+
+    function setReturnsFalse(address account, bool on) external {
+        returnsFalse[account] = on;
+    }
+
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        if (returnsFalse[to]) return false;
+        return super.transfer(to, amount);
     }
 
     function transferWithAuthorization(
@@ -115,5 +134,6 @@ contract MockAUSD is ERC20 {
 
     function _beforeTokenTransfer(address from, address to, uint256) internal view override {
         if (frozen[from] || frozen[to]) revert AccountFrozen();
+        if (alwaysReverts[to]) revert RecipientRejected();
     }
 }

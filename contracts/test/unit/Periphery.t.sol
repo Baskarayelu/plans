@@ -287,6 +287,7 @@ contract PeripheryTest is PlansBase {
             toCurrency: "INR",
             fxRateE8: 11_250_000_000,
             fxTimestamp: 1_700_000_000,
+            fxRoundId: 0,
             memoHash: keccak256("rent"),
             salt: "x"
         });
@@ -298,7 +299,19 @@ contract PeripheryTest is PlansBase {
         Auth3009 memory auth = PlansSigs.receiveAuth(pks[0], token, address(sender), 7 * USD, keccak256(abi.encode(m)));
         vm.expectEmit(address(sender));
         emit IPlansSend.Sent(
-            users[0], users[6], 7 * USD, "GB", "IN", "GBP", "INR", 11_250_000_000, 1_700_000_000, keccak256("rent")
+            users[0],
+            users[6],
+            7 * USD,
+            "GB",
+            "IN",
+            "GBP",
+            "INR",
+            11_250_000_000,
+            1_700_000_000,
+            keccak256("rent"),
+            0,
+            0,
+            0
         );
         sender.send(users[0], m, auth);
         assertEq(_balance(users[6]), 7 * USD);

@@ -10,7 +10,7 @@ import { join as pathJoin } from "node:path";
 import { getAddress, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { ausdAbi, potAbi } from "../../src/abi.js";
+import { ausdAbi, plansSendAbi, potAbi } from "../../src/abi.js";
 import { loadConfig } from "../../src/config.js";
 import {
   asciiToBytes,
@@ -18,6 +18,7 @@ import {
   factoryTypes,
   hashCreatePotParams,
   hashMemo,
+  hashSendMeta,
   hashSplit,
   randomBytes32,
   randomNonce,
@@ -25,6 +26,7 @@ import {
   signReceiveAuth,
   ZERO_BYTES32,
   type CreatePotParams,
+  type SendMeta,
 } from "../../src/eip712.js";
 import { registerErrors } from "../../src/errors.js";
 import { pushRegisterMessage } from "../../src/push.js";
@@ -170,6 +172,8 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
     d = await deployAll(anvil.url);
     registerErrors(artifact("Pot").abi);
     registerErrors(artifact("MockAUSD").abi);
+    registerErrors(artifact("PlansSend").abi);
+    registerErrors(artifact("FxReference").abi);
     for (const a of [alice, bob, judge]) await d.mint(a.address, USD(100));
     for (const k of Object.values(demoKeys)) await d.mint(privateKeyToAccount(k).address, USD(10));
     await d.mint(privateKeyToAccount(ANVIL_KEYS[1]).address, USD(100)); // lane 0 holds faucet AUSD
@@ -317,6 +321,102 @@ describe.skipIf(!avail.ok)("relayer on anvil with real contracts", () => {
     const exp = await relay("ack", { pot: d.ausd, member: alice.address, nonce, deadline: 1, sig: "0x" + "11".repeat(65) });
     expect(exp.status).toBe(422);
     expect(exp.body.error!.code).toBe("EXPIRED");
+  });
+
+  it("reads the FxReference address from the factory", async () => {
+    expect(s.relayer.contracts.fxReference?.toLowerCase()).toBe(d.fxReference.toLowerCase());
+    // (GET /v1/fx/round is cached for 15 s, so the first read happens after rounds are written below.)
+  });
+
+  it("send records the FxReference round, its reference rate and the difference", async () => {
+    const now = (await d.pub.getBlock()).timestamp;
+    // round 1 is 7 h old (stale), round 2 is fresh: GBP $1.34, INR $0.0113
+    await d.writeFxRound({ GBP: 134_000_000n, INR: 1_130_000n }, now - 7n * 3600n);
+    await d.writeFxRound({ GBP: 134_000_000n, INR: 1_130_000n, EUR: 116_000_000n });
+    const round = (await (await s.app.request("/v1/fx/round")).json()) as { roundId: string; fresh: boolean; usdPerUnitE8: Record<string, string>; sourceMasks: Record<string, number> };
+    expect(round).toMatchObject({ roundId: "2", fresh: true, usdPerUnitE8: { GBP: "134000000", INR: "1130000", EUR: "116000000" }, sourceMasks: { GBP: 3 } });
+
+    const send = async (fxRoundId: bigint | undefined, fxRateE8 = 11_800_000_000n) => {
+      const meta: SendMeta = {
+        to: bob.address,
+        fromCountry: asciiToBytes("GB"),
+        toCountry: asciiToBytes("IN"),
+        fromCurrency: asciiToBytes("GBP"),
+        toCurrency: asciiToBytes("INR"),
+        fxRateE8,
+        fxTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        fxRoundId: fxRoundId ?? 0n,
+        memoHash: ZERO_BYTES32,
+        salt: randomBytes32(),
+      };
+      const a = await signReceiveAuth(alice, { chainId, ausd: d.ausd, to: d.plansSend, value: USD(1), validBefore: deadline(), nonce: hashSendMeta(meta), domain: AGORA });
+      const { fxRoundId: _omit, ...rest } = meta;
+      return relay("send", { from: alice.address, meta: fxRoundId === undefined ? rest : meta, auth: a });
+    };
+
+    // fresh round: ref = floor(1.34e8 * 1e8 / 1_130_000) = 11_858_407_079; diff = trunc((11.8e9 - ref) * 1e4 / ref) = -49
+    const ok = await send(2n);
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    const sent = ok.body.events.find((e) => e.name === "Sent")!;
+    expect(sent.args).toMatchObject({ fxRoundId: "2", refRateE8: "11858407079", fxDiffBps: "-49", amount: "1000000" });
+    expect(await d.pub.readContract({ address: d.plansSend, abi: plansSendAbi, functionName: "fxReference" })).toBe(getAddress(d.fxReference));
+
+    // no fxRoundId at all (an older client): defaults to 0 in the nonce and the calldata
+    const plain = await send(undefined);
+    expect(plain.status, JSON.stringify(plain.body)).toBe(200);
+    expect(plain.body.events.find((e) => e.name === "Sent")!.args).toMatchObject({ fxRoundId: "0", refRateE8: "0", fxDiffBps: "0" });
+
+    const unknown = await send(99n);
+    expect(unknown.status).toBe(422);
+    expect(unknown.body.error).toMatchObject({ code: "FX_ROUND_UNKNOWN", error: "FxRoundUnknown" });
+    const stale = await send(1n);
+    expect(stale.status).toBe(422);
+    expect(stale.body.error).toMatchObject({ code: "FX_ROUND_STALE", error: "FxRoundStale" });
+    expect(stale.body.error!.message).toMatch(/more than 6 hours old/);
+    expect(JSON.stringify(stale.body.error)).not.toMatch(/unrecognised|0x[0-9a-f]{8}\)/);
+  });
+
+  it("collect pays a member whose payout AUSD refused at settlement, once the account is unfrozen", async () => {
+    const invite = privateKeyToAccount(generatePrivateKey());
+    const { r, pot } = await createPot(alice, invite, { deposit: USD(2) });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect((await join(pot, bob, invite, "IN", USD(1))).status).toBe(200);
+
+    const early = await relay("collect", { pot, member: bob.address });
+    expect(early.status).toBe(422);
+    expect(early.body.error).toMatchObject({ code: "NOT_SETTLED", error: "NotSettled" });
+
+    expect((await ack(pot, alice)).status).toBe(200);
+    expect((await ack(pot, bob)).status).toBe(200);
+    const mockAbi = artifact("MockAUSD").abi;
+    const setFrozen = async (on: boolean) =>
+      d.pub.waitForTransactionReceipt({ hash: await d.wallet.writeContract({ address: d.ausd, abi: mockAbi, functionName: "setFrozen", args: [bob.address, on] } as never) });
+    await setFrozen(true);
+    const settled = await relay("settle", { pot });
+    expect(settled.status, JSON.stringify(settled.body)).toBe(200);
+    const ev = settled.body.events.find((e) => e.name === "Settled")!;
+    expect(ev.args).toMatchObject({ unpaidClaims: "1000000", fxRoundId: "2" }); // round 2 is fresh
+    await waitFor(() => s.store.getPot(pot)?.settled, "settled in store");
+
+    const refused = await relay("collect", { pot, member: bob.address });
+    expect(refused.status).toBe(422);
+    expect(refused.body.error).toMatchObject({ code: "PAYOUT_REFUSED", error: "PayoutRefused" });
+    expect(refused.body.error!.message).toMatch(/claim is kept/);
+
+    await setFrozen(false);
+    const before = await balance(bob.address);
+    const c = await relay("collect", { pot, member: bob.address });
+    expect(c.status, JSON.stringify(c.body)).toBe(200);
+    expect(c.body.events.map((e) => e.name)).toEqual(expect.arrayContaining(["Payout", "Collected"]));
+    expect(c.body.events.find((e) => e.name === "Collected")!.args).toMatchObject({ member: bob.address, amount: "1000000" });
+    expect((await balance(bob.address)) - before).toBe(USD(1));
+
+    const again = await relay("collect", { pot, member: bob.address });
+    expect(again.status).toBe(422);
+    expect(again.body.error).toMatchObject({ code: "NOTHING_TO_COLLECT" });
+    const stranger = await relay("collect", { pot, member: judge.address });
+    expect(stranger.status).toBe(422);
+    expect(stranger.body.error!.code).toBe("NOT_MEMBER");
   });
 
   it("demo members approve small spends and ack after a human acks", async () => {

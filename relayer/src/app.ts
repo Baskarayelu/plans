@@ -10,7 +10,7 @@ import type { Config } from "./config.js";
 import type { DemoService } from "./demo/demo.js";
 import { RelayError } from "./errors.js";
 import type { Faucet } from "./faucet.js";
-import { fxQuerySchema, type FxService } from "./fx.js";
+import { fxQuerySchema, readLatestFxRound, type FxRoundView, type FxService } from "./fx.js";
 import type { LanePool } from "./lanes.js";
 import type { Listener } from "./listener.js";
 import { log, shortErr } from "./log.js";
@@ -82,6 +82,7 @@ export function createApp(s: AppServices) {
   const blobPutLimiter = new RateLimiter(s.cfg.blobs?.putPerIpPerHour ?? 60, 3_600_000);
   const blobMax = s.cfg.blobs?.maxBytes ?? 2 * 1024 * 1024;
   let lastBalanceRefresh = 0;
+  let fxRoundCache: { at: number; view: FxRoundView } | null = null;
 
   app.use(
     "*",
@@ -201,6 +202,24 @@ export function createApp(s: AppServices) {
     const quote = await s.fx.quote(q.from, q.to);
     c.header("cache-control", "public, max-age=60");
     return c.json(quote);
+  });
+
+  /** The latest onchain FxReference round (Chainlink CRE). Read-only; cached for 15 s. */
+  app.get("/v1/fx/round", async (c) => {
+    const fx = s.relayer.contracts.fxReference;
+    if (!fx) throw new RelayError(404, "FX_REFERENCE_DISABLED", "No FxReference contract is configured on this relayer.");
+    if (!fxRoundCache || Date.now() - fxRoundCache.at > 15_000 || fxRoundCache.view.fxReference !== fx) {
+      try {
+        fxRoundCache = { at: Date.now(), view: await readLatestFxRound(s.client, fx) };
+      } catch (e) {
+        throw new RelayError(503, "RPC_UNAVAILABLE", "Couldn't read the reference rate from the network. Please try again.", { detail: shortErr(e) });
+      }
+    }
+    // Age is recomputed per request so a cached read never looks fresher than it is.
+    const v = fxRoundCache.view;
+    const ageSec = v.roundId === "0" ? null : Math.max(0, Math.floor(Date.now() / 1000) - v.scheduledTime);
+    c.header("cache-control", "public, max-age=15");
+    return c.json({ ...v, ageSec, fresh: ageSec !== null && ageSec <= v.maxAgeSec });
   });
 
   app.post("/v1/faucet", async (c) => {

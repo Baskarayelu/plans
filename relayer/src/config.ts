@@ -113,6 +113,7 @@ const envSchema = z.object({
   KEY_REGISTRY_ADDRESS: optAddress,
   CLAIM_ESCROW_ADDRESS: optAddress,
   PLANS_SEND_ADDRESS: optAddress,
+  FX_REFERENCE_ADDRESS: optAddress,
   AUSD_ADDRESS: optAddress,
   RELAYER_KEYS: list,
   DATA_DIR: z.string().optional().default("./data"),
@@ -229,8 +230,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       keyRegistry: e.KEY_REGISTRY_ADDRESS,
       claimEscrow: e.CLAIM_ESCROW_ADDRESS,
       plansSend: e.PLANS_SEND_ADDRESS,
+      fxReference: e.FX_REFERENCE_ADDRESS,
       ausd: e.AUSD_ADDRESS ?? (known ? getAddress(known.ausd) : undefined),
-    } as { factory?: Address; keyRegistry?: Address; claimEscrow?: Address; plansSend?: Address; ausd?: Address },
+    } as { factory?: Address; keyRegistry?: Address; claimEscrow?: Address; plansSend?: Address; fxReference?: Address; ausd?: Address },
     relayerKeys,
     dataDir: e.DATA_DIR,
     listener: {

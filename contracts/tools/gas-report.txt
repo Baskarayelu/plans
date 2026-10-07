@@ -1,234 +1,379 @@
 No files changed, compilation skipped
 
-Ran 1 test for test/Smoke.t.sol:SmokeTest
-[PASS] test_lifecycle() (gas: 2181103)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 12.75ms (7.40ms CPU time)
-
-Ran 22 tests for test/unit/PotGovernance.t.sol:PotGovernanceTest
-[PASS] test_dispute_onPersonalSpend() (gas: 641446)
-[PASS] test_finalize_noEligibleVotersKeepsAfterPeriod() (gas: 1285800)
-[PASS] test_freeze() (gas: 396212)
-[PASS] test_freeze_reverts() (gas: 1014030)
-[PASS] test_freeze_secondFreezeNeverShortens() (gas: 220949)
-[PASS] test_openDispute() (gas: 357731)
-[PASS] test_openDispute_afterSettleReverts() (gas: 1402426)
-[PASS] test_openDispute_reverts() (gas: 801593)
-[PASS] test_resolve_resplit() (gas: 775243)
-[PASS] test_resolve_reverts() (gas: 636558)
-[PASS] test_resolve_spenderCovers() (gas: 581282)
-[PASS] test_rules_allowlistRemoveThenAdd() (gas: 1110659)
-[PASS] test_rules_minContributionRecomputed() (gas: 533410)
-[PASS] test_rules_proposeVoteApply() (gas: 989804)
-[PASS] test_rules_reverts() (gas: 698798)
-[PASS] test_rules_settledReverts() (gas: 1245069)
-[PASS] test_rules_soloApprovesImmediately() (gas: 515964)
-[PASS] test_unfreeze_majority() (gas: 753607)
-[PASS] test_unfreeze_votesResetOnNewFreeze() (gas: 503376)
-[PASS] test_vote_majorityForSpenderCovers() (gas: 522961)
-[PASS] test_vote_reverts() (gas: 598631)
-[PASS] test_vote_tieKeeps() (gas: 436250)
-Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 31.32ms (18.77ms CPU time)
-
-Ran 38 tests for test/unit/PotMembership.t.sol:PotMembershipTest
-[PASS] test_contribute() (gas: 278919)
-[PASS] test_contribute_authMustNameTheMember() (gas: 279598)
-[PASS] test_contribute_revertsForNonMemberZeroOrSettled() (gas: 330918)
-[PASS] test_initialize_emitsEvents() (gas: 363154)
-[PASS] test_initialize_implementationIsLocked() (gas: 62916)
-[PASS] test_initialize_onlyFactory() (gas: 58345)
-[PASS] test_initialize_onlyOnce() (gas: 60861)
-[PASS] test_initialize_pastStartIsNow() (gas: 344831)
-[PASS] test_initialize_rejectsBadSchedule() (gas: 666749)
-[PASS] test_initialize_rejectsLongData() (gas: 514569)
-[PASS] test_initialize_rejectsZeroInviteSigner() (gas: 179924)
-[PASS] test_initialize_rejectsZeroTtl() (gas: 180944)
-[PASS] test_initialize_setsStateAndCreator() (gas: 164403)
-[PASS] test_join_alreadyRegisteredKeyIsSkipped() (gas: 230188)
-[PASS] test_join_bare() (gas: 180153)
-[PASS] test_join_erc1271Member() (gas: 345291)
-[PASS] test_join_exitedMembersKeepTheirSlot() (gas: 8569264)
-[PASS] test_join_failedPermitWithoutAllowanceReverts() (gas: 174915)
-[PASS] test_join_revertsForExitedMember() (gas: 300190)
-[PASS] test_join_revertsWhenAlreadyMember() (gas: 219118)
-[PASS] test_join_revertsWhenFull() (gas: 8487176)
-[PASS] test_join_revertsWhenSettled() (gas: 161359)
-[PASS] test_join_revertsWithBadInvite() (gas: 178699)
-[PASS] test_join_revertsWithBadMemberSig() (gas: 94716)
-[PASS] test_join_rotatedInviteStopsOldLinks() (gas: 303995)
-[PASS] test_join_usedPermitDoesNotRevert() (gas: 262794)
-[PASS] test_join_withDepositPermitAndKey() (gas: 566260)
-[PASS] test_postKeyWraps() (gas: 110117)
-[PASS] test_postKeyWraps_reverts() (gas: 328328)
-[PASS] test_rotateInvite() (gas: 108179)
-[PASS] test_rotateInvite_reverts() (gas: 157965)
-[PASS] test_signature_compactSignatureAccepted() (gas: 219136)
-[PASS] test_signature_expiredDeadline() (gas: 172736)
-[PASS] test_signature_nonceCannotBeReused() (gas: 343537)
-[PASS] test_signature_otherPotDomainRejected() (gas: 201212)
-[PASS] test_signature_unorderedNonces() (gas: 236137)
-[PASS] test_signature_wrongSignerRejected() (gas: 204087)
-[PASS] test_views_unknownMember() (gas: 33548)
-Suite result: ok. 38 passed; 0 failed; 0 skipped; finished in 42.10ms (46.79ms CPU time)
-
-Ran 35 tests for test/unit/PotSpending.t.sol:PotSpendingTest
-[PASS] test_cancelSpend() (gas: 559791)
-[PASS] test_cancelSpend_approved() (gas: 504822)
-[PASS] test_execute_reverts() (gas: 474679)
-[PASS] test_execution_rechecksBudgetAndCaps() (gas: 1844443)
-[PASS] test_execution_splitMemberExited() (gas: 529345)
-[PASS] test_expire() (gas: 331478)
-[PASS] test_instantLink_createsClaim() (gas: 457436)
-[PASS] test_instantPay_executesWithExactShares() (gas: 472140)
-[PASS] test_instantPersonal_creditsProposer() (gas: 912170)
-[PASS] test_link_expiryCappedAtReviewEnd() (gas: 388812)
-[PASS] test_memoTooLong() (gas: 65021)
-[PASS] test_openProposalBlocksExitAndSettle() (gas: 948055)
-[PASS] test_pending_thenVoteExecutes() (gas: 566139)
-[PASS] test_previewSpend() (gas: 178379)
-[PASS] test_reason10_invalidSplits() (gas: 883541)
-[PASS] test_reason11_amountOrCategory() (gas: 1067766)
-[PASS] test_reason1_notActiveMember() (gas: 342523)
-[PASS] test_reason2_notOpen() (gas: 871273)
-[PASS] test_reason2_settled() (gas: 729699)
-[PASS] test_reason3_frozen() (gas: 482970)
-[PASS] test_reason4_minContribution() (gas: 1301426)
-[PASS] test_reason5_allowlist() (gas: 1163924)
-[PASS] test_reason5_payeePolicy() (gas: 1773844)
-[PASS] test_reason6_categoryBudget() (gas: 1570400)
-[PASS] test_reason7_dailyCapResetsNextUtcDay() (gas: 2538108)
-[PASS] test_reason8_totalCap() (gas: 1463563)
-[PASS] test_reason9_funds() (gas: 1772297)
-[PASS] test_reasonOrder_firstFailingCheckWins() (gas: 1132165)
-[PASS] test_rulesChangeDoesNotAlterOpenProposals() (gas: 884392)
-[PASS] test_tiers_majorityAllAndCap() (gas: 1455835)
-[PASS] test_vote_rejectCancelsWhenUnreachable() (gas: 1765800)
-[PASS] test_vote_rejectKeepsPendingWhileReachable() (gas: 611032)
-[PASS] test_vote_reverts() (gas: 658820)
-[PASS] test_vote_thresholdWhileFrozenApprovesThenExecute() (gas: 887280)
-[PASS] test_weightedSplit_remainderToFirst() (gas: 317607)
-Suite result: ok. 35 passed; 0 failed; 0 skipped; finished in 131.74ms (40.02ms CPU time)
-
-Ran 24 tests for test/unit/PotEnding.t.sol:PotEndingTest
-[PASS] test_ack() (gas: 739787)
-[PASS] test_ack_resetByJoinSpendExitAndRules() (gas: 3458092)
-[PASS] test_ack_reverts() (gas: 595299)
-[PASS] test_claimedLinkStaysSpent() (gas: 1258468)
-[PASS] test_escrowRefund_afterDisputeUsesCurrentSplit() (gas: 1859117)
-[PASS] test_escrowRefund_afterSettleDistributes() (gas: 1638929)
-[PASS] test_escrowRefund_beforeSettleReversesShares() (gas: 1749792)
-[PASS] test_exit_payoutCappedAtBalance() (gas: 1208719)
-[PASS] test_exit_paysPositiveNet() (gas: 1700462)
-[PASS] test_exit_pullsDebtAndRecordsRest() (gas: 1385321)
-[PASS] test_exit_reverts() (gas: 864810)
-[PASS] test_onEscrowRefund_partialRefundReverts() (gas: 1591984)
-[PASS] test_onEscrowRefund_reverts() (gas: 1466102)
-[PASS] test_payDebt_afterSettleDistributes() (gas: 1679729)
-[PASS] test_payDebt_exitedBeforeSettleStaysInPot() (gas: 1425515)
-[PASS] test_payDebt_proRataBetweenCreditors() (gas: 1709064)
-[PASS] test_payDebt_reverts() (gas: 1766125)
-[PASS] test_settle_afterReviewWindow() (gas: 1084656)
-[PASS] test_settle_allExitedSettlesEarly() (gas: 686087)
-[PASS] test_settle_blockedByOpenItems() (gas: 1567937)
-[PASS] test_settle_frozenRecipientKeepsClaim() (gas: 1257491)
-[PASS] test_settle_partialPayoutFloors() (gas: 1701049)
-[PASS] test_settle_partialPullIsProRataAndRecordsDebt() (gas: 1847834)
-[PASS] test_settle_pullsDebtThroughSafetyNet() (gas: 1770540)
-Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 132.48ms (49.18ms CPU time)
+Ran 5 tests for test/unit/FxReferenceCre.t.sol:FxReferenceCreTest
+[PASS] test_onReport_decodesWorkflowVector() (gas: 661133)
+[PASS] test_onReport_vectorFromStrangerRejected() (gas: 125004)
+[PASS] test_onReport_vectorOnOtherChainRejected() (gas: 1626842)
+[PASS] test_onReport_vectorReplayRejected() (gas: 335857)
+[PASS] test_vector_shape() (gas: 146674)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 8.07ms (939.46µs CPU time)
 
 Ran 18 tests for test/unit/Periphery.t.sol:PeripheryTest
-[PASS] test_createPot_deploysRegistersAndEmits() (gas: 396564)
-[PASS] test_createPot_erc1271Creator() (gas: 555752)
-[PASS] test_createPot_failedPermitWithoutAllowanceReverts() (gas: 398891)
-[PASS] test_createPot_reverts() (gas: 619357)
-[PASS] test_createPot_sameSaltTwiceFails() (gas: 1040774242)
-[PASS] test_createPot_usedPermitDoesNotRevert() (gas: 478525)
-[PASS] test_createPot_withCreatorDepositPermitAndKey() (gas: 732631)
-[PASS] test_escrow_claimReverts() (gas: 376300)
+[PASS] test_createPot_deploysRegistersAndEmits() (gas: 396763)
+[PASS] test_createPot_erc1271Creator() (gas: 555894)
+[PASS] test_createPot_failedPermitWithoutAllowanceReverts() (gas: 399218)
+[PASS] test_createPot_reverts() (gas: 619746)
+[PASS] test_createPot_sameSaltTwiceFails() (gas: 1040774289)
+[PASS] test_createPot_usedPermitDoesNotRevert() (gas: 478952)
+[PASS] test_createPot_withCreatorDepositPermitAndKey() (gas: 737540)
+[PASS] test_escrow_claimReverts() (gas: 380868)
 [PASS] test_escrow_createFromPotOnlyPots() (gas: 41062)
-[PASS] test_escrow_createWithAuthorizationAndClaim() (gas: 490519)
-[PASS] test_escrow_createWithAuthorization_reverts() (gas: 472393)
-[PASS] test_escrow_refundToSender() (gas: 711910)
-[PASS] test_factory_wiring() (gas: 42223)
+[PASS] test_escrow_createWithAuthorizationAndClaim() (gas: 499608)
+[PASS] test_escrow_createWithAuthorization_reverts() (gas: 479209)
+[PASS] test_escrow_refundToSender() (gas: 729998)
+[PASS] test_factory_wiring() (gas: 42344)
 [PASS] test_keyRegistry_register() (gas: 98106)
 [PASS] test_keyRegistry_replayAndStaleRejected() (gas: 194906)
 [PASS] test_keyRegistry_reverts() (gas: 111339)
-[PASS] test_send() (gas: 213473)
-[PASS] test_send_reverts() (gas: 328145)
-Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 2.47s (26.11ms CPU time)
+[PASS] test_send() (gas: 224781)
+[PASS] test_send_reverts() (gas: 331851)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 21.84ms (16.47ms CPU time)
+
+Ran 1 test for test/Smoke.t.sol:SmokeTest
+[PASS] test_lifecycle() (gas: 2221904)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 4.04ms (1.87ms CPU time)
+
+Ran 22 tests for test/unit/PotGovernance.t.sol:PotGovernanceTest
+[PASS] test_dispute_onPersonalSpend() (gas: 641742)
+[PASS] test_finalize_noEligibleVotersKeepsAfterPeriod() (gas: 1299582)
+[PASS] test_freeze() (gas: 396290)
+[PASS] test_freeze_reverts() (gas: 1045263)
+[PASS] test_freeze_secondFreezeNeverShortens() (gas: 220993)
+[PASS] test_openDispute() (gas: 357984)
+[PASS] test_openDispute_afterSettleReverts() (gas: 1433610)
+[PASS] test_openDispute_reverts() (gas: 802045)
+[PASS] test_resolve_resplit() (gas: 775707)
+[PASS] test_resolve_reverts() (gas: 636943)
+[PASS] test_resolve_spenderCovers() (gas: 586212)
+[PASS] test_rules_allowlistRemoveThenAdd() (gas: 1110969)
+[PASS] test_rules_minContributionRecomputed() (gas: 533541)
+[PASS] test_rules_proposeVoteApply() (gas: 994611)
+[PASS] test_rules_reverts() (gas: 699018)
+[PASS] test_rules_settledReverts() (gas: 1276368)
+[PASS] test_rules_soloApprovesImmediately() (gas: 516041)
+[PASS] test_unfreeze_majority() (gas: 758422)
+[PASS] test_unfreeze_votesResetOnNewFreeze() (gas: 503677)
+[PASS] test_vote_majorityForSpenderCovers() (gas: 523081)
+[PASS] test_vote_reverts() (gas: 598752)
+[PASS] test_vote_tieKeeps() (gas: 436360)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 30.60ms (17.93ms CPU time)
+
+Ran 35 tests for test/unit/PotSpending.t.sol:PotSpendingTest
+[PASS] test_cancelSpend() (gas: 564567)
+[PASS] test_cancelSpend_approved() (gas: 504967)
+[PASS] test_execute_reverts() (gas: 474890)
+[PASS] test_execution_rechecksBudgetAndCaps() (gas: 1862860)
+[PASS] test_execution_splitMemberExited() (gas: 534187)
+[PASS] test_expire() (gas: 331734)
+[PASS] test_instantLink_createsClaim() (gas: 459886)
+[PASS] test_instantPay_executesWithExactShares() (gas: 476935)
+[PASS] test_instantPersonal_creditsProposer() (gas: 912467)
+[PASS] test_link_expiryCappedAtReviewEnd() (gas: 391142)
+[PASS] test_memoTooLong() (gas: 65021)
+[PASS] test_openProposalBlocksExitAndSettle() (gas: 953347)
+[PASS] test_pending_thenVoteExecutes() (gas: 571025)
+[PASS] test_previewSpend() (gas: 178621)
+[PASS] test_reason10_invalidSplits() (gas: 888524)
+[PASS] test_reason11_amountOrCategory() (gas: 1068039)
+[PASS] test_reason1_notActiveMember() (gas: 347119)
+[PASS] test_reason2_notOpen() (gas: 875923)
+[PASS] test_reason2_settled() (gas: 756272)
+[PASS] test_reason3_frozen() (gas: 487546)
+[PASS] test_reason4_minContribution() (gas: 1319589)
+[PASS] test_reason5_allowlist() (gas: 1173104)
+[PASS] test_reason5_payeePolicy() (gas: 1794349)
+[PASS] test_reason6_categoryBudget() (gas: 1593141)
+[PASS] test_reason7_dailyCapResetsNextUtcDay() (gas: 2583572)
+[PASS] test_reason8_totalCap() (gas: 1474952)
+[PASS] test_reason9_funds() (gas: 1790701)
+[PASS] test_reasonOrder_firstFailingCheckWins() (gas: 1141414)
+[PASS] test_rulesChangeDoesNotAlterOpenProposals() (gas: 889167)
+[PASS] test_tiers_majorityAllAndCap() (gas: 1456168)
+[PASS] test_vote_rejectCancelsWhenUnreachable() (gas: 1784195)
+[PASS] test_vote_rejectKeepsPendingWhileReachable() (gas: 615709)
+[PASS] test_vote_reverts() (gas: 658977)
+[PASS] test_vote_thresholdWhileFrozenApprovesThenExecute() (gas: 892253)
+[PASS] test_weightedSplit_remainderToFirst() (gas: 322182)
+Suite result: ok. 35 passed; 0 failed; 0 skipped; finished in 52.97ms (40.67ms CPU time)
+
+Ran 10 tests for test/unit/PotCollect.t.sol:PotCollectTest
+[PASS] test_collect_alwaysRevertingRecipient_doesNotBlockOthers() (gas: 2060979)
+[PASS] test_collect_exitedMember() (gas: 1613732)
+[PASS] test_collect_frozenThenUnfrozenRecipient() (gas: 2116995)
+[PASS] test_collect_gasLimitCannotSkipPayout() (gas: 26686395)
+[PASS] test_collect_neverMoreThanNet() (gas: 1944924)
+[PASS] test_collect_proRataWhenPotShort() (gas: 2250938)
+[PASS] test_collect_refusalIsNotMistakenForStarvation() (gas: 1819509)
+[PASS] test_collect_revertsBeforeSettlement() (gas: 867806)
+[PASS] test_collect_revertsForNonMemberAndNothingOwed() (gas: 1069346)
+[PASS] test_collect_tokenReturningFalse_reverts() (gas: 1411946)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 62.69ms (57.47ms CPU time)
+
+Ran 24 tests for test/unit/PotEnding.t.sol:PotEndingTest
+[PASS] test_ack() (gas: 740185)
+[PASS] test_ack_resetByJoinSpendExitAndRules() (gas: 3478250)
+[PASS] test_ack_reverts() (gas: 603770)
+[PASS] test_claimedLinkStaysSpent() (gas: 1274572)
+[PASS] test_escrowRefund_afterDisputeUsesCurrentSplit() (gas: 1879900)
+[PASS] test_escrowRefund_afterSettleDistributes() (gas: 1676201)
+[PASS] test_escrowRefund_beforeSettleReversesShares() (gas: 1770553)
+[PASS] test_exit_payoutCappedAtBalance() (gas: 1222645)
+[PASS] test_exit_paysPositiveNet() (gas: 1723636)
+[PASS] test_exit_pullsDebtAndRecordsRest() (gas: 1399292)
+[PASS] test_exit_reverts() (gas: 873502)
+[PASS] test_onEscrowRefund_partialRefundReverts() (gas: 1608139)
+[PASS] test_onEscrowRefund_reverts() (gas: 1482216)
+[PASS] test_payDebt_afterSettleDistributes() (gas: 1706861)
+[PASS] test_payDebt_exitedBeforeSettleStaysInPot() (gas: 1439607)
+[PASS] test_payDebt_proRataBetweenCreditors() (gas: 1731598)
+[PASS] test_payDebt_reverts() (gas: 1786423)
+[PASS] test_settle_afterReviewWindow() (gas: 1111592)
+[PASS] test_settle_allExitedSettlesEarly() (gas: 694615)
+[PASS] test_settle_blockedByOpenItems() (gas: 1586416)
+[PASS] test_settle_frozenRecipientKeepsClaim() (gas: 1282272)
+[PASS] test_settle_partialPayoutFloors() (gas: 1728155)
+[PASS] test_settle_partialPullIsProRataAndRecordsDebt() (gas: 1877428)
+[PASS] test_settle_pullsDebtThroughSafetyNet() (gas: 1800273)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 83.27ms (52.96ms CPU time)
+
+Ran 4 tests for test/unit/PotGasGriefing.t.sol:PotGasGriefingTest
+[PASS] test_escrowRefund_gasLimitCannotSkipCreditorPayout() (gas: 78594358)
+[PASS] test_exit_frozenDebtorPullStillSkipped() (gas: 1011255)
+[PASS] test_payDebt_frozenCreditorStillSkipped() (gas: 1362026)
+[PASS] test_payDebt_gasLimitCannotSkipCreditorPayout() (gas: 27916282)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 164.62ms (192.77ms CPU time)
+
+Ran 26 tests for test/unit/FxReference.t.sol:FxReferenceTest
+[PASS] testFuzz_moveLimit(uint64,uint64,uint16) (runs: 1000, μ: 258357, ~: 256332)
+[PASS] testFuzz_roundTrip(uint64[8],uint8[8],uint32) (runs: 1000, μ: 247488, ~: 249422)
+[PASS] test_absentCurrencyAndEmptyReport() (gas: 327462)
+[PASS] test_constructor_rejectsZeroConfig() (gas: 1269714)
+[PASS] test_constructor_startsInSimulationMode() (gas: 53437)
+[PASS] test_currencyListMustMatch() (gas: 126588)
+[PASS] test_futureScheduledTimeRejected() (gas: 270186)
+[PASS] test_invalidRateDateRejected() (gas: 61542)
+[PASS] test_malformedReportReverts() (gas: 41051)
+[PASS] test_maxMoveBounds() (gas: 94945)
+[PASS] test_moveLimit_boundaryAndLastKnownRate() (gas: 761858)
+[PASS] test_moveLimit_ownerCanWidenIt() (gas: 500030)
+[PASS] test_needsTwoKnownSourcesPerRate() (gas: 266866)
+[PASS] test_ownerCannotEditRounds() (gas: 326517)
+[PASS] test_ownerOnly() (gas: 138603)
+[PASS] test_prod_cannotUseSimForwarderOrZeroConfig() (gas: 118463)
+[PASS] test_prod_checksForwarderWorkflowIdAndOwner() (gas: 464564)
+[PASS] test_replay_sameOrOlderScheduledTimeRejected() (gas: 469591)
+[PASS] test_sim_ignoresPlaceholderMetadata() (gas: 222857)
+[PASS] test_sim_rejectsWrongSender() (gas: 60261)
+[PASS] test_sim_rejectsWrongTransmitter() (gas: 61748)
+[PASS] test_sim_writesRoundAndEmits() (gas: 390546)
+[PASS] test_supportsInterface() (gas: 15803)
+[PASS] test_switchBackToSimulation() (gas: 442044)
+[PASS] test_twoStepOwnership() (gas: 141225)
+[PASS] test_wrongChainSelectorRejected() (gas: 59646)
+Suite result: ok. 26 passed; 0 failed; 0 skipped; finished in 363.84ms (576.35ms CPU time)
+
+Ran 2 tests for test/fuzz/PotCollectFuzz.t.sol:PotCollectFuzzTest
+[PASS] testFuzz_collect_proRata(int96[8],uint8,uint256,uint8) (runs: 1000, μ: 449831, ~: 388721)
+[PASS] testFuzz_collect_sequence(int96[8],uint8,uint256,uint256) (runs: 1000, μ: 971819, ~: 842860)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 423.56ms (727.00ms CPU time)
+
+Ran 16 tests for test/unit/FxSendSettle.t.sol:FxSendSettleTest
+[PASS] testFuzz_send_referenceMath(uint64,uint64,uint64,uint96) (runs: 1000, μ: 399754, ~: 403891)
+[PASS] test_send_noFxReferenceConfigured() (gas: 1087231)
+[PASS] test_send_roundIsBoundBySignature() (gas: 586305)
+[PASS] test_send_staleRoundRejected() (gas: 583086)
+[PASS] test_send_unknownRoundOrMissingPairRejected() (gas: 607075)
+[PASS] test_send_usdLegsAndSameCurrency() (gas: 496216)
+[PASS] test_send_withRound_recordsReferenceAndDiff() (gas: 504676)
+[PASS] test_send_withoutRound_zeros() (gas: 443935)
+[PASS] test_settle_gasLimitCannotSuppressRound() (gas: 82061160)
+[PASS] test_settle_latestRoundWins() (gas: 1576913)
+[PASS] test_settle_neverFailsBecauseOfFx() (gas: 17023204)
+[PASS] test_settle_noRoundRecordsZero() (gas: 1177260)
+[PASS] test_settle_oddRoundTimes() (gas: 11110843)
+[PASS] test_settle_recordsFreshRound() (gas: 1406229)
+[PASS] test_settle_staleRoundRecordsZero() (gas: 1406027)
+[PASS] test_settle_withoutFxReference() (gas: 9779334)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 989.11ms (1.12s CPU time)
 
 Ran 7 tests for test/Deploy.t.sol:DeployTest
-[PASS] test_ausdFor() (gas: 27817)
-[PASS] test_deploy_addressesDoNotDependOnSender() (gas: 20671761)
-[PASS] test_deploy_isIdempotent() (gas: 9512490)
-[PASS] test_deploy_local() (gas: 9466850)
-[PASS] test_deploy_revertsWithoutCreate2Deployer() (gas: 906286)
-[PASS] test_run_local() (gas: 9438792)
-[PASS] test_run_monadFork() (gas: 19880017)
-Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 2.87s (1.63s CPU time)
+[PASS] test_ausdFor() (gas: 28257)
+[PASS] test_deploy_addressesDoNotDependOnSender() (gas: 25509265)
+[PASS] test_deploy_isIdempotent() (gas: 11693635)
+[PASS] test_deploy_local() (gas: 11616957)
+[PASS] test_deploy_revertsWithoutCreate2Deployer() (gas: 1019641)
+[PASS] test_run_local() (gas: 11583877)
+[PASS] test_run_monadFork() (gas: 24650576)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 1.29s (1.29s CPU time)
+
+Ran 38 tests for test/unit/PotMembership.t.sol:PotMembershipTest
+[PASS] test_contribute() (gas: 283533)
+[PASS] test_contribute_authMustNameTheMember() (gas: 281928)
+[PASS] test_contribute_revertsForNonMemberZeroOrSettled() (gas: 341430)
+[PASS] test_initialize_emitsEvents() (gas: 363231)
+[PASS] test_initialize_implementationIsLocked() (gas: 62938)
+[PASS] test_initialize_onlyFactory() (gas: 58345)
+[PASS] test_initialize_onlyOnce() (gas: 60861)
+[PASS] test_initialize_pastStartIsNow() (gas: 344897)
+[PASS] test_initialize_rejectsBadSchedule() (gas: 666936)
+[PASS] test_initialize_rejectsLongData() (gas: 514734)
+[PASS] test_initialize_rejectsZeroInviteSigner() (gas: 179967)
+[PASS] test_initialize_rejectsZeroTtl() (gas: 180999)
+[PASS] test_initialize_setsStateAndCreator() (gas: 164774)
+[PASS] test_join_alreadyRegisteredKeyIsSkipped() (gas: 230233)
+[PASS] test_join_bare() (gas: 180253)
+[PASS] test_join_erc1271Member() (gas: 345321)
+[PASS] test_join_exitedMembersKeepTheirSlot() (gas: 8570944)
+[PASS] test_join_failedPermitWithoutAllowanceReverts() (gas: 175180)
+[PASS] test_join_revertsForExitedMember() (gas: 300335)
+[PASS] test_join_revertsWhenAlreadyMember() (gas: 219208)
+[PASS] test_join_revertsWhenFull() (gas: 8488765)
+[PASS] test_join_revertsWhenSettled() (gas: 169675)
+[PASS] test_join_revertsWithBadInvite() (gas: 178789)
+[PASS] test_join_revertsWithBadMemberSig() (gas: 94761)
+[PASS] test_join_rotatedInviteStopsOldLinks() (gas: 304149)
+[PASS] test_join_usedPermitDoesNotRevert() (gas: 263180)
+[PASS] test_join_withDepositPermitAndKey() (gas: 571227)
+[PASS] test_postKeyWraps() (gas: 110128)
+[PASS] test_postKeyWraps_reverts() (gas: 328361)
+[PASS] test_rotateInvite() (gas: 108245)
+[PASS] test_rotateInvite_reverts() (gas: 158087)
+[PASS] test_signature_compactSignatureAccepted() (gas: 219291)
+[PASS] test_signature_expiredDeadline() (gas: 172860)
+[PASS] test_signature_nonceCannotBeReused() (gas: 343793)
+[PASS] test_signature_otherPotDomainRejected() (gas: 201312)
+[PASS] test_signature_unorderedNonces() (gas: 236558)
+[PASS] test_signature_wrongSignerRejected() (gas: 204187)
+[PASS] test_views_unknownMember() (gas: 33592)
+Suite result: ok. 38 passed; 0 failed; 0 skipped; finished in 1.52s (64.79ms CPU time)
 
 Ran 10 tests for test/fuzz/PotFuzz.t.sol:PotFuzzTest
-[PASS] testFuzz_categoryBudget(uint64,uint64[6],uint8) (runs: 1000, μ: 1698249, ~: 1677747)
-[PASS] testFuzz_dailyAndTotalCaps(uint64,uint64,uint256) (runs: 1000, μ: 4050444, ~: 3961064)
-[PASS] testFuzz_escrowRefund_reversesShares(uint64,uint32,uint32,uint32,bool) (runs: 1000, μ: 2017011, ~: 2214194)
-[PASS] testFuzz_exit(uint64,uint64,uint64,uint64,bool) (runs: 1000, μ: 1182653, ~: 1241285)
-[PASS] testFuzz_parts_exactWithRemainderToFirst(uint96,uint256,uint8) (runs: 1000, μ: 46735, ~: 30505)
-[PASS] testFuzz_payDebt_distribution(uint64,uint64,uint64) (runs: 1000, μ: 1959624, ~: 1973052)
-[PASS] testFuzz_propose_sharesMatchLedger(uint64,uint32,uint32,uint32) (runs: 1000, μ: 929576, ~: 930094)
-[PASS] testFuzz_settle_fullOrPartial(uint64,uint64,uint64,uint64,uint64) (runs: 1000, μ: 2042851, ~: 2047124)
-[PASS] testFuzz_splitPacking_roundTrips(uint256,uint8) (runs: 1000, μ: 184254, ~: 137355)
-[PASS] testFuzz_tiers(uint64,uint64,bool,uint8,uint64) (runs: 1000, μ: 1193645, ~: 967775)
-Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 5.61s (21.36s CPU time)
+[PASS] testFuzz_categoryBudget(uint64,uint64[6],uint8) (runs: 1000, μ: 1693532, ~: 1677887)
+[PASS] testFuzz_dailyAndTotalCaps(uint64,uint64,uint256) (runs: 1000, μ: 4029312, ~: 3922997)
+[PASS] testFuzz_escrowRefund_reversesShares(uint64,uint32,uint32,uint32,bool) (runs: 1000, μ: 2036221, ~: 1791600)
+[PASS] testFuzz_exit(uint64,uint64,uint64,uint64,bool) (runs: 1000, μ: 1195227, ~: 1197325)
+[PASS] testFuzz_parts_exactWithRemainderToFirst(uint96,uint256,uint8) (runs: 1000, μ: 48909, ~: 33257)
+[PASS] testFuzz_payDebt_distribution(uint64,uint64,uint64) (runs: 1000, μ: 1990578, ~: 2004798)
+[PASS] testFuzz_propose_sharesMatchLedger(uint64,uint32,uint32,uint32) (runs: 1000, μ: 929954, ~: 930427)
+[PASS] testFuzz_settle_fullOrPartial(uint64,uint64,uint64,uint64,uint64) (runs: 1000, μ: 2074800, ~: 2115370)
+[PASS] testFuzz_splitPacking_roundTrips(uint256,uint8) (runs: 1000, μ: 181920, ~: 137257)
+[PASS] testFuzz_tiers(uint64,uint64,bool,uint8,uint64) (runs: 1000, μ: 1231999, ~: 1090810)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 6.26s (24.74s CPU time)
 
-╭-------------------------------------+-----------------+---------+---------+---------+---------╮
-| script/Deploy.s.sol:Deploy Contract |                 |         |         |         |         |
-+===============================================================================================+
-| Deployment Cost                     | Deployment Size |         |         |         |         |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| 11253196                            | 51832           |         |         |         |         |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-|                                     |                 |         |         |         |         |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| Function Name                       | Min             | Avg     | Median  | Max     | # Calls |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| AUSD_MAINNET                        | 153             | 153     | 153     | 153     | 1       |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| CREATE2_DEPLOYER                    | 209             | 209     | 209     | 209     | 10      |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| KEY_REGISTRY_SALT                   | 363             | 363     | 363     | 363     | 4       |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| ausdFor                             | 310             | 1080    | 326     | 3358    | 4       |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| deploy                              | 24651           | 5084120 | 8437217 | 8437217 | 5       |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| predict                             | 45177           | 45177   | 45177   | 45177   | 5       |
-|-------------------------------------+-----------------+---------+---------+---------+---------|
-| run                                 | 8448371         | 8448650 | 8448650 | 8448929 | 2       |
-╰-------------------------------------+-----------------+---------+---------+---------+---------╯
+╭-------------------------------------+-----------------+----------+----------+----------+---------╮
+| script/Deploy.s.sol:Deploy Contract |                 |          |          |          |         |
++==================================================================================================+
+| Deployment Cost                     | Deployment Size |          |          |          |         |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| 13975421                            | 64437           |          |          |          |         |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+|                                     |                 |          |          |          |         |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| Function Name                       | Min             | Avg      | Median   | Max      | # Calls |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| AUSD_MAINNET                        | 153             | 153      | 153      | 153      | 1       |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| CREATE2_DEPLOYER                    | 231             | 231      | 231      | 231      | 10      |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| KEY_REGISTRY_SALT                   | 451             | 451      | 451      | 451      | 4       |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| ausdFor                             | 420             | 1190     | 436      | 3468     | 4       |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| deploy                              | 25821           | 6270848  | 10408000 | 10408000 | 5       |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| fxConfigFor                         | 4259            | 4802     | 4863     | 4863     | 10      |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| predict                             | 60035           | 60035    | 60035    | 60035    | 5       |
+|-------------------------------------+-----------------+----------+----------+----------+---------|
+| run                                 | 10424227        | 10424820 | 10424820 | 10425413 | 2       |
+╰-------------------------------------+-----------------+----------+----------+----------+---------╯
+
+╭------------------------------------------+-----------------+-------+--------+--------+---------╮
+| src/ClaimEscrow.sol:ClaimEscrow Contract |                 |       |        |        |         |
++================================================================================================+
+| Deployment Cost                          | Deployment Size |       |        |        |         |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| 0                                        | 4642            |       |        |        |         |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+|                                          |                 |       |        |        |         |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| Function Name                            | Min             | Avg   | Median | Max    | # Calls |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| ausd                                     | 336             | 336   | 336    | 336    | 5       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| claim                                    | 25820           | 43747 | 34574  | 73165  | 9       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| claimInfo                                | 4703            | 4703  | 4703   | 4703   | 3       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| createFromPot                            | 27718           | 27718 | 27718  | 27718  | 1       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| createWithAuthorization                  | 29680           | 99082 | 96160  | 162092 | 9       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| factory                                  | 353             | 353   | 353    | 353    | 5       |
+|------------------------------------------+-----------------+-------+--------+--------+---------|
+| refund                                   | 0               | 81602 | 113900 | 161362 | 1383    |
+╰------------------------------------------+-----------------+-------+--------+--------+---------╯
 
 ╭------------------------------------------+-----------------+--------+--------+--------+---------╮
-| src/ClaimEscrow.sol:ClaimEscrow Contract |                 |        |        |        |         |
+| src/FxReference.sol:FxReference Contract |                 |        |        |        |         |
 +=================================================================================================+
 | Deployment Cost                          | Deployment Size |        |        |        |         |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| 0                                        | 4642            |        |        |        |         |
+| 1468901                                  | 6740            |        |        |        |         |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                          |                 |        |        |        |         |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                            | Min             | Avg    | Median | Max    | # Calls |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| ausd                                     | 336             | 336    | 336    | 336    | 5       |
+| CHAIN_SELECTOR                           | 281             | 281    | 281    | 281    | 5       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| claim                                    | 25790           | 42243  | 34574  | 68678  | 9       |
+| SIM_FORWARDER                            | 372             | 372    | 372    | 372    | 5       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| claimInfo                                | 4703            | 4703   | 4703   | 4703   | 3       |
+| acceptOwnership                          | 23663           | 25989  | 25989  | 28316  | 2       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| createFromPot                            | 27718           | 27718  | 27718  | 27718  | 1       |
+| currencies                               | 4157            | 4157   | 4157   | 4157   | 3       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| createWithAuthorization                  | 29680           | 97561  | 93886  | 159830 | 9       |
+| expectedWorkflowId                       | 2718            | 2718   | 2718   | 2718   | 1       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| factory                                  | 353             | 353    | 353    | 353    | 5       |
+| expectedWorkflowOwner                    | 2786            | 2786   | 2786   | 2786   | 1       |
 |------------------------------------------+-----------------+--------+--------+--------+---------|
-| refund                                   | 23638           | 105565 | 93220  | 157696 | 262     |
+| forwarder                                | 2915            | 2915   | 2915   | 2915   | 7       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| lastRates                                | 6229            | 6229   | 6229   | 6229   | 2       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| lastScheduledTime                        | 2868            | 2868   | 2868   | 2868   | 2       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| latestRound                              | 19512           | 19512  | 19512  | 19512  | 3       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| latestRoundId                            | 2346            | 2346   | 2346   | 2346   | 537     |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| latestRoundTime                          | 478             | 5008   | 5027   | 5027   | 1262    |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| maxMoveBps                               | 2400            | 2400   | 2400   | 2400   | 2       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| onReport                                 | 27438           | 132314 | 145622 | 201173 | 1078    |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| owner                                    | 2653            | 2653   | 2653   | 2653   | 7       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| pendingOwner                             | 2852            | 2852   | 2852   | 2852   | 1       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| rateOf                                   | 653             | 2339   | 3011   | 6588   | 559     |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| round                                    | 4140            | 17692  | 17745  | 17745  | 258     |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| roundTime                                | 2446            | 2446   | 2446   | 2446   | 270     |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| setMaxMoveBps                            | 23950           | 29996  | 30106  | 30106  | 263     |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| setProductionMode                        | 24583           | 34640  | 24851  | 59238  | 7       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| setSimulationMode                        | 23854           | 35753  | 30575  | 58010  | 4       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| simTransmitter                           | 2610            | 2610   | 2610   | 2610   | 6       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| supportsInterface                        | 238             | 254    | 254    | 270    | 4       |
+|------------------------------------------+-----------------+--------+--------+--------+---------|
+| transferOwnership                        | 24418           | 36246  | 36246  | 48075  | 2       |
 ╰------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭------------------------------------------+-----------------+-------+--------+-------+---------╮
@@ -252,171 +397,199 @@ Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 5.61s (21.36s CPU 
 +=======================================================================================================+
 | Deployment Cost                            | Deployment Size |        |        |            |         |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| 8322680                                    | 39445           |        |        |            |         |
+| 8510518                                    | 40423           |        |        |            |         |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
 |                                            |                 |        |        |            |         |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
 | Function Name                              | Min             | Avg    | Median | Max        | # Calls |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| ausd                                       | 311             | 311    | 311    | 311        | 5       |
+| ausd                                       | 333             | 333    | 333    | 333        | 5       |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| claimEscrow                                | 201             | 201    | 201    | 201        | 159     |
+| claimEscrow                                | 201             | 201    | 201    | 201        | 215     |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| createPot                                  | 46520           | 804164 | 316250 | 1040101519 | 2209    |
+| createPot                                  | 46580           | 799668 | 316305 | 1040101390 | 2238    |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| isPot                                      | 2466            | 2466   | 2466   | 2466       | 270     |
+| fxReference                                | 245             | 245    | 245    | 245        | 10      |
+|--------------------------------------------+-----------------+--------+--------+------------+---------|
+| isPot                                      | 2466            | 2466   | 2466   | 2466       | 271     |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
 | keyRegistry                                | 171             | 171    | 171    | 171        | 5       |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| potImplementation                          | 245             | 245    | 245    | 245        | 15      |
+| potImplementation                          | 267             | 267    | 267    | 267        | 15      |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| predictPot                                 | 817             | 817    | 817    | 817        | 853     |
+| predictPot                                 | 839             | 839    | 839    | 839        | 880     |
 |--------------------------------------------+-----------------+--------+--------+------------+---------|
-| usedNonce                                  | 2688            | 2688   | 2688   | 2688       | 1       |
+| usedNonce                                  | 2710            | 2710   | 2710   | 2710       | 1       |
 ╰--------------------------------------------+-----------------+--------+--------+------------+---------╯
 
-╭--------------------------------------+-----------------+-------+--------+--------+---------╮
-| src/PlansSend.sol:PlansSend Contract |                 |       |        |        |         |
-+============================================================================================+
-| Deployment Cost                      | Deployment Size |       |        |        |         |
-|--------------------------------------+-----------------+-------+--------+--------+---------|
-| 339487                               | 1502            |       |        |        |         |
-|--------------------------------------+-----------------+-------+--------+--------+---------|
-|                                      |                 |       |        |        |         |
-|--------------------------------------+-----------------+-------+--------+--------+---------|
-| Function Name                        | Min             | Avg   | Median | Max    | # Calls |
-|--------------------------------------+-----------------+-------+--------+--------+---------|
-| ausd                                 | 171             | 171   | 171    | 171    | 4       |
-|--------------------------------------+-----------------+-------+--------+--------+---------|
-| send                                 | 32870           | 50510 | 33395  | 102380 | 4       |
-╰--------------------------------------+-----------------+-------+--------+--------+---------╯
+╭--------------------------------------+-----------------+--------+--------+--------+---------╮
+| src/PlansSend.sol:PlansSend Contract |                 |        |        |        |         |
++=============================================================================================+
+| Deployment Cost                      | Deployment Size |        |        |        |         |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| 788464                               | 3683            |        |        |        |         |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+|                                      |                 |        |        |        |         |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                        | Min             | Avg    | Median | Max    | # Calls |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| ausd                                 | 237             | 237    | 237    | 237    | 4       |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| fxReference                          | 193             | 193    | 193    | 193    | 4       |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| previewReference                     | 11516           | 11638  | 11524  | 11874  | 3       |
+|--------------------------------------+-----------------+--------+--------+--------+---------|
+| send                                 | 33190           | 116192 | 122251 | 122359 | 272     |
+╰--------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭--------------------------+-----------------+--------+--------+--------+---------╮
 | src/Pot.sol:Pot Contract |                 |        |        |        |         |
 +=================================================================================+
 | Deployment Cost          | Deployment Size |        |        |        |         |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| 0                        | 29871           |        |        |        |         |
+| 0                        | 30731           |        |        |        |         |
 |--------------------------+-----------------+--------+--------+--------+---------|
 |                          |                 |        |        |        |         |
 |--------------------------+-----------------+--------+--------+--------+---------|
 | Function Name            | Min             | Avg    | Median | Max    | # Calls |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| ack                      | 1974            | 41658  | 41713  | 48412  | 2019    |
+| ack                      | 2029            | 41691  | 41768  | 48467  | 2042    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| ackEpoch                 | 2581            | 2581   | 2581   | 2581   | 5       |
+| ackEpoch                 | 2592            | 2592   | 2592   | 2592   | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| activeMemberCount        | 2856            | 2856   | 2856   | 2856   | 4       |
+| activeMemberCount        | 2867            | 2867   | 2867   | 2867   | 4       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| applyRules               | 2509            | 52299  | 62303  | 114610 | 11      |
+| applyRules               | 2520            | 52310  | 62314  | 114621 | 11      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| ausd                     | 1128            | 1128   | 1128   | 1128   | 5       |
+| ausd                     | 1183            | 1183   | 1183   | 1183   | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| canSettle                | 5781            | 6107   | 6180   | 6180   | 15      |
+| canSettle                | 5836            | 6162   | 6235   | 6235   | 15      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| cancelSpend              | 30185           | 39239  | 39779  | 47216  | 4       |
+| cancelSpend              | 30218           | 39272  | 39812  | 47249  | 4       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| categorySpent            | 2700            | 2700   | 2700   | 2700   | 1538    |
+| categorySpent            | 2711            | 2711   | 2711   | 2711   | 1538    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| claimEscrow              | 531             | 531    | 531    | 531    | 5       |
+| claimEscrow              | 542             | 542    | 542    | 542    | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| contribute               | 2652            | 96992  | 94804  | 116704 | 1111    |
+| collect                  | 2351            | 51226  | 59045  | 59366  | 538     |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| disputeInfo              | 2526            | 2526   | 2526   | 2526   | 5       |
+| contribute               | 2663            | 99217  | 97089  | 118989 | 1138    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| endTime                  | 2537            | 2537   | 2537   | 2537   | 9       |
+| disputeInfo              | 2537            | 2537   | 2537   | 2537   | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| execute                  | 3695            | 33495  | 16858  | 130813 | 6       |
+| endTime                  | 2548            | 2548   | 2548   | 2548   | 9       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| exit                     | 30230           | 93042  | 88640  | 122161 | 277     |
+| execute                  | 3750            | 34313  | 16913  | 135399 | 6       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| expire                   | 3384            | 10832  | 10838  | 18269  | 4       |
+| exit                     | 30285           | 95962  | 93226  | 124568 | 279     |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| factory                  | 1172            | 1172   | 1172   | 1172   | 6       |
+| expire                   | 3439            | 10887  | 10893  | 18324  | 4       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| finalizeDispute          | 2882            | 29296  | 25629  | 66136  | 6       |
+| factory                  | 1227            | 1227   | 1227   | 1227   | 6       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| freeze                   | 3785            | 52995  | 63929  | 68395  | 18      |
+| finalizeDispute          | 2893            | 29307  | 25640  | 66147  | 6       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| frozenUntil              | 2757            | 2757   | 2757   | 2757   | 6       |
+| freeze                   | 3796            | 53006  | 63940  | 68406  | 18      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| getRules                 | 11683           | 11683  | 11683  | 11683  | 2       |
+| frozenUntil              | 2768            | 2768   | 2768   | 2768   | 6       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| initialize               | 1103            | 159798 | 158226 | 178126 | 2208    |
+| fxReference              | 828             | 828    | 828    | 828    | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| inviteSigner             | 2725            | 2725   | 2725   | 2725   | 2       |
+| getRules                 | 11694           | 11694  | 11694  | 11694  | 2       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| isAllowedPayee           | 2599            | 2599   | 2599   | 2599   | 3       |
+| initialize               | 1136            | 159811 | 158259 | 178159 | 2237    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| isMember                 | 5442            | 7686   | 7803   | 14502  | 2272    |
+| inviteSigner             | 2736            | 2736   | 2736   | 2736   | 2       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| join                     | 31130           | 100274 | 77620  | 274164 | 3664    |
+| isAllowedPayee           | 2610            | 2610   | 2610   | 2610   | 3       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| keyRegistry              | 171             | 171    | 171    | 171    | 5       |
+| isMember                 | 5475            | 7705   | 7836   | 14535  | 2296    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| memberCount              | 2317            | 2317   | 2317   | 2317   | 2       |
+| join                     | 31163           | 100894 | 77653  | 276559 | 3763    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| members                  | 6060            | 10566  | 10836  | 15612  | 2229    |
+| keyRegistry              | 190             | 190    | 190    | 190    | 5       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| netOf                    | 4765            | 7048   | 7095   | 13794  | 7471    |
+| memberCount              | 2328            | 2328   | 2328   | 2328   | 2       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| onEscrowRefund           | 866             | 56474  | 43396  | 109268 | 267     |
+| members                  | 6115            | 10590  | 10891  | 15667  | 2264    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| openDispute              | 30866           | 73815  | 94623  | 100876 | 21      |
+| netOf                    | 4776            | 7058   | 7106   | 13805  | 7566    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| payDebt                  | 5647            | 158957 | 177930 | 177930 | 264     |
+| onEscrowRefund           | 67              | 54681  | 60985  | 105647 | 1249    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| postKeyWraps             | 32290           | 41528  | 36841  | 60140  | 4       |
+| openDispute              | 30921           | 73870  | 94678  | 100931 | 21      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| previewSpend             | 13033           | 15677  | 15816  | 21139  | 6666    |
+| payDebt                  | 5658            | 117314 | 130453 | 189179 | 988     |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| propose                  | 1440            | 102407 | 131379 | 322101 | 10627   |
+| postKeyWraps             | 32301           | 41539  | 36852  | 60151  | 4       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| proposeRules             | 32999           | 125114 | 132814 | 241159 | 14      |
+| previewSpend             | 13044           | 15705  | 15827  | 21194  | 6666    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| resolveDispute           | 31409           | 66807  | 85421  | 107075 | 11      |
+| propose                  | 1451            | 103669 | 131390 | 324364 | 10682   |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| reviewWindow             | 2977            | 2977   | 2977   | 2977   | 6       |
+| proposeRules             | 33010           | 125125 | 132825 | 241170 | 14      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| rotateInvite             | 19365           | 31321  | 32843  | 39265  | 7       |
+| resolveDispute           | 31464           | 66862  | 85476  | 107130 | 11      |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| ruleChangeInfo           | 2878            | 2878   | 2878   | 2878   | 2       |
+| reviewWindow             | 3010            | 3010   | 3010   | 3010   | 6       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| rulesVersion             | 2405            | 2405   | 2405   | 2405   | 2       |
+| rotateInvite             | 19420           | 31376  | 32898  | 39320  | 7       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| settle                   | 2439            | 93781  | 127796 | 199574 | 671     |
+| ruleChangeInfo           | 2889            | 2889   | 2889   | 2889   | 2       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| settled                  | 2961            | 2961   | 2961   | 2961   | 2       |
+| rulesVersion             | 2416            | 2416   | 2416   | 2416   | 2       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| spendInfo                | 5434            | 5434   | 5434   | 5434   | 822     |
+| settle                   | 2450            | 105299 | 109260 | 230223 | 1366    |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| startTime                | 2839            | 2839   | 2839   | 2839   | 3       |
+| settled                  | 2994            | 2994   | 2994   | 2994   | 9       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| usedNonce                | 3749            | 3749   | 3749   | 3749   | 7       |
+| spendInfo                | 5445            | 5445   | 5445   | 5445   | 878     |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| vote                     | 34219           | 65759  | 50700  | 160614 | 325     |
+| startTime                | 2850            | 2850   | 2850   | 2850   | 3       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| voteDispute              | 34733           | 42709  | 44604  | 49083  | 11      |
+| usedNonce                | 3804            | 3804   | 3804   | 3804   | 7       |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| voteRules                | 35098           | 44474  | 44907  | 51019  | 17      |
+| vote                     | 34230           | 66121  | 48478  | 165156 | 381     |
 |--------------------------+-----------------+--------+--------+--------+---------|
-| voteUnfreeze             | 32750           | 39912  | 39449  | 46896  | 13      |
+| voteDispute              | 34744           | 42720  | 44615  | 49094  | 11      |
+|--------------------------+-----------------+--------+--------+--------+---------|
+| voteRules                | 35153           | 44529  | 44962  | 51074  | 17      |
+|--------------------------+-----------------+--------+--------+--------+---------|
+| voteUnfreeze             | 32805           | 39967  | 39504  | 46951  | 13      |
 ╰--------------------------+-----------------+--------+--------+--------+---------╯
+
+╭------------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| test/fuzz/PotCollectHarness.sol:PotCollectHarness Contract |                 |        |        |        |         |
++===================================================================================================================+
+| Deployment Cost                                            | Deployment Size |        |        |        |         |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 6619759                                                    | 30851           |        |        |        |         |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                            |                 |        |        |        |         |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                              | Min             | Avg    | Median | Max    | # Calls |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| collect                                                    | 26136           | 48994  | 41862  | 93509  | 3190    |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| netOf                                                      | 4873            | 9541   | 9339   | 20504  | 1501    |
+|------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| seed                                                       | 51253           | 116793 | 99129  | 218267 | 512     |
+╰------------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭----------------------------------------------+-----------------+--------+--------+--------+---------╮
 | test/fuzz/PotHarness.sol:PotHarness Contract |                 |        |        |        |         |
 +=====================================================================================================+
 | Deployment Cost                              | Deployment Size |        |        |        |         |
 |----------------------------------------------+-----------------+--------+--------+--------+---------|
-| 6465617                                      | 30034           |        |        |        |         |
+| 6634943                                      | 30849           |        |        |        |         |
 |----------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                              |                 |        |        |        |         |
 |----------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                                | Min             | Avg    | Median | Max    | # Calls |
 |----------------------------------------------+-----------------+--------+--------+--------+---------|
-| parts                                        | 2700            | 15646  | 8820   | 45574  | 256     |
+| parts                                        | 2755            | 14989  | 9749   | 45629  | 256     |
 |----------------------------------------------+-----------------+--------+--------+--------+---------|
-| storeAndLoadSplit                            | 70792           | 136441 | 103670 | 323701 | 256     |
+| storeAndLoadSplit                            | 70803           | 144808 | 121526 | 323712 | 256     |
 ╰----------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭-------------------------------------------+-----------------+-------+--------+-------+---------╮
@@ -424,30 +597,52 @@ Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 5.61s (21.36s CPU 
 +================================================================================================+
 | Deployment Cost                           | Deployment Size |       |        |       |         |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| 833589                                    | 3634            |       |        |       |         |
+| 934829                                    | 4102            |       |        |       |         |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
 |                                           |                 |       |        |       |         |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
 | Function Name                             | Min             | Avg   | Median | Max   | # Calls |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| DOMAIN_SEPARATOR                          | 430             | 430   | 430    | 430   | 2388    |
+| DOMAIN_SEPARATOR                          | 430             | 430   | 430    | 430   | 2712    |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| allowance                                 | 2856            | 2856  | 2856   | 2856  | 684     |
+| allowance                                 | 2944            | 2944  | 2944   | 2944  | 698     |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| approve                                   | 25866           | 45345 | 45790  | 45862 | 388     |
+| approve                                   | 25866           | 45302 | 45802  | 45862 | 394     |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| balanceOf                                 | 529             | 2464  | 2529   | 2529  | 7580    |
+| balanceOf                                 | 573             | 2539  | 2573   | 2573  | 14736   |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| mint                                      | 32586           | 62143 | 55334  | 72446 | 2757    |
+| mint                                      | 34794           | 65969 | 74606  | 74678 | 3592    |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| nonces                                    | 2551            | 2551  | 2551   | 2551  | 7       |
+| nonces                                    | 2595            | 2595  | 2595   | 2595  | 7       |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| permit                                    | 73702           | 73702 | 73702  | 73702 | 2       |
+| permit                                    | 73790           | 73790 | 73790  | 73790 | 2       |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| receiveWithAuthorization                  | 28970           | 28970 | 28970  | 28970 | 1       |
+| receiveWithAuthorization                  | 29000           | 29000 | 29000  | 29000 | 1       |
 |-------------------------------------------+-----------------+-------+--------+-------+---------|
-| setFrozen                                 | 44329           | 44329 | 44329  | 44329 | 1       |
+| setAlwaysReverts                          | 44213           | 44213 | 44213  | 44213 | 1       |
+|-------------------------------------------+-----------------+-------+--------+-------+---------|
+| setFrozen                                 | 22521           | 36216 | 44433  | 44433 | 16      |
+|-------------------------------------------+-----------------+-------+--------+-------+---------|
+| setReturnsFalse                           | 22400           | 33339 | 33339  | 44279 | 2       |
+|-------------------------------------------+-----------------+-------+--------+-------+---------|
+| transfer                                  | 55060           | 55060 | 55060  | 55060 | 1       |
 ╰-------------------------------------------+-----------------+-------+--------+-------+---------╯
 
+╭---------------------------------------------------------+-----------------+-------+--------+--------+---------╮
+| test/mocks/MockFxReference.sol:MockFxReference Contract |                 |       |        |        |         |
++===============================================================================================================+
+| Deployment Cost                                         | Deployment Size |       |        |        |         |
+|---------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| 232436                                                  | 856             |       |        |        |         |
+|---------------------------------------------------------+-----------------+-------+--------+--------+---------|
+|                                                         |                 |       |        |        |         |
+|---------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| Function Name                                           | Min             | Avg   | Median | Max    | # Calls |
+|---------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| latestRoundTime                                         | 2477            | 16664 | 2840   | 100000 | 9       |
+|---------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| set                                                     | 26879           | 30676 | 26879  | 43967  | 9       |
+╰---------------------------------------------------------+-----------------+-------+--------+--------+---------╯
 
-Ran 8 test suites in 6.34s (11.30s CPU time): 155 tests passed, 0 failed, 0 skipped (155 total tests)
+
+Ran 14 test suites in 7.09s (11.28s CPU time): 218 tests passed, 0 failed, 0 skipped (218 total tests)

@@ -1,7 +1,7 @@
 /**
  * Stage A end-to-end run. One command: `npm --prefix e2e/stage-a test` (or `npx tsx run.ts` here).
  *
- *  1. fresh anvil fork of Monad mainnet (chain 143, real AUSD), five contracts deployed with
+ *  1. fresh anvil fork of Monad mainnet (chain 143, real AUSD), six contracts deployed with
  *     Deploy.s.sol's CREATE2 salts, actors funded with real AUSD through storage;
  *  2. the relayer from relayer/dist against the fork (demo on, faucet/push/long-stop off), plus a
  *     second "strict" relayer with production rate/body limits for the limit tests;
@@ -23,6 +23,7 @@ import { peripheryScenarios, peripheryAfterExpiry } from "./scenarios/periphery"
 import { potAScenarios } from "./scenarios/potA";
 import { otherPotScenarios } from "./scenarios/otherPots";
 import { timeScenarios } from "./scenarios/time";
+import { fxAfterTime, fxReferenceScenarios } from "./scenarios/fx";
 
 const HERE = import.meta.dirname;
 
@@ -51,8 +52,11 @@ async function main() {
     const anvil = await startAnvil(runDir);
     procs.push(anvil);
     console.log(`anvil fork of Monad mainnet at block ${anvil.forkBlock} on ${anvil.url}`);
-    const dep = await deployPlans(anvil);
-    console.log(`deployed: factory ${dep.plansFactory}, escrow ${dep.claimEscrow}, keys ${dep.keyRegistry}, send ${dep.plansSend}`);
+    // FxReference owner and CRE simulation transmitter: throwaway keys for this run (never printed).
+    const fxOwner = privateKeyToAccount(generatePrivateKey());
+    const fxTransmitter = privateKeyToAccount(generatePrivateKey());
+    const dep = await deployPlans(anvil, { owner: fxOwner.address, transmitter: fxTransmitter.address });
+    console.log(`deployed: factory ${dep.plansFactory}, escrow ${dep.claimEscrow}, keys ${dep.keyRegistry}, send ${dep.plansSend}, fx ${dep.fxReference}`);
     const ctx = makeCtx(anvil.pub, dep);
 
     // actors (fresh throwaway keys each run; never printed)
@@ -132,15 +136,17 @@ async function main() {
 
     // 3-4. scenarios, in chain-time order (the fork's clock only moves forward)
     const R = new Runner(env);
-    const t = { R, env, A, main, strict, fx };
+    const t = { R, env, A, main, strict, fx, fxKeys: { owner: fxOwner, transmitter: fxTransmitter } };
     await httpScenarios(t);
     await strictLimitScenarios(t);
     await demoScenarios(t);
+    const fxState = await fxReferenceScenarios(t);
     const later = await peripheryScenarios(t);
     const potA = await potAScenarios(t);
     const others = await otherPotScenarios(t);
     await timeScenarios(t, potA, others, later);
     await peripheryAfterExpiry(t, later);
+    await fxAfterTime(t, fxState);
     await R.invariants("final state");
 
     const finished = new Date();

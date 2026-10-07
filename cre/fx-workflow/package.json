@@ -1,0 +1,23 @@
+{
+  "name": "plans-fx-workflow",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plans FX reference rates: Chainlink CRE workflow -> FxReference on Monad. Offline tests and the Monad gas-limit tool.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p fx-rates/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
+    "gas-limit": "node scripts/gas-limit.mjs"
+  },
+  "devDependencies": {
+    "@chainlink/cre-sdk": "^1.23.0",
+    "@types/node": "^24.0.0",
+    "typescript": "5.9.3",
+    "viem": "^2.57.3",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,69 @@
+# FX reference (Chainlink CRE → FxReference): the latest round and its config, per chain.
+# Rates are USD per 1 unit of the currency, 8 decimals; 0 = absent in that round.
+query LatestFxRound($chainId: Int!) {
+  FxReferenceConfig(where: { chainId: { _eq: $chainId } }) {
+    address
+    mode
+    forwarder
+    maxMoveBps
+    latestRoundId
+    latestScheduledTime
+    roundCount
+    latestRound {
+      roundId
+      scheduledTime
+      writtenAt
+      rateDate
+      sourceMask
+      rateGBP
+      rateEUR
+      rateINR
+      rateNGN
+      rateJPY
+      rateCHF
+      rateAED
+      rateSGD
+      maskGBP
+      maskEUR
+      maskINR
+      maskNGN
+      maskJPY
+      maskCHF
+      maskAED
+      maskSGD
+      txHash
+    }
+  }
+}
+
+# Send receipts for an account, with the FX reference each send cited (fxRound is null when fxRoundId = 0).
+query AccountSendReceipts($account: String!, $chainId: Int!, $limit: Int = 30) {
+  Send(
+    where: { _or: [{ from_id: { _eq: $account } }, { to_id: { _eq: $account } }], chainId: { _eq: $chainId } }
+    order_by: { timestamp: desc }
+    limit: $limit
+  ) {
+    id
+    from_id
+    to_id
+    amount
+    fromCountry
+    toCountry
+    fromCurrency
+    toCurrency
+    fxRateE8
+    fxTimestamp
+    fxRoundId
+    refRateE8
+    fxDiffBps
+    fxRound {
+      roundId
+      scheduledTime
+      rateDate
+      sourceMask
+    }
+    memoHash
+    timestamp
+    txHash
+  }
+}

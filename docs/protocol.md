@@ -6,13 +6,14 @@ The source of truth for contract behaviour. The Solidity interfaces in `contract
 
 | Contract | Role |
 |---|---|
-| `PlansFactory` | Deploys `Pot` clones (Solady `LibClone` minimal proxy, 0age's 44-byte ERC-1167 variant; CREATE2 with salt `keccak256(abi.encode(creator, params.salt))`), registers them, and is the only caller of `Pot.initialize`. Its constructor deploys `ClaimEscrow` and the `Pot` implementation. Use `predictPot(creator, salt)` to get a pot's address. |
+| `PlansFactory` | Deploys `Pot` clones (Solady `LibClone` minimal proxy, 0age's 44-byte ERC-1167 variant; CREATE2 with salt `keccak256(abi.encode(creator, params.salt))`), registers them, and is the only caller of `Pot.initialize`. Its constructor deploys `ClaimEscrow` and the `Pot` implementation, and fixes the `FxReference` every pot reads. Use `predictPot(creator, salt)` to get a pot's address. |
 | `Pot` | One plan: members, money, rules, proposals, disputes, settlement. No admin, not upgradeable. |
 | `KeyRegistry` | Account → X25519 public key, set with the account's EIP-712 signature. |
 | `ClaimEscrow` | Money locked against a one-time claim key, claimed by a signature from that key, refundable after expiry. |
-| `PlansSend` | Person-to-person AUSD send with a receipt event. |
+| `PlansSend` | Person-to-person AUSD send with a receipt event, optionally citing an FX reference round. |
+| `FxReference` | Reference FX rates written by a Chainlink CRE workflow, in numbered rounds. Display and receipts only; never touches funds. |
 
-All contracts are immutable and hold no privileged roles. Token: AUSD, 6 decimals. Mainnet `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`, testnet `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`. AUSD's EIP-712 domain name is `"Agora Dollar"`, version `"1"`.
+All contracts are immutable. Only `FxReference` has a privileged role (its owner, with the limited powers listed in [FX reference rates](#fx-reference-rates)); the money contracts have none. Token: AUSD, 6 decimals. Mainnet `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`, testnet `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`. AUSD's EIP-712 domain name is `"Agora Dollar"`, version `"1"`.
 
 Gas is charged on the gas limit on Monad, and cold storage is expensive. Keep each member's ledger in one packed struct, and keep loops bounded by `MAX_MEMBERS = 50`.
 
@@ -59,7 +60,7 @@ net(m) = contributed + personalPaid − share − withdrawn
 | contribute / deposit / pull | `contributed += amount` |
 | PAY or LINK spend executes | pot sends `amount` out; each split member `share += their part` |
 | PERSONAL spend executes | proposer `personalPaid += amount`; each split member `share += part` |
-| payout (exit, settle, debt distribution) | `withdrawn += amount` |
+| payout (exit, settle, debt distribution, `collect`) | `withdrawn += amount` |
 | escrow refund before settlement | the spend's current shares are reversed exactly and its amount becomes 0 (claims are all or nothing, so a refund is always the full amount) |
 
 **Invariant I1:** `Σ net(m) over all members (active and exited) == AUSD.balanceOf(pot)`. Funds held in ClaimEscrow left the pot when the LINK spend executed, so they are not counted.
@@ -151,8 +152,15 @@ The result is capped at `active`, so a solo member is never stuck.
   2. Let `C = Σ max(net, 0)` and `B` the pot balance.
   3. If `B >= C`, pay each creditor their net.
   4. Otherwise pay `net * B / C`, floored, and the remaining positive nets stay as claims. Every remaining negative net is emitted as `DebtRecorded`.
-  - A payout whose transfer fails (for example to an address AUSD refuses) is skipped and stays as that member's claim, so one recipient cannot block settlement.
-  5. Mark the pot settled and emit `Settled`. Spending stops for good.
+  - A payout whose transfer fails (for example to an address AUSD refuses) is skipped and stays as that member's claim, so one recipient cannot block settlement. The member gets it later with `collect`.
+  5. Mark the pot settled and emit `Settled(by, paidOut, pulledIn, unpaidClaims, fxRoundId)`. Spending stops for good.
+  - `fxRoundId` is `FxReference.latestRoundTime()`'s round if its scheduled time is at most `MAX_FX_AGE` (6 h) before the settle block, else 0. It labels the settlement for display and changes no amount. Settlement never fails because of FX: no FxReference, a reverting or misbehaving FxReference, or malformed return data all give 0. The read gets at most 100,000 gas; only a read starved by the submitter's gas limit reverts the settle (`InsufficientGas`, the same rule as payouts), so the round cannot be suppressed by choosing a gas limit.
+- **`collect(member)`**: after settlement, anyone may call it. It pays `member`, and nobody else, what the pot still owes them:
+  - `C = Σ max(net, 0)` over every member ever (active and exited), `B` = the pot balance.
+  - If `B >= C`: `amount = net(member)`. Otherwise `amount = net(member) × B / C`, floored, so never more than the net. A collect in a short pot takes the member's pro-rata share of what is left, and the rest of the claim stays for later (debt payments and refunds are distributed pro rata to every positive net).
+  - Reverts: `NotSettled` before settlement, `NotMember` for an address never admitted, `NothingToCollect` when `net <= 0` or the amount floors to 0, `PayoutRefused` when AUSD refuses the transfer (for example a frozen account; the claim is kept and can be collected later), `InsufficientGas` when the submitter starved the transfer.
+  - On success: `withdrawn += amount`, `Payout(member, amount)` and `Collected(member, by = msg.sender, amount)`.
+  - Only `member`'s net changes and only `member` is paid, so no other member's state (a frozen account, a refusing recipient, a debt) can block it.
 - **`payDebt`**: a member with `net < 0` deposits up to `−net` with 3009. After settlement the amount is immediately distributed pro rata (floored) to members with `net > 0`, emitting `DebtPaid` and `Payout`. Before settlement only exited members can pay debt (active members `contribute`); the payment stays in the pot and is paid out by `settle`.
 - **`exit`**:
   - Allowed when the member is not the proposer of a Pending or Approved proposal, is not the opener or subject of an open dispute, and the pot is not settled.
@@ -161,6 +169,40 @@ The result is capped at `active`, so a solo member is never stuck.
 - **Escrow refund after settlement**: shares are reversed as before settlement, then the refunded amount is distributed to positive nets.
 - **Escrow claims**: a claim is claimable until `expiry` inclusive and refundable only after it, so it is never both.
 - **Unsolicited transfers**: AUSD sent to a pot directly is credited to no one and stays in the pot; I1 then holds as `Σ net ≤ balance`.
+
+## FX reference rates
+
+### FxReference
+
+A Chainlink CRE workflow (`cre/fx-workflow`) fetches keyless FX sources, takes a median per currency, and writes a report through Chainlink's forwarder to `FxReference.onReport(metadata, report)` (the CRE `IReceiver` interface; `supportsInterface` answers for `IReceiver` and ERC-165).
+
+- **Rates:** USD per one unit of each currency, 8 decimals. AUSD is treated as USD, so `rateOf(id, "USD") = 1e8` for every existing round. Fixed currency list, in report order: GBP, EUR, INR, NGN, JPY, CHF, AED, SGD.
+- **Report:** `abi.encode(uint64 chainSelector, uint64 scheduledTime, uint32 rateDate, bytes3[] currencies, uint64[] usdPerUnitE8, uint8[] sourceMasks)`.
+  - `chainSelector` must equal this chain's CCIP selector (Monad testnet 2183018362218727504, mainnet 8481857512324358265): DON signatures do not commit to a chain.
+  - `scheduledTime` is the cron trigger's scheduled time. It must be greater than the last accepted one (replay protection: the forwarder does not mark a reverted delivery as used) and at most 5 minutes ahead of the block.
+  - `rateDate` is the newest source's reference date, yyyymmdd (informational).
+  - `currencies` must be exactly the fixed list. A rate of 0 means the currency is absent from the round (its mask must be 0).
+  - `sourceMasks[i]`: bit 0 Frankfurter v2 (ECB provider), bit 1 fawazahmed0 currency-api, bit 2 Frankfurter v2 central-bank blend (only for currencies the ECB does not publish: NGN, AED). A present rate needs at least 2 known bits.
+  - Every present rate must be within `maxMoveBps` (default 1,000 = 10 %) of the last accepted rate for that currency (the last round that carried it). At least one rate must be present.
+- **Rounds:** `roundId` increments from 1. Each stores `scheduledTime`, `writtenAt` (block time), `rateDate`, the per-currency rates and masks, and their OR `sourceMask`. Rounds are append-only. Event: `RoundWritten(roundId, scheduledTime, rateDate, sourceMask, usdPerUnitE8[], sourceMasks[])`.
+- **Views:** `latestRound()`, `round(id)` (empty with `roundId = 0` if missing), `rateOf(id, ccy)` (0 if the round or currency is missing), `latestRoundTime()`, `roundTime(id)`, `latestRoundId()`, `currencies()`.
+- **Who can write:**
+  - *Simulation mode* (deploy-time mode; `simTransmitter != 0`): `msg.sender` must be the chain's Chainlink MockKeystoneForwarder (`SIM_FORWARDER`, fixed at deployment: testnet `0xB9F79d863261869B234c481D1f9A7af84AeAd192`, mainnet `0x9eF6468C5f37b976E57d52054c693269479A784d`) and `tx.origin` must be `simTransmitter`, the wallet that runs `cre workflow simulate --broadcast`. The mock forwarder is permissionless, checks no DON signatures and passes placeholder metadata, so **this is a demo guard**: a simulation-mode round is only as trustworthy as that one key and the one machine that ran the simulation.
+  - *Production mode* (`simTransmitter == 0`): `msg.sender` must be the configured KeystoneForwarder (which checks the DON's f+1 signatures; testnet `0xF8344CFd5c43616a4366C34E3EEE75af79a74482`, mainnet `0x76c9cf548b4179F8901cda1f8623568b58215E62`), and the metadata (`workflowId(32) | workflowName(10) | workflowOwner(20) | reportId(2)`) must carry the expected workflow id and workflow owner. Production mode can never use the mock forwarder.
+- **Owner powers** (two-step handover): `setSimulationMode(transmitter)`, `setProductionMode(forwarder, workflowId, workflowOwner)`, `setMaxMoveBps(1..10,000)`. The owner cannot edit or delete rounds and has no path to any funds; a compromised owner could make future rounds (and receipts citing them) show wrong reference rates, never move money.
+
+### Staleness
+
+`MAX_FX_AGE = 6 hours`, measured from a round's `scheduledTime` (when the workflow's sources were read), not from when it landed onchain, so a delayed or replayed old report never looks fresh. The workflow runs every 30 minutes, so a 6-hour gap means the oracle is down. In simulation mode rounds are only written when someone runs the simulation, so run one shortly before a demo. Apps should also show `rateDate`: the ECB publishes on TARGET working days only, so a Friday rate is legitimately current over a weekend.
+
+### PlansSend FX fields
+
+`SendMeta` = `{to, fromCountry, toCountry, fromCurrency, toCurrency, fxRateE8, fxTimestamp, fxRoundId, memoHash, salt}`; the 3009 nonce is still `keccak256(abi.encode(meta))`, so the sender's signature covers the applied rate and the round.
+
+- `fxRateE8` is the **applied** rate the app showed: units of `toCurrency` per 1 `fromCurrency`, 8 decimals.
+- `fxRoundId = 0`: no FX reference; `Sent` carries `refRateE8 = 0`, `fxDiffBps = 0`. Sends never depend on the oracle being up.
+- `fxRoundId != 0`: the round must exist (`FxRoundUnknown`), be at most `MAX_FX_AGE` old (`FxRoundStale`), and carry both currencies (`FxPairUnavailable`; "USD" is always present). Then `refRateE8 = usdPer(from) × 1e8 / usdPer(to)`, floored, and `fxDiffBps = (fxRateE8 − refRateE8) × 10,000 / refRateE8`, rounded toward zero. A reference that floors to 0 counts as unavailable.
+- `Sent(from, to, amount, fromCountry, toCountry, fromCurrency, toCurrency, fxRateE8, fxTimestamp, memoHash, fxRoundId, refRateE8, fxDiffBps)`. The FX fields are display and transparency only: **the AUSD amount moved is always `auth.value`**, whatever the rates say. `previewReference(meta)` returns what `send` would record.
 
 ## KeyRegistry
 
@@ -175,6 +217,9 @@ The result is capped at `active`, so a solo member is never stuck.
 | FREEZE_DURATION | 24 hours |
 | LINK_EXPIRY | 7 days, capped at `endTime + reviewWindow` |
 | Max memo / meta / key-wrap bytes | 512 |
+| MAX_FX_AGE (PlansSend, Pot) | 6 hours, from the round's scheduled time |
+| FxReference max move (default) | 1,000 bps (10 %) per currency per round, owner-settable 1..10,000 |
+| FxReference future skew | 5 minutes |
 
 ## Rules presets (app side)
 

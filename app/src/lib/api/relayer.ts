@@ -82,6 +82,29 @@ export async function getFx(from: string, to: string): Promise<FxQuote> {
   return r.body;
 }
 
+/** GET /v1/fx/round: the latest onchain FxReference round as the relayer reads it (cached 15 s). */
+export type FxRoundInfo = {
+  fxReference: Hex;
+  roundId: string;
+  scheduledTime: number;
+  writtenAt: number;
+  rateDate: number;
+  sourceMask: number;
+  usdPerUnitE8: Record<string, string>;
+  sourceMasks: Record<string, number>;
+  ageSec: number | null;
+  maxAgeSec: number;
+  fresh: boolean;
+};
+
+/** null when the relayer has no FxReference (404) or no round has been written yet. */
+export async function getFxRound(): Promise<FxRoundInfo | null> {
+  const r = await fetchJson<FxRoundInfo & { error?: { code: string; message: string } }>(`${config.relayerUrl}/v1/fx/round`, { timeoutMs: 10_000 });
+  if (r.status === 404) return null;
+  if (r.status >= 400 || r.body?.error) throw new RelayError(r.status, r.body?.error?.code ?? "FX_FAILED", r.body?.error?.message ?? "");
+  return r.body.roundId === "0" ? null : r.body;
+}
+
 export async function requestFaucet(address: string): Promise<{ txHash?: Hex; amount?: string }> {
   const r = await fetchJson<{ txHash?: Hex; amount?: string; error?: { code: string; message: string } }>(`${config.relayerUrl}/v1/faucet`, {
     method: "POST",
@@ -236,6 +259,14 @@ const CODE_COPY: Record<string, string> = {
   GAS_CAP_EXCEEDED: "That's too big to do in one go.",
   REVERTED_ONCHAIN: "Things changed while we were sending it. Nothing moved; check and try again.",
   FAUCET_LIMIT: "You've had today's test dollars. Come back tomorrow.",
+  NOT_MEMBER: "You're not in this plan.",
+  NOT_SETTLED: "This plan isn't settled yet. Settle up first, then collect.",
+  NOTHING_TO_COLLECT: "There's nothing left to collect from this plan.",
+  PAYOUT_REFUSED: "The payout was refused for now, for example because the account is frozen. What you're owed is kept: try again later.",
+  INSUFFICIENT_GAS: "That didn't go through. Nothing moved. Try again.",
+  FX_ROUND_UNKNOWN: "The exchange rate we showed isn't available any more. Get a fresh rate and try again.",
+  FX_ROUND_STALE: "The exchange rate is more than 6 hours old. Get a fresh rate and try again.",
+  FX_PAIR_UNAVAILABLE: "There's no reference rate for these currencies right now. Get a fresh rate and try again.",
 };
 
 const BANNED = /\b(wallet|address|gas|token|chain|transaction|blockchain|crypto|sign(ature|ed|ing)?|ausd|nonce|revert(ed)?|contract|erc\d*|allowance|permit)\b/i;

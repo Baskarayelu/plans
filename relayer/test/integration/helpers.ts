@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
-import { createPublicClient, createWalletClient, http, type Abi, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeAbiParameters, http, stringToHex, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 
@@ -15,7 +15,12 @@ export const ANVIL_KEYS = [
   "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
 ] as const;
 
-const REQUIRED = ["MockAUSD", "KeyRegistry", "PlansFactory", "PlansSend", "Pot", "ClaimEscrow"];
+const REQUIRED = ["MockAUSD", "KeyRegistry", "FxReference", "PlansFactory", "PlansSend", "Pot", "ClaimEscrow"];
+
+/** Monad testnet's CCIP chain selector; any non-zero value works on anvil. */
+export const FX_CHAIN_SELECTOR = 2183018362218727504n;
+/** FxReference's fixed currency order. */
+export const FX_CURRENCIES = ["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"] as const;
 
 export function artifactsAvailable(): { ok: boolean; missing: string[] } {
   const missing = REQUIRED.filter((n) => !existsSync(join(CONTRACTS_OUT, `${n}.sol`, `${n}.json`)));
@@ -69,13 +74,29 @@ export async function deployAll(url: string) {
   };
   const ausd = await deploy("MockAUSD");
   const keyRegistry = await deploy("KeyRegistry");
-  const factory = await deploy("PlansFactory", [ausd, keyRegistry]);
-  const plansSend = await deploy("PlansSend", [ausd]);
+  // Simulation mode with the deployer as both forwarder and transmitter, so the test can write
+  // rounds by calling onReport directly (msg.sender == forwarder, tx.origin == transmitter).
+  const fxReference = await deploy("FxReference", [deployer.address, deployer.address, deployer.address, FX_CHAIN_SELECTOR]);
+  const factory = await deploy("PlansFactory", [ausd, keyRegistry, fxReference]);
+  const plansSend = await deploy("PlansSend", [ausd, fxReference]);
   const mint = async (to: Address, amount: bigint) => {
     const hash = await wallet.writeContract({ address: ausd, abi: artifact("MockAUSD").abi, functionName: "mint", args: [to, amount] } as never);
     await pub.waitForTransactionReceipt({ hash });
   };
-  return { ausd, keyRegistry, factory, plansSend, mint, pub, wallet };
+  /** Write one FxReference round. `rates` = USD per 1 unit, 8 decimals, by ISO code; others absent. */
+  const writeFxRound = async (rates: Partial<Record<(typeof FX_CURRENCIES)[number], bigint>>, scheduledTime?: bigint) => {
+    const t = scheduledTime ?? (await pub.getBlock()).timestamp;
+    const usd = FX_CURRENCIES.map((c) => rates[c] ?? 0n);
+    const masks = usd.map((r) => (r === 0n ? 0 : 3));
+    const report = encodeAbiParameters(
+      [{ type: "uint64" }, { type: "uint64" }, { type: "uint32" }, { type: "bytes3[]" }, { type: "uint64[]" }, { type: "uint8[]" }],
+      [FX_CHAIN_SELECTOR, t, 20261007, FX_CURRENCIES.map((c) => stringToHex(c, { size: 3 })), usd, masks],
+    );
+    const hash = await wallet.writeContract({ address: fxReference, abi: artifact("FxReference").abi, functionName: "onReport", args: ["0x", report] } as never);
+    const r = await pub.waitForTransactionReceipt({ hash });
+    if (r.status !== "success") throw new Error("FxReference.onReport failed");
+  };
+  return { ausd, keyRegistry, fxReference, factory, plansSend, mint, writeFxRound, pub, wallet };
 }
 
 export async function waitFor<T>(fn: () => T | Promise<T>, what: string, timeoutMs = 20_000, everyMs = 100): Promise<NonNullable<T>> {

@@ -231,6 +231,7 @@ describe("ERC-3009 nonce binding (IPlansPeriphery.sol)", () => {
       toCurrency: codeToBytes("USD", 3),
       fxRateE8: 132250000n,
       fxTimestamp: 1791270666n,
+      fxRoundId: 7n,
       memoHash: `0x${"00".repeat(32)}`,
       salt: `0x${"99".repeat(32)}`,
     };
@@ -238,7 +239,7 @@ describe("ERC-3009 nonce binding (IPlansPeriphery.sol)", () => {
     const right = (h: string) => word(h).padEnd(64, "0");
     const left = (h: string) => word(h).padStart(64, "0");
     const expected = keccak256(
-      `0x${left(other.toLowerCase())}${right("4742")}${right("5553")}${right("474250")}${right("555344")}${left((132250000n).toString(16))}${left((1791270666n).toString(16))}${word(meta.memoHash)}${word(meta.salt)}`,
+      `0x${left(other.toLowerCase())}${right("4742")}${right("5553")}${right("474250")}${right("555344")}${left((132250000n).toString(16))}${left((1791270666n).toString(16))}${left((7n).toString(16))}${word(meta.memoHash)}${word(meta.salt)}`,
     );
     expect(sendAuthNonce(meta)).toBe(expected);
   });
@@ -260,13 +261,14 @@ describe("ERC-3009 nonce binding (IPlansPeriphery.sol)", () => {
       toCurrency: "0x494e52",
       fxRateE8: 11_000_000_000n,
       fxTimestamp: 1791270666n,
+      fxRoundId: 12n,
       memoHash: `0x${"00".repeat(32)}`,
       salt: `0x${"42".repeat(32)}`,
     };
     const enc = cast(
       "abi-encode",
-      "f((address,bytes2,bytes2,bytes3,bytes3,uint64,uint64,bytes32,bytes32))",
-      `(${meta.to},${meta.fromCountry},${meta.toCountry},${meta.fromCurrency},${meta.toCurrency},${meta.fxRateE8},${meta.fxTimestamp},${meta.memoHash},${meta.salt})`,
+      "f((address,bytes2,bytes2,bytes3,bytes3,uint64,uint64,uint64,bytes32,bytes32))",
+      `(${meta.to},${meta.fromCountry},${meta.toCountry},${meta.fromCurrency},${meta.toCurrency},${meta.fxRateE8},${meta.fxTimestamp},${meta.fxRoundId},${meta.memoHash},${meta.salt})`,
     );
     expect(sendAuthNonce(meta)).toBe(cast("keccak", enc));
   });

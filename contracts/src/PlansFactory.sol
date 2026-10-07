@@ -36,16 +36,20 @@ contract PlansFactory is IPlansFactory, EIP712 {
     address public immutable claimEscrow;
     /// @notice The Pot implementation every clone delegates to.
     address public immutable potImplementation;
+    /// @inheritdoc IPlansFactory
+    address public immutable fxReference;
 
     /// @inheritdoc IPlansFactory
     mapping(address pot => bool) public isPot;
     mapping(address account => mapping(uint256 word => uint256 bits)) internal _nonces;
 
-    constructor(address ausd_, address keyRegistry_) {
+    /// @param fxReference_ The FxReference every pot reads at settlement (address(0) for none).
+    constructor(address ausd_, address keyRegistry_, address fxReference_) {
         ausd = ausd_;
         keyRegistry = keyRegistry_;
+        fxReference = fxReference_;
         claimEscrow = address(new ClaimEscrow(ausd_));
-        potImplementation = address(new Pot(ausd_, keyRegistry_, claimEscrow));
+        potImplementation = address(new Pot(ausd_, keyRegistry_, claimEscrow, fxReference_));
     }
 
     /// @inheritdoc IPlansFactory

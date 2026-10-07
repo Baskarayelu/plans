@@ -13,6 +13,8 @@ const map = {
   KeyRegistry: ["IPlansPeriphery.sol", "IKeyRegistry.json"],
   ClaimEscrow: ["IPlansPeriphery.sol", "IClaimEscrow.json"],
   PlansSend: ["IPlansPeriphery.sol", "IPlansSend.json"],
+  // The contract artifact (not IFxReference) so the inherited ownership events are included too.
+  FxReference: ["FxReference.sol", "FxReference.json"],
 };
 for (const [name, [dir, file]] of Object.entries(map)) {
   const { abi } = JSON.parse(readFileSync(join(out, dir, file), "utf8"));

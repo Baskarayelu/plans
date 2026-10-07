@@ -52,7 +52,7 @@ describe("demo / internal exclusion", () => {
     sim.pot(P2, "SpendExecuted", { id: 1n, amount: USD(80), members: [BOB], shares: [USD(80)], claimId: 0n });
     sim.tx().pot(P2, "Pulled", { member: BOB, amount: USD(80) });
     sim.pot(P2, "Payout", { member: ALICE, amount: USD(100) });
-    sim.pot(P2, "Settled", { by: ALICE, paidOut: USD(100), pulledIn: USD(80), unpaidClaims: 0n });
+    sim.pot(P2, "Settled", { by: ALICE, paidOut: USD(100), pulledIn: USD(80), unpaidClaims: 0n, fxRoundId: 0n });
     // an unrelated real plan that must stay counted
     sim.createPot(P3, CARL, "US").contribute(P3, CARL, USD(5));
     await sim.run();
@@ -99,7 +99,7 @@ describe("demo / internal exclusion", () => {
     const send = (from: string, to: string) =>
       sim.tx().ev("PlansSend", "Sent", SEND, {
         from, to, amount: USD(1), fromCountry: cc("US"), toCountry: cc("MX"), fromCurrency: cc("USD"), toCurrency: cc("MXN"),
-        fxRateE8: 1_700_000_000n, fxTimestamp: 0n, memoHash: "0x" + "00".repeat(32),
+        fxRateE8: 1_700_000_000n, fxTimestamp: 0n, memoHash: "0x" + "00".repeat(32), fxRoundId: 0n, refRateE8: 0n, fxDiffBps: 0n,
       });
     send(EVE, ASHA); // to a demo account: internal
     send(EVE, DIA); // real

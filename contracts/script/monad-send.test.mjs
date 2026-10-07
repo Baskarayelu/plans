@@ -19,11 +19,19 @@ const account = privateKeyToAccount('0xac0974bec39a17e36ba4a6b4d238ff944bacb478c
 const AUSD = '0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC';
 const CHAIN = 10143;
 
-/** A forge-shaped dry-run file with three CREATE2 deployments (tiny fake initcodes). */
-function dryRun() {
+const FX_OWNER = '0x44E61d9E73394EDEBAB7095D224B0a6185EDa4e3';
+const FX_TRANSMITTER = '0x00000000000000000000000000000000000cafe1';
+const fxArgs = (o = {}) =>
+  encodeAbiParameters(
+    [{ type: 'address' }, { type: 'address' }, { type: 'address' }, { type: 'uint64' }],
+    [o.owner ?? FX_OWNER, o.simForwarder ?? M.CRE[CHAIN].simForwarder, o.simTransmitter ?? FX_TRANSMITTER, o.chainSelector ?? M.CRE[CHAIN].chainSelector],
+  );
+
+/** A forge-shaped dry-run file with four CREATE2 deployments (tiny fake initcodes; FxReference's ends with real constructor args). */
+function dryRun(fx = {}) {
   const mk = (name, tag, additional = []) => {
     const salt = keccak256(toHex(`plans.v1.${name}`));
-    const initcode = toHex(`init:${tag}`);
+    const initcode = name === 'FxReference' ? concat([toHex(`init:${tag}`), fxArgs(fx)]) : toHex(`init:${tag}`);
     const data = concat([salt, initcode]);
     const addr = getContractAddress({ opcode: 'CREATE2', from: M.CREATE2_DEPLOYER, salt, bytecode: initcode });
     return {
@@ -36,6 +44,7 @@ function dryRun() {
     };
   };
   const kr = mk('KeyRegistry', 'kr');
+  const fxr = mk('FxReference', 'fx');
   const ps = mk('PlansSend', 'ps');
   const escrow = getAddress('0x00000000000000000000000000000000000e5c20');
   const impl = getAddress('0x0000000000000000000000000000000000001a11');
@@ -45,8 +54,8 @@ function dryRun() {
   ]);
   const a = (t) => getAddress(t.contractAddress);
   return {
-    transactions: [kr, ps, pf],
-    returns: { d: { internal_type: 'struct Deploy.Deployment', value: `(${CHAIN}, ${AUSD}, ${a(kr)}, ${a(ps)}, ${a(pf)}, ${escrow}, ${impl})` } },
+    transactions: [kr, fxr, ps, pf],
+    returns: { d: { internal_type: 'struct Deploy.Deployment', value: `(${CHAIN}, ${AUSD}, ${a(kr)}, ${a(fxr)}, ${a(ps)}, ${a(pf)}, ${escrow}, ${impl})` } },
     chain: CHAIN,
   };
 }
@@ -56,10 +65,11 @@ function dryRun() {
  * hard-coded limit cannot match by accident) and is logged with its params; every raw transaction
  * is decoded and logged in the same sequence.
  */
-function fakeMonad({ plan, deployed = [], sync = true, clientVersion = 'Monad/v0.11', balance = 10n ** 20n } = {}) {
+function fakeMonad({ plan, deployed = [], sync = true, clientVersion = 'Monad/v0.11', balance = 10n ** 20n, wiring = {} } = {}) {
   const code = new Map([[M.CREATE2_DEPLOYER.toLowerCase(), '0x60'], [AUSD.toLowerCase(), '0x60']]);
   for (const a of deployed) code.set(a.toLowerCase(), '0x60');
   const log = [];
+  const calls = [];
   let nonce = 5;
   let seed = 12345;
   const receipts = new Map();
@@ -111,14 +121,26 @@ function fakeMonad({ plan, deployed = [], sync = true, clientVersion = 'Monad/v0
         return receipts.get(params[0]) ?? null;
       case 'eth_call': {
         const sel = params[0].data.slice(0, 10);
-        const map = { [selector('ausd')]: d.ausd, [selector('keyRegistry')]: d.keyRegistry, [selector('claimEscrow')]: d.claimEscrow, [selector('potImplementation')]: d.potImplementation };
+        const to = params[0].to.toLowerCase();
+        calls.push({ to, sel });
+        if (sel === selector('CHAIN_SELECTOR')) return encodeAbiParameters([{ type: 'uint64' }], [wiring.chainSelector ?? plan.fx.chainSelector]);
+        const map = {
+          [selector('ausd')]: d.ausd,
+          [selector('keyRegistry')]: d.keyRegistry,
+          [selector('claimEscrow')]: d.claimEscrow,
+          [selector('potImplementation')]: d.potImplementation,
+          [selector('fxReference')]: wiring.fxReference?.[to] ?? d.fxReference,
+          [selector('factory')]: d.plansFactory,
+          [selector('SIM_FORWARDER')]: plan.fx.simForwarder,
+        };
+        if (!map[sel]) throw new Error('unexpected eth_call ' + sel);
         return encodeAbiParameters([{ type: 'address' }], [map[sel]]);
       }
       default:
         throw new Error('unexpected ' + method);
     }
   };
-  return { rpc, log, code };
+  return { rpc, log, code, calls };
 }
 const selector = (fn) => keccak256(toHex(`${fn}()`)).slice(0, 10);
 
@@ -142,9 +164,9 @@ test('check sends nothing and prints what to verify', async () => {
   const out = lines.join('\n');
   assert.equal(f.log.filter((x) => x.kind === 'send').length, 0);
   const estimates = f.log.filter((x) => x.kind === 'estimate');
-  assert.equal(estimates.length, 3);
+  assert.equal(estimates.length, 4);
   r.rows.forEach((row, i) => assert.equal(row.quote.gasLimit, M.gasLimitFromEstimate(estimates[i].result)));
-  for (const s of ['chain id        10143', 'https://testnet-rpc.monad.xyz', account.address, 'balance         100 MON', 'nonce (pending) 5', 'fingerprint     ' + r.fingerprint, `node script/monad-send.mjs send --chain 10143 --rpc https://testnet-rpc.monad.xyz --confirm ${r.fingerprint}`]) {
+  for (const s of ['chain id        10143', 'https://testnet-rpc.monad.xyz', account.address, 'balance         100 MON', 'nonce (pending) 5', 'fingerprint     ' + r.fingerprint, `node script/monad-send.mjs send --chain 10143 --rpc https://testnet-rpc.monad.xyz --confirm ${r.fingerprint}`, `fx owner        ${FX_OWNER}`, `fx forwarder    ${M.CRE[CHAIN].simForwarder}`, `fx transmitter  ${getAddress(FX_TRANSMITTER)}`, 'fx chain sel.   2183018362218727504']) {
     assert.ok(out.includes(s), `missing: ${s}`);
   }
   for (const row of r.rows) {
@@ -162,8 +184,8 @@ test('send: every signed gas limit is the Monad estimate (+10%) for that exact t
   f.log.length = 0;
   const { sent, file } = await M.runSend({ rpc: f.rpc, rpcUrl: 'x', plan: p, account, tipWei: 1n, confirm: r0.fingerprint, deploymentsDir: dir, out: quiet, waitOpts: { sleepMs: 1 } });
   const sends = f.log.filter((x) => x.kind === 'send');
-  assert.equal(sends.length, 3);
-  assert.equal(sent.length, 3);
+  assert.equal(sends.length, 4);
+  assert.equal(sent.length, 4);
   for (const s of sends) {
     const i = f.log.indexOf(s);
     const tx = parseTransaction(s.raw);
@@ -183,17 +205,24 @@ test('send: every signed gas limit is the Monad estimate (+10%) for that exact t
   assert.equal(j.plansFactory, p.deployment.plansFactory);
   assert.equal(j.claimEscrow, p.deployment.claimEscrow);
   assert.equal(j.potImplementation, p.deployment.potImplementation);
-  assert.equal(j.transactions.length, 3);
-  assert.deepEqual(Object.keys(j.salts), ['keyRegistry', 'plansFactory', 'plansSend']);
+  assert.equal(j.fxReference, p.deployment.fxReference);
+  assert.deepEqual(j.fxConfig, { owner: FX_OWNER, simForwarder: M.CRE[CHAIN].simForwarder, simTransmitter: getAddress(FX_TRANSMITTER), chainSelector: '2183018362218727504' });
+  assert.equal(j.transactions.length, 4);
+  assert.deepEqual(Object.keys(j.salts), ['fxReference', 'keyRegistry', 'plansFactory', 'plansSend']);
+  // the wiring was read from the factory, PlansSend, the Pot implementation and FxReference
+  const d = p.deployment;
+  for (const [to, fn] of [[d.plansFactory, 'fxReference'], [d.plansSend, 'fxReference'], [d.plansSend, 'ausd'], [d.potImplementation, 'fxReference'], [d.potImplementation, 'factory'], [d.fxReference, 'SIM_FORWARDER'], [d.fxReference, 'CHAIN_SELECTOR']]) {
+    assert.ok(f.calls.some((c) => c.to === to.toLowerCase() && c.sel === selector(fn)), `verified ${fn} on ${to}`);
+  }
 });
 
 test('send skips transactions whose CREATE2 address already has code', async () => {
   const p = plan();
   const f = fakeMonad({ plan: p, deployed: [p.deployment.keyRegistry] });
   const r0 = await M.buildReport({ rpc: f.rpc, rpcUrl: 'x', plan: p, from: account.address, tipWei: 1n });
-  assert.equal(r0.pending.length, 2);
+  assert.equal(r0.pending.length, 3);
   const { sent } = await M.runSend({ rpc: f.rpc, rpcUrl: 'x', plan: p, account, tipWei: 1n, confirm: r0.fingerprint, deploymentsDir: mkdtempSync(path.join(tmpdir(), 'ms-')), out: quiet, waitOpts: { sleepMs: 1 } });
-  assert.deepEqual(sent.map((s) => s.contract), ['PlansSend', 'PlansFactory']);
+  assert.deepEqual(sent.map((s) => s.contract), ['FxReference', 'PlansSend', 'PlansFactory']);
   // a second run sends nothing
   const before = f.log.filter((x) => x.kind === 'send').length;
   const again = await M.runSend({ rpc: f.rpc, rpcUrl: 'x', plan: p, account, tipWei: 1n, confirm: r0.fingerprint, deploymentsDir: mkdtempSync(path.join(tmpdir(), 'ms-')), out: quiet });
@@ -206,7 +235,7 @@ test('falls back to eth_sendRawTransaction when the sync method is missing', asy
   const f = fakeMonad({ plan: p, sync: false });
   const r0 = await M.buildReport({ rpc: f.rpc, rpcUrl: 'x', plan: p, from: account.address, tipWei: 1n });
   await M.runSend({ rpc: f.rpc, rpcUrl: 'x', plan: p, account, tipWei: 1n, confirm: r0.fingerprint, deploymentsDir: mkdtempSync(path.join(tmpdir(), 'ms-')), out: quiet, waitOpts: { sleepMs: 1 } });
-  assert.equal(f.log.filter((x) => x.method === 'eth_sendRawTransaction').length, 3);
+  assert.equal(f.log.filter((x) => x.method === 'eth_sendRawTransaction').length, 4);
 });
 
 test('refuses: wrong --confirm, unfunded deployer, non-Monad node, wrong chain, tampered plan', async () => {
@@ -251,4 +280,25 @@ test('loads the deployer key without exposing it', () => {
   assert.ok(!JSON.stringify({ source: d.source }).includes(k.slice(2)));
   assert.throws(() => M.loadDeployer({ env: { PLANS_DEPLOYER_KEY: '0x1234' }, keysFile: '/nonexistent' }), (e) => /value hidden/.test(e.message) && !e.message.includes('1234'));
   assert.equal(M.loadDeployer({ env: {}, keysFile: '/nonexistent' }), null);
+});
+
+test('FxReference constructor args must be Chainlink\'s forwarder and selector for the chain, with an owner and transmitter', () => {
+  assert.throws(() => M.loadPlan(dryRun({ simForwarder: M.CRE[143].simForwarder }), CHAIN), /not Chainlink's MockKeystoneForwarder/);
+  assert.throws(() => M.loadPlan(dryRun({ chainSelector: 1n }), CHAIN), /chainSelector 1 != 2183018362218727504/);
+  assert.throws(() => M.loadPlan(dryRun({ owner: '0x0000000000000000000000000000000000000000' }), CHAIN), /owner and simTransmitter must be set/);
+  assert.throws(() => M.loadPlan(dryRun({ simTransmitter: '0x0000000000000000000000000000000000000000' }), CHAIN), /owner and simTransmitter must be set/);
+  const p = M.loadPlan(dryRun(), CHAIN);
+  assert.equal(p.fx.owner, FX_OWNER);
+  assert.equal(p.fx.chainSelector, 2183018362218727504n);
+});
+
+test('verify refuses a deployment whose PlansSend or Pot points at another FxReference', async () => {
+  const p = plan();
+  const other = '0x000000000000000000000000000000000000f00d';
+  for (const where of ['plansSend', 'potImplementation', 'plansFactory']) {
+    const f = fakeMonad({ plan: p, deployed: [p.deployment.keyRegistry, p.deployment.fxReference, p.deployment.plansSend, p.deployment.plansFactory, p.deployment.claimEscrow, p.deployment.potImplementation], wiring: { fxReference: { [p.deployment[where].toLowerCase()]: other } } });
+    await assert.rejects(M.verifyDeployment(f.rpc, p.deployment, p.fx), /fxReference\(\) = /);
+  }
+  const f = fakeMonad({ plan: p, deployed: [p.deployment.keyRegistry, p.deployment.fxReference, p.deployment.plansSend, p.deployment.plansFactory, p.deployment.claimEscrow, p.deployment.potImplementation], wiring: { chainSelector: 1n } });
+  await assert.rejects(M.verifyDeployment(f.rpc, p.deployment, p.fx), /CHAIN_SELECTOR/);
 });

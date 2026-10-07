@@ -176,6 +176,7 @@ export async function ensurePot(s: Store, address: string): Promise<Pot> {
     totalPersonalSpent: 0n,
     totalRefunded: 0n,
     totalPaidOut: 0n,
+    totalCollected: 0n,
     totalDebtRecorded: 0n,
     contributionCount: 0,
     spendCount: 0,

@@ -37,10 +37,14 @@ All bodies are JSON. Errors are always `{"error": {"code", "message", ...}}` wit
 | Target | Actions |
 |---|---|
 | PlansFactory | `createPot` |
-| Pot (only if `factory.isPot(pot)`) | `join`, `contribute`, `propose`, `vote`, `cancelSpend`, `execute`, `expire`, `openDispute`, `resolveDispute`, `voteDispute`, `finalizeDispute`, `freeze`, `voteUnfreeze`, `proposeRules`, `voteRules`, `applyRules`, `exit`, `ack`, `settle`, `payDebt`, `rotateInvite`, `postKeyWraps` |
+| Pot (only if `factory.isPot(pot)`) | `join`, `contribute`, `propose`, `vote`, `cancelSpend`, `execute`, `expire`, `openDispute`, `resolveDispute`, `voteDispute`, `finalizeDispute`, `freeze`, `voteUnfreeze`, `proposeRules`, `voteRules`, `applyRules`, `exit`, `ack`, `settle`, `payDebt`, `collect`, `rotateInvite`, `postKeyWraps` |
 | KeyRegistry | `registerKey` (`account`, `pubKey`, `deadline`, `sig`) |
-| PlansSend | `send` (`from`, `meta`, `auth`) |
+| PlansSend | `send` (`from`, `meta`, `auth`); `meta.fxRoundId` is optional (default `0`) |
 | ClaimEscrow | `claimCreate` (calls `createWithAuthorization`), `claim`, `claimRefund` (calls `refund`) |
+
+**`collect`** (`{ "pot": "0x…", "member": "0x…" }`). After settlement, pays `member`, and only `member`, what the pot still owes them: the whole positive net when the pot covers every positive net, otherwise a pro-rata share. It is unsigned and permissionless like `settle`, because it can only ever pay `member`; the per-address rate limit applies to `member`. Use it when a payout was skipped at settlement, for example because AUSD refused a frozen account (the `Settled` event's `unpaidClaims` is then above 0). Decoded errors: `NOT_SETTLED`, `NOT_MEMBER`, `NOTHING_TO_COLLECT`, `PAYOUT_REFUSED` (AUSD still refuses; the claim is kept, try later) and `INSUFFICIENT_GAS`. A success emits `Payout` and `Collected(member, by, amount)`.
+
+**`send` and `meta.fxRoundId`.** `meta` is `{ to, fromCountry, toCountry, fromCurrency, toCurrency, fxRateE8, fxTimestamp, fxRoundId, memoHash, salt }`, in that order. `fxRoundId` is the FxReference round the app quoted from, or `0` for none, and defaults to `0` when absent so older clients still validate. The ERC-3009 nonce is `keccak256(abi.encode(meta))` over all ten fields, so the app must send exactly the `fxRoundId` it hashed: a different value fails as a bad authorisation. With a round, the contract records the round's reference rate (`refRateE8`) and the applied rate's difference from it (`fxDiffBps`) in `Sent`; it never changes the amount. A round that doesn't exist, is more than 6 hours old (by its scheduled time) or lacks either currency reverts as `FX_ROUND_UNKNOWN`, `FX_ROUND_STALE` or `FX_PAIR_UNAVAILABLE`.
 
 **Pipeline:**
 
@@ -74,7 +78,7 @@ All bodies are JSON. Errors are always `{"error": {"code", "message", ...}}` wit
 | 429 | Rate limited | Includes a `retry-after` header |
 | 502 / 503 | RPC or relayer funding problem | |
 
-Every `SpendBlocked` reason code from `docs/protocol.md` (1–11) has its own `code` and message. See `src/errors.ts`.
+Every `SpendBlocked` reason code from `docs/protocol.md` (1–11) has its own `code` and message. Every other custom error is decoded by name into an UPPER_SNAKE `code` (`NotSettled` → `NOT_SETTLED`, `FxRoundStale` → `FX_ROUND_STALE`) with a plain-English message. See `src/errors.ts`.
 
 ### `GET /v1/health`
 
@@ -128,6 +132,18 @@ The server decodes the body, recomputes sha256 over the decoded bytes, and store
 | 507 | `STORAGE_FULL`: the disk cap (`BLOB_DISK_CAP_BYTES`, default 2 GB) is reached |
 
 **Download.** `GET` returns `{"data": "<base64url, unpadded>"}` when the `Accept` header includes `application/json`, which is what the app sends. Otherwise it returns the raw bytes as `application/octet-stream`. Both carry `Cache-Control: public, max-age=31536000, immutable`, `Vary: Accept` and an ETag (which differs between the two forms), and `If-None-Match` gives 304. Unknown ids return 404.
+
+### `GET /v1/fx/round`
+
+The latest round of the onchain FxReference (written by the Chainlink CRE workflow), read with one `eth_call` and cached for 15 s. The relayer never writes to FxReference. The address is `FX_REFERENCE_ADDRESS`, or `factory.fxReference()` when unset; without one the endpoint returns 404 `FX_REFERENCE_DISABLED`.
+
+```json
+{ "fxReference": "0x…", "roundId": "12", "scheduledTime": 1791270000, "writtenAt": 1791270004, "rateDate": 20261007,
+  "sourceMask": 7, "usdPerUnitE8": { "GBP": "134000000", "INR": "1130000" }, "sourceMasks": { "GBP": 3, "INR": 3 },
+  "ageSec": 120, "maxAgeSec": 21600, "fresh": true }
+```
+
+Rates are USD per 1 unit, 8 decimals; currencies absent from the round are left out. `roundId` is `"0"` before the first round. A send quoted from this round passes `fxRoundId` while `fresh` is true (at most 6 hours after `scheduledTime`).
 
 ### `GET /v1/fx?from=GBP&to=USD`
 
@@ -183,8 +199,8 @@ The deadline must be in the future and at most 24 h ahead. Smart accounts are ve
 | `SpendProposed` with `approvalsRequired > 1` | The other active members | "Approval needed" |
 | `SpendExecuted` | Active members except the proposer | |
 | `Contributed` | The other active members | |
-| `Settled` | Every member, including those who exited | |
-| `Payout` | The member who was paid | |
+| `Settled` | Every member, including those who exited | Mentions payouts still owed when `unpaidClaims > 0` |
+| `Payout` | The member who was paid (settlement, exit, debt distribution or `collect`) | `Collected` sends nothing extra: `collect` also emits `Payout` |
 | `Sent` | The recipient | |
 | `Claimed` | The link's creator: the sender, or for a pot LINK spend, its proposer | |
 
@@ -258,7 +274,7 @@ Against a local anvil chain, with contracts built in `../contracts`:
 anvil --code-size-limit 131072   # Pot's runtime is ~29 KB; Monad allows 128 KB, anvil defaults to 24 KB
 ```
 
-Then deploy `MockAUSD`, `KeyRegistry`, `PlansFactory(ausd, keyRegistry)` and `PlansSend(ausd)`, set `CHAIN_ID=31337` and `RPC_URL`/`WS_URL`, and `pnpm dev`. `test/integration/helpers.ts` has a `deployAll()` that does this.
+Then deploy `MockAUSD`, `KeyRegistry`, `FxReference(owner, simForwarder, simTransmitter, chainSelector)`, `PlansFactory(ausd, keyRegistry, fxReference)` and `PlansSend(ausd, fxReference)`, set `CHAIN_ID=31337` and `RPC_URL`/`WS_URL`, and `pnpm dev`. `test/integration/helpers.ts` has a `deployAll()` that does this.
 
 ## Tests
 
@@ -269,7 +285,7 @@ pnpm test:integration   # spawns anvil, deploys ../contracts/out artifacts + Moc
 ```
 
 - **Unit tests** cover validation, revert decoding, the gas policy, fees, nonce lanes (with a scripted RPC), FX signing and caching, rate limits, demo scheduling, push routing and the HTTP layer.
-- **Integration tests** cover createPot → join → propose → vote → ack → settle over HTTP, decoded errors (`INVALID_INVITE`, `SpendBlocked(9)`, `CANNOT_SETTLE`), push dispatch, demo approvals and acks, the full "Try a settle-up" run, the faucet and the long-stop job.
+- **Integration tests** cover createPot → join → propose → vote → ack → settle over HTTP, decoded errors (`INVALID_INVITE`, `SpendBlocked(9)`, `CANNOT_SETTLE`), `send` with and without an FxReference round (`FX_ROUND_UNKNOWN`, `FX_ROUND_STALE`), `collect` after a payout AUSD refused at settlement (`NOT_SETTLED`, `PAYOUT_REFUSED`, `NOTHING_TO_COLLECT`), push dispatch, demo approvals and acks, the full "Try a settle-up" run, the faucet and the long-stop job.
 - **Skipping.** The integration suite skips with a warning if `contracts/out` lacks the artifacts. Build them with `forge build` in `../contracts`.
 
 When the contracts change, run `forge build` in `../contracts` and then `pnpm sync-abi`. This regenerates `src/abi.errors.generated.json` (every custom error) for revert decoding. The typed ABIs in `src/abi.ts` are hand-copied from `contracts/src/interfaces/*.sol`; keep them in sync.
@@ -304,7 +320,7 @@ When the contracts change, run `forge build` in `../contracts` and then `pnpm sy
 | `src/errors.ts` | Revert decoding and friendly messages |
 | `src/listener.ts` | Backfill, websocket and polling listener |
 | `src/push.ts` | Push registration, routing and the Expo dispatcher |
-| `src/fx.ts` | Signed FX reference |
+| `src/fx.ts` | Signed FX reference; read-only FxReference latest round |
 | `src/faucet.ts` | Testnet faucet |
 | `src/demo/` | Demo members (`policy.ts` is the pure decision logic) |
 | `src/longstop.ts` | Long-stop settlement |

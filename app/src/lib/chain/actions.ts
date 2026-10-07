@@ -291,11 +291,25 @@ export async function ack(pot: Address): Promise<RelayResult> {
 
 export const settle = (pot: Address) => relay("settle", { pot });
 
+/**
+ * After settlement, pays `member` (default: the signed-in account) what the pot still owes them,
+ * e.g. a payout that was refused at settlement. Unsigned and permissionless (it can only pay
+ * `member`), like `settle`. Errors: NOT_SETTLED, NOT_MEMBER, NOTHING_TO_COLLECT, PAYOUT_REFUSED.
+ */
+export const collect = (pot: Address, member?: Address) => relay("collect", { pot, member: member ?? me().address });
+
 // ─────────────── send & claim links ───────────────
 
-export async function send(p: { to: Address; amount: bigint; meta: Omit<SendMeta, "to"> }): Promise<RelayResult> {
+/** SendMeta without `to`; `fxRoundId` is optional and defaults to 0n (no onchain FX reference). */
+export type SendMetaInput = Omit<SendMeta, "to" | "fxRoundId"> & { fxRoundId?: bigint };
+
+/** The full SendMeta for a send: the struct that is hashed into the 3009 nonce and relayed as-is. */
+export const buildSendMeta = (to: Address, m: SendMetaInput): SendMeta => ({ ...m, to, fxRoundId: m.fxRoundId ?? 0n });
+
+export async function send(p: { to: Address; amount: bigint; meta: SendMetaInput }): Promise<RelayResult> {
   const a = me();
-  const meta: SendMeta = { ...p.meta, to: p.to };
+  // The relayer gets the very meta that was hashed (incl. fxRoundId), so the nonce always matches.
+  const meta = buildSendMeta(p.to, p.meta);
   const auth = await receiveAuth(a, config.contracts.plansSend, p.amount, sendAuthNonce(meta));
   return relay("send", { from: a.address, meta, auth });
 }

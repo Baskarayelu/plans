@@ -103,9 +103,16 @@ contract PotHandler is PlansBase {
     uint256 public ghostCleanSettleViolations;
     uint256 public ghostPostSettleRefunds;
 
+    // ───────────────────────────── ghosts: collect ─────────────────────────────
+
+    uint256 public ghostCollects;
+    uint256 public ghostCollectedAmount;
+    uint256 public ghostCollectViolations;
+    string public lastCollectViolation;
+
     // ───────────────────────────── stats ─────────────────────────────
 
-    uint256 internal constant N_ACTIONS = 26;
+    uint256 internal constant N_ACTIONS = 28;
     uint256[N_ACTIONS] public callCount;
     uint256[N_ACTIONS] public okCount;
     uint256 internal _totalCalls;
@@ -535,6 +542,11 @@ contract PotHandler is PlansBase {
         bool clean = true;
         for (uint256 i; i < all.length; ++i) {
             int256 net = pot.netOf(all[i]);
+            if (MockAUSD(token).frozen(all[i])) {
+                // A frozen creditor's payout or debtor's pull is skipped: not a clean settle.
+                if (net != 0) clean = false;
+                continue;
+            }
             if (net >= 0) continue;
             uint256 debt = uint256(-net);
             if (prepare) {
@@ -614,6 +626,83 @@ contract PotHandler is PlansBase {
             if (early) ++ghostEscrowViolations;
             ghostRefunded[id] = true;
         }
+    }
+
+    // ───────────────────────────── actions: AUSD freeze and collect ─────────────────────────────
+
+    /// @dev Toggles AUSD's freeze flag on a member (freezing is rarer than unfreezing), so payouts
+    /// at settlement and in distributions get skipped and later collected.
+    function freezeAusd(uint256 seed) external {
+        _stat(26);
+        seed = _h(seed, 1182);
+        address a = users[seed % N_USERS];
+        bool freezeIt = !MockAUSD(token).frozen(a);
+        if (freezeIt && (seed >> 8) % 3 != 0) return;
+        MockAUSD(token).setFrozen(a, freezeIt);
+        ++okCount[26];
+    }
+
+    /// @dev Anyone collects for a member (mostly one with a positive net). A success must pay that
+    /// member exactly the pro-rata formula and nobody else anything; a refusal must change nothing.
+    function collectPayout(uint256 seed) external {
+        _stat(27);
+        seed = _h(seed, 1189);
+        address[] memory all = pot.members();
+        address m = all[seed % all.length];
+        if ((seed >> 8) % 4 != 0) {
+            for (uint256 k; k < all.length; ++k) {
+                address c = all[(seed + k) % all.length];
+                if (pot.netOf(c) > 0) {
+                    m = c;
+                    break;
+                }
+            }
+        }
+        if ((seed >> 16) % 2 == 0 && MockAUSD(token).frozen(m)) MockAUSD(token).setFrozen(m, false);
+
+        int256 net = pot.netOf(m);
+        uint256 credit;
+        int256[] memory nets = new int256[](all.length);
+        for (uint256 i; i < all.length; ++i) {
+            nets[i] = pot.netOf(all[i]);
+            if (nets[i] > 0) credit += uint256(nets[i]);
+        }
+        uint256 bal = _balance(address(pot));
+        uint256 expected;
+        if (net > 0) expected = bal >= credit ? uint256(net) : uint256(net) * bal / credit;
+        bool settledBefore = pot.settled();
+        bool frozenBefore = MockAUSD(token).frozen(m);
+        uint256[] memory before = new uint256[](_actors.length);
+        for (uint256 i; i < _actors.length; ++i) {
+            before[i] = _balance(_actors[i]);
+        }
+        uint256 escrowBefore = _balance(address(escrow));
+
+        bool ok = _call(27, address(pot), abi.encodeCall(IPot.collect, (m)), false, address(0));
+        if (!ok) {
+            if (settledBefore && expected != 0 && !frozenBefore) _collectViolation("collect refused a payable claim");
+            if (_balance(address(pot)) != bal) _collectViolation("failed collect moved money");
+            return;
+        }
+        ++ghostCollects;
+        ghostCollectedAmount += expected;
+        if (!settledBefore) _collectViolation("collect before settlement");
+        if (expected == 0 || expected > uint256(net)) _collectViolation("collect paid with nothing owed");
+        if (_balance(address(pot)) != bal - expected) _collectViolation("pot paid a different amount");
+        if (pot.netOf(m) != net - int256(expected)) _collectViolation("member net not reduced by the payment");
+        if (_balance(address(escrow)) != escrowBefore) _collectViolation("escrow changed");
+        for (uint256 i; i < _actors.length; ++i) {
+            uint256 want = _actors[i] == m ? before[i] + expected : before[i];
+            if (_balance(_actors[i]) != want) _collectViolation("someone other than the member was paid");
+        }
+        for (uint256 i; i < all.length; ++i) {
+            if (all[i] != m && pot.netOf(all[i]) != nets[i]) _collectViolation("another member's net changed");
+        }
+    }
+
+    function _collectViolation(string memory why) internal {
+        ++ghostCollectViolations;
+        lastCollectViolation = why;
     }
 
     // ───────────────────────────── actions: time and replays ─────────────────────────────

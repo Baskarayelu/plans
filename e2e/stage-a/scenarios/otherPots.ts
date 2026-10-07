@@ -1,6 +1,6 @@
 /**
  * Smaller pots for the rule-driven SpendBlocked codes (2, 4, 6, 7, 8), a front-run permit,
- * MAX_MEMBERS, a frozen creditor at settlement, and Pot G (partial settlement with debts; its end is
+ * MAX_MEMBERS, frozen creditors at settlement and `collect` afterwards, and Pot G (partial settlement with debts; its end is
  * reached in the time phase).
  */
 import { encodeFunctionData, getAddress, type Address } from "viem";
@@ -117,39 +117,62 @@ export async function otherPotScenarios({ R, env, A }: T): Promise<Others> {
     out.F = { pot: c.pot, endTime: BigInt(await potRead(env, c.pot, "endTime")) };
   });
 
-  // ───── Pot H: a creditor AUSD refuses at settlement ─────
+  // ───── Pot H: creditors AUSD refuses at settlement; collect afterwards (finding F1) ─────
   R.group = "pot H: frozen creditor";
-  await R.run("settle while a creditor is frozen by AUSD", "flow", "Settled; the frozen member's payout is skipped and kept as their claim; others paid", async (s) => {
+  let H: Address | undefined;
+  const { rex } = A;
+  await R.run("settle while two creditors are frozen by AUSD", "flow", "Settled; the frozen members' payouts are skipped and kept as their claims; alice paid", async (s) => {
     const c = await create("H", alice, { rules: rules() }, { deposit: USD(20) });
     s.ok(c.r, "PotCreated", "Contributed");
-    const H = c.pot;
+    H = c.pot;
     s.ok(await api.relay("join", await build.join(ctx, H, bob, c.invite, { deposit: USD(10) })), "MemberJoined");
-    s.ok(await api.relay("ack", await build.ack(ctx, H, alice)), "Acked");
-    s.ok(await api.relay("ack", await build.ack(ctx, H, bob)), "Acked");
+    s.ok(await api.relay("join", await build.join(ctx, H, rex, c.invite, { deposit: USD(5) })), "MemberJoined");
+    for (const m of [alice, bob, rex]) s.ok(await api.relay("ack", await build.ack(ctx, H, m)), "Acked");
+    // bob: frozen now, unfrozen later. rex: frozen for the rest of the run (a recipient AUSD always refuses).
     await setAusdFrozen(env.anvil, bob.address, true);
+    await setAusdFrozen(env.anvil, rex.address, true);
     const a0 = await ausdBal(env, alice.address);
     const b0 = await ausdBal(env, bob.address);
-    let r;
-    try {
-      r = s.ok(await api.relay("settle", { pot: H }), "Settled");
-    } finally {
-      await setAusdFrozen(env.anvil, bob.address, false);
-    }
+    const r = s.ok(await api.relay("settle", { pot: H }), "Settled");
     const payouts = findEvents(r, "Payout").map((e) => getAddress(e.args.member));
     s.eq((await ausdBal(env, alice.address)) - a0, USD(20), "alice paid");
-    s.eq(payouts.includes(bob.address), false, "no Payout to the frozen member");
+    s.eq([payouts.includes(bob.address), payouts.includes(rex.address)], [false, false], "no Payout to the frozen members");
     s.eq(await ausdBal(env, bob.address), b0, "bob unpaid");
-    s.eq(await net(env, H, bob.address), USD(10), "bob's 10 stays as his claim");
-    s.eq(await ausdBal(env, H), USD(10), "pot still holds bob's 10");
-    s.eq(findEvent(r, "Settled")!.args.unpaidClaims, USD(10).toString(), "Settled.unpaidClaims");
-    // Bob is no longer frozen. Is there any way for him to collect?
-    const tries = {
-      settle: await api.relay("settle", { pot: H }),
-      exit: await api.relay("exit", await build.exit(ctx, H, bob)),
-      payDebt: await api.relay("payDebt", await build.payDebt(ctx, H, bob, USD(1))),
-    };
-    s.note(`after unfreezing, bob cannot collect: settle -> ${tries.settle.body.error?.code}, exit -> ${tries.exit.body.error?.code}, payDebt -> ${tries.payDebt.body.error?.code}. FINDING F1: a skipped payout has no retry path; the money is stuck in the settled pot.`);
-    s.actual = `Settled; alice paid 20; bob's payout skipped (claim 10 kept); afterwards settle/exit/payDebt -> ${tries.settle.body.error?.code}/${tries.exit.body.error?.code}/${tries.payDebt.body.error?.code}`;
+    s.eq([await net(env, H, bob.address), await net(env, H, rex.address)], [USD(10), USD(5)], "claims kept");
+    s.eq(await ausdBal(env, H), USD(15), "pot still holds the two claims");
+    s.eq(findEvent(r, "Settled")!.args.unpaidClaims, USD(15).toString(), "Settled.unpaidClaims");
+  });
+  await R.run("collect while the creditor is still frozen", "failure", "422 PAYOUT_REFUSED, claim kept", async (s) => {
+    await s.rejects(() => api.relay("collect", { pot: H!, member: bob.address }), { status: 422, code: "PAYOUT_REFUSED", error: "PayoutRefused" }, H!);
+  });
+  await R.run("collect after AUSD unfreezes the creditor (frozen-then-unfrozen recipient)", "flow", "Payout + Collected to bob only, +10; submitted by a third party; rex (still refused) does not block it", async (s) => {
+    await setAusdFrozen(env.anvil, bob.address, false);
+    const b0 = await ausdBal(env, bob.address);
+    const a0 = await ausdBal(env, alice.address);
+    const r = s.ok(await api.relay("collect", { pot: H!, member: bob.address }), "Payout", "Collected");
+    const ev = findEvent(r, "Collected")!.args;
+    s.eq([getAddress(ev.member), ev.amount], [bob.address, USD(10).toString()], "Collected");
+    s.eq(findEvents(r, "Payout").map((e) => getAddress(e.args.member)), [bob.address], "only bob paid");
+    s.eq((await ausdBal(env, bob.address)) - b0, USD(10), "bob +10");
+    s.eq(await ausdBal(env, alice.address), a0, "alice unchanged");
+    s.eq(await net(env, H!, bob.address), 0n, "bob's claim cleared");
+    s.eq([await ausdBal(env, H!), await net(env, H!, rex.address)], [USD(5), USD(5)], "rex's claim still held");
+    s.note(`Collected.by = ${getAddress(ev.by)} (a relayer lane; anyone may submit)`);
+  });
+  await R.run("collect for a recipient AUSD always refuses", "failure", "422 PAYOUT_REFUSED every time; claim kept, nothing moves", async (s) => {
+    for (let i = 0; i < 2; i++) await s.rejects(() => api.relay("collect", { pot: H!, member: rex.address }), { status: 422, code: "PAYOUT_REFUSED" }, H!);
+  });
+  await R.run("collect again with nothing owed", "failure", "422 NOTHING_TO_COLLECT", async (s) => {
+    await s.rejects(() => api.relay("collect", { pot: H!, member: bob.address }), { status: 422, code: "NOTHING_TO_COLLECT" }, H!);
+  });
+  await R.run("collect for an address that never joined", "failure", "422 NOT_MEMBER", async (s) => {
+    await s.rejects(() => api.relay("collect", { pot: H!, member: A.stranger }), { status: 422, code: "NOT_MEMBER" }, H!);
+  });
+  await R.run("collect on a pot that is not settled", "failure", "422 NOT_SETTLED", async (s) => {
+    await s.rejects(() => api.relay("collect", { pot: B!, member: bob.address }), { status: 422, code: "NOT_SETTLED" }, B!);
+  });
+  await R.run("collect with a malformed member", "failure", "400 INVALID_PARAMS", async (s) => {
+    await s.rejects(() => api.relay("collect", { pot: H!, member: "0x1234" }), { status: 400, code: "INVALID_PARAMS" });
   });
   await R.invariants("pot F/H");
 

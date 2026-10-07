@@ -43,6 +43,11 @@ export const DEFAULT_GAS_CAPS: Record<string, number> = {
   ack: 200_000,
   settle: 5_000_000,
   payDebt: 2_500_000,
+  // One member's payout after settlement: two scans of `_members` on the pot's warm storage page
+  // (<= 50 members at ~100 gas each), one AUSD transfer (cold AUSD proxy + implementation, maybe a
+  // fresh balance slot) and the Payout/Collected logs. That is the shape of "exit with a payout"
+  // (GAS.md row 34, ~147k on Monad); the cap leaves ~2.5x headroom. It only rejects an estimate.
+  collect: 400_000,
   rotateInvite: 200_000,
   postKeyWraps: 800_000,
   registerKey: 200_000,

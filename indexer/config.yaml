@@ -57,6 +57,8 @@ contracts:
       - event: DebtPaid
       - event: MemberExited
       - event: Settled
+      # collect(member) after settlement: emitted right after its Payout (same tx); marks that Payout.
+      - event: Collected
       - event: EscrowRefunded
   - name: KeyRegistry
     abi_file_path: ./abis/KeyRegistry.json
@@ -72,6 +74,16 @@ contracts:
     abi_file_path: ./abis/PlansSend.json
     events:
       - event: Sent
+  - name: FxReference
+    # Chainlink CRE receiver: reference FX rounds (display / receipts only, never moves funds).
+    abi_file_path: ./abis/FxReference.json
+    events:
+      - event: RoundWritten
+      - event: SimulationModeSet
+      - event: ProductionModeSet
+      - event: MaxMoveSet
+      - event: OwnershipTransferStarted
+      - event: OwnershipTransferred
 
 chains:
   # Monad mainnet (HyperSync: https://143.hypersync.xyz)
@@ -88,6 +100,8 @@ chains:
         address: "${ENVIO_MAINNET_CLAIM_ESCROW_ADDRESS:-0x00000000000000000000000000000000000f0003}" # TODO after deploy
       - name: PlansSend
         address: "${ENVIO_MAINNET_SEND_ADDRESS:-0x00000000000000000000000000000000000f0004}" # TODO after deploy
+      - name: FxReference
+        address: "${ENVIO_MAINNET_FX_REFERENCE_ADDRESS:-0x00000000000000000000000000000000000f0005}" # TODO after deploy
 
   # Monad testnet (HyperSync: https://10143.hypersync.xyz)
   - id: 10143
@@ -102,3 +116,5 @@ chains:
         address: "${ENVIO_TESTNET_CLAIM_ESCROW_ADDRESS:-0x00000000000000000000000000000000000f1003}" # TODO after deploy
       - name: PlansSend
         address: "${ENVIO_TESTNET_SEND_ADDRESS:-0x00000000000000000000000000000000000f1004}" # TODO after deploy
+      - name: FxReference
+        address: "${ENVIO_TESTNET_FX_REFERENCE_ADDRESS:-0x00000000000000000000000000000000000f1005}" # TODO after deploy
