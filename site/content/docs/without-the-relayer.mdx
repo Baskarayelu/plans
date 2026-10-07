@@ -1,0 +1,98 @@
+---
+title: Using Plans if the relayer is down
+description: The money stays in the pot. Anyone can submit the same signed messages to the contracts, and settle-up needs no signature at all.
+---
+
+The relayer is a convenience, not a gatekeeper. It pays the gas so nobody needs MON, and it delivers messages that members have already signed. It never holds anyone's money and can't move it. If it goes down, or disappears for good, this is what still works and how.
+
+## The short version
+
+- **The money stays in the pot.** Every plan's AUSD sits in its own pot contract. Only the pot's rules can move it, and the relayer has no special role in any contract.
+- **Anyone can submit the same signed messages.** Each member action is an EIP-712 message that the pot checks itself. It doesn't matter who sends the transaction, only that the member's signature, nonce and deadline are valid.
+- **Settling up needs no signature.** `settle()` and `collect(member)` can be called by anyone with a little MON for gas.
+
+What goes away while the relayer is down: free gas, push notifications, the signed FX reference, the testnet faucet, the demo members and the long-stop that settles plans nobody settled.
+
+## What anyone can do without it
+
+| Call | Who can send it | What you need |
+|---|---|---|
+| `settle()` | Anyone | Nothing signed. Allowed once there are no pending spends or open disputes and either the end time plus the review window has passed or every member said “Looks right”. See [Ending a plan](/docs/how-plans-works#ending-a-plan). |
+| `collect(member)` | Anyone | Nothing signed. After settle-up, a payout that couldn't be delivered stays reserved for that member, and anyone can collect it for them later. |
+| `execute(id)`, `expire(id)`, `finalizeDispute(id)`, `applyRules(id)` | Anyone | Nothing signed. Each checks its own conditions (approvals met, expired, voting over, timelock passed). |
+| `vote`, `propose`, `ack`, `exit`, `freeze` and every other member action | Anyone holding the member's signed message | The signed message: its arguments, nonce, deadline and signature. |
+| `join`, `contribute`, `payDebt` | Anyone holding the signatures | The member's signature and their AUSD authorisation (ERC-3009). |
+
+## Submitting a pending action yourself
+
+A technical friend can send a member's action straight to the pot. They need:
+
+1. **The pot address.** It's the `0x…` part of the plan's invite link (`plans.0xo.in/j/<pot>#…`), and every pot is listed in the factory's `PotCreated` events.
+2. **The signed action**: the function name and its arguments exactly as signed, including `member`, `nonce`, `deadline` and `sig`. These match, one for one, the `params` the app would have sent to the relayer's [`POST /v1/relay`](/docs/relayer-api#post-v1relay).
+3. **An account with a little MON** on the same network, to pay the gas.
+4. **A Monad RPC**: `https://testnet-rpc.monad.xyz` for testnet, `https://rpc.monad.xyz` for mainnet.
+
+<Callout type="warn" title="The app can't export signed actions yet">
+  Today the Android app signs an action and hands it straight to the relayer. There is no button to copy a signed action out of the app, so an action that never reached the relayer can't be submitted by someone else yet. Until that export exists, the calls that need no signature (`settle()`, `collect(member)`, `execute`, `expire`, `finalizeDispute`, `applyRules`) are the practical way to act without the relayer. Either way, nothing can leave a pot except under its rules.
+</Callout>
+
+### A script outline (viem)
+
+Simulate first, so a call that would fail costs nothing. Then take the gas limit from Monad's own `eth_estimateGas`. Never hard-code a limit: Monad charges the full gas limit, with no refund, and prices storage differently from Ethereum (see [`contracts/GAS-LIMITS.md`](https://github.com/Baskarayelu/plans/blob/main/contracts/GAS-LIMITS.md)).
+
+```ts title="submit.ts"
+import { createPublicClient, createWalletClient, http, parseAbi, type Address, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { monadTestnet } from "viem/chains"; // or `monad` for mainnet (chain 143)
+
+const potAbi = parseAbi([
+  "function settle()",
+  "function canSettle() view returns (bool)",
+  "function collect(address member)",
+  "function vote(address member, uint256 id, bool approve, uint256 nonce, uint256 deadline, bytes sig)",
+]);
+
+const pot = "0x…" as Address; // from the invite link
+const account = privateKeyToAccount(process.env.SENDER_KEY as Hex); // any account with a little MON
+const transport = http("https://testnet-rpc.monad.xyz");
+const publicClient = createPublicClient({ chain: monadTestnet, transport });
+const walletClient = createWalletClient({ chain: monadTestnet, transport, account });
+
+// Example: a member's vote, exactly as they signed it.
+const call = {
+  address: pot,
+  abi: potAbi,
+  functionName: "vote",
+  args: ["0xMember…", 4n, true, 123n /* nonce */, 1760000000n /* deadline */, "0xSignature…"],
+  account,
+} as const;
+
+// 1. Simulate: a revert shows the reason here, before any gas is spent.
+await publicClient.simulateContract(call);
+
+// 2. Gas from Monad's eth_estimateGas, with a small margin derived from it (Monad charges the limit).
+const estimate = await publicClient.estimateContractGas(call);
+const gas = (estimate * 110n) / 100n;
+
+// 3. Send and wait for the receipt.
+const hash = await walletClient.writeContract({ ...call, gas });
+const receipt = await publicClient.waitForTransactionReceipt({ hash });
+console.log(receipt.status, `https://testnet.monadvision.com/tx/${hash}`);
+```
+
+For settle-up, check `canSettle()` first, then send `settle()` the same way with no arguments. For an undelivered payout after settle-up, send `collect(member)` with that member's address.
+
+## Contract addresses
+
+Monad testnet (chain 10143). Source of truth: [`contracts/deployments/10143.json`](https://github.com/Baskarayelu/plans/blob/main/contracts/deployments/10143.json). All five contracts are verified on MonadVision.
+
+| Contract | Address |
+|---|---|
+| `PlansFactory` | [`0x01F92d40b765516d54ED551da0DC56984CAA2e74`](https://testnet.monadvision.com/address/0x01F92d40b765516d54ED551da0DC56984CAA2e74) |
+| `Pot` implementation | [`0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6`](https://testnet.monadvision.com/address/0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6) |
+| `ClaimEscrow` | [`0x28F6E6095761f003ff413cD99922894bee6e73C7`](https://testnet.monadvision.com/address/0x28F6E6095761f003ff413cD99922894bee6e73C7) |
+| `KeyRegistry` | [`0xD5114ff91FD11B343c9193e9463020ca0D12d168`](https://testnet.monadvision.com/address/0xD5114ff91FD11B343c9193e9463020ca0D12d168) |
+| `PlansSend` | [`0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C`](https://testnet.monadvision.com/address/0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C) |
+| AUSD (Agora, testnet) | [`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`](https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) |
+
+Each plan is its own pot at its own address, created by `PlansFactory`. Mainnet addresses will be listed in the [contracts reference](/docs/contracts#addresses) after the mainnet deployment.

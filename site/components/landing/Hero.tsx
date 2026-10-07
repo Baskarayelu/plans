@@ -1,6 +1,8 @@
 import { Fragment } from "react";
 import { Button, BtnTag, Card, Chip } from "@/components/ui/primitives";
-import { DOWNLOAD_PATH, RELEASE_TAG } from "@/lib/site";
+import { DesktopQrCard } from "@/components/plans/DesktopQrCard";
+import { WebAppButton } from "@/components/plans/WebAppButton";
+import { DOWNLOAD_PATH, RELEASE_LIVE, RELEASE_TAG } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const HEADLINE: Array<{ w: string; hl?: boolean }> = [
@@ -61,7 +63,7 @@ export function Hero() {
 
       <Floating
         delay={1}
-        className="top-16 left-[4%] rotate-[-12deg] max-[1080px]:-left-10 max-[760px]:top-2.5 max-[760px]:-left-[70px] max-[760px]:scale-[.72] max-[760px]:opacity-55"
+        className="top-16 left-[4%] rotate-[-12deg] desktop:hidden max-[1080px]:-left-10 max-[760px]:top-2.5 max-[760px]:-left-[70px] max-[760px]:scale-[.72] max-[760px]:opacity-55"
       >
         <TicketStub
           title="Dinner at Taberna"
@@ -80,7 +82,7 @@ export function Hero() {
 
       <Floating
         delay={3}
-        className="top-[70px] right-[5%] rotate-[9deg] max-[1080px]:-right-[60px] max-[760px]:top-1.5 max-[760px]:-right-[120px] max-[760px]:scale-[.72] max-[760px]:opacity-55"
+        className="top-[70px] right-[5%] rotate-[9deg] desktop:hidden max-[1080px]:-right-[60px] max-[760px]:top-1.5 max-[760px]:-right-[120px] max-[760px]:scale-[.72] max-[760px]:opacity-55"
       >
         <Card className="grid w-[250px] gap-2.5">
           <div className="flex items-center gap-2.5 text-sm font-semibold">
@@ -117,7 +119,7 @@ export function Hero() {
 
       <Floating
         delay={4.5}
-        className="right-[4%] bottom-[26px] rotate-[-10deg] max-[760px]:-right-[110px] max-[760px]:-bottom-10 max-[760px]:scale-[.72] max-[760px]:opacity-55"
+        className="right-[4%] bottom-[26px] rotate-[-10deg] desktop:hidden max-[760px]:-right-[110px] max-[760px]:-bottom-10 max-[760px]:scale-[.72] max-[760px]:opacity-55"
       >
         <Card className="grid w-[220px] gap-2.5 text-sm">
           <div className="font-display text-[15px] leading-tight font-bold">Settled up 🎉</div>
@@ -136,14 +138,16 @@ export function Hero() {
         </Card>
       </Floating>
 
-      <Floating delay={5.5} className="bottom-[150px] left-[1%] rotate-[16deg] max-[1080px]:hidden">
+      <Floating delay={5.5} className="bottom-[150px] left-[1%] rotate-[16deg] max-[1080px]:hidden desktop:hidden">
         <Card className="inline-flex items-center gap-2.5 text-[13px] font-semibold">
           <span>Your key</span>
           <span className="rounded-full border border-line bg-surface-2 px-2.5 py-1.5 text-lg tracking-[2px]">🦊🌵🎈</span>
         </Card>
       </Floating>
 
-      <div className="relative z-[5] mx-auto grid max-w-[760px] justify-items-center gap-[26px] text-center">
+      {/* Phones: one centred column. Computers (131): the copy on the left, a QR to /download on the right. */}
+      <div className="relative z-[5] mx-auto flex max-w-[760px] items-center gap-12 desktop:max-w-[1120px] desktop:px-4">
+      <div className="grid min-w-0 flex-1 justify-items-center gap-[26px] text-center desktop:justify-items-start desktop:text-left">
         <span className="inline-flex items-center gap-2.5 rounded-full border border-line bg-surface-2 py-[7px] pr-3.5 pl-2 text-[13px] font-semibold whitespace-nowrap min-[420px]:text-sm">
           <span className="inline-flex" aria-hidden="true">
             {["🇬🇧", "🇺🇸", "🇮🇳", "🇵🇹"].map((f, i) => (
@@ -161,7 +165,7 @@ export function Hero() {
           Friends in four countries, one pot
         </span>
 
-        <h1 className="m-0 font-display text-[clamp(40px,6.4vw,76px)] leading-none font-extrabold tracking-[-0.035em] text-balance">
+        <h1 className="m-0 font-display text-[clamp(40px,6.4vw,76px)] leading-none desktop:text-[clamp(52px,4.6vw,68px)] font-extrabold tracking-[-0.035em] text-balance">
           {HEADLINE.map(({ w, hl }, i) => (
             <Fragment key={i}>
               {/* CSS reveal (globals.css `word`): renders visible without JS, instant under reduced motion */}
@@ -178,17 +182,25 @@ export function Hero() {
           is settled in one tap, in pounds, dollars or rupees.
         </p>
 
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3 desktop:justify-start">
           <Button href={DOWNLOAD_PATH}>
             Get the Android app <BtnTag>{RELEASE_TAG}</BtnTag>
           </Button>
-          <Button href="#how" variant="ghost">
-            See how it works
-          </Button>
+          <WebAppButton />
         </div>
+        {RELEASE_LIVE ? (
+          <span className="-mt-2 font-mono text-[13px] leading-snug font-medium text-muted">
+            Test version available now · free test dollars
+          </span>
+        ) : null}
         <span className="font-mono text-xs leading-snug font-medium text-muted">
           No bank account in common. No app password. Free for groups.
         </span>
+      </div>
+      <DesktopQrCard
+        title="On a computer? Get it on your phone"
+        sub="Scan with your Android phone’s camera. On iPhone, Plans in your browser is coming soon."
+      />
       </div>
     </header>
   );

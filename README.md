@@ -60,6 +60,16 @@ cd contracts && npm --prefix tools install && npm --prefix tools run gas
 
 Docs: [`docs/`](docs) in this repo, and the docs site at https://plans.0xo.in/docs. Updates on X: [@PlansOnMonad](https://x.com/PlansOnMonad).
 
+## Agora
+
+Plans uses AUSD, Agora's digital dollar, and only Agora's public interfaces:
+
+- **Public API:** `GET https://api.agora.finance/v0/metrics` for AUSD supply on Monad.
+- **Reserves:** Agora's monthly attestation reports. The latest one's date and firm are bundled in [`app/src/lib/agora/attestation.json`](app/src/lib/agora/attestation.json) and updated by hand.
+- **Staging environment:** access requested by the entrant on 7 Oct 2026; **pending**.
+
+"Instant settlement" in Plans means a send that is final on Monad in under a second (measured). It is not Agora's Instant Settlement product.
+
 ## AI tool disclosure
 
 AI coding tools (Claude Code) were used to help research, design and write this project, as section 4.1.4 of the Metropolis rules requires us to disclose.

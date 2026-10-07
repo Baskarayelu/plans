@@ -9,18 +9,16 @@ All contracts are **immutable and hold no privileged roles**. Token: AUSD, 6 dec
 
 ## Addresses
 
-<Callout type="warn" title="Pending">
-  Not deployed yet. Addresses, deploy blocks and verified-source links will be listed here when the contracts are live on Monad mainnet and testnet.
-</Callout>
+Live on **Monad testnet** and verified on MonadVision (Sourcify, exact match). Source of truth: [`contracts/deployments/10143.json`](https://github.com/Baskarayelu/plans/blob/main/contracts/deployments/10143.json). Mainnet comes after a full testnet run.
 
 | Contract | Monad mainnet (143) | Monad testnet (10143) |
 |---|---|---|
-| AUSD (Agora) | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
-| `PlansFactory` | <Pending /> | <Pending /> |
-| `Pot` implementation | <Pending /> | <Pending /> |
-| `ClaimEscrow` | <Pending /> | <Pending /> |
-| `KeyRegistry` | <Pending /> | <Pending /> |
-| `PlansSend` | <Pending /> | <Pending /> |
+| AUSD (Agora) | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` | [`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`](https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) |
+| `PlansFactory` | <Pending /> | [`0x01F92d40b765516d54ED551da0DC56984CAA2e74`](https://testnet.monadvision.com/address/0x01F92d40b765516d54ED551da0DC56984CAA2e74) |
+| `Pot` implementation | <Pending /> | [`0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6`](https://testnet.monadvision.com/address/0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6) |
+| `ClaimEscrow` | <Pending /> | [`0x28F6E6095761f003ff413cD99922894bee6e73C7`](https://testnet.monadvision.com/address/0x28F6E6095761f003ff413cD99922894bee6e73C7) |
+| `KeyRegistry` | <Pending /> | [`0xD5114ff91FD11B343c9193e9463020ca0D12d168`](https://testnet.monadvision.com/address/0xD5114ff91FD11B343c9193e9463020ca0D12d168) |
+| `PlansSend` | <Pending /> | [`0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C`](https://testnet.monadvision.com/address/0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C) |
 
 Deployment uses the canonical CREATE2 deployer `0x4e59b44847b379578588920cA78FbF26c0B4956C` with fixed salts (`keccak256("plans.v1.KeyRegistry")`, `"plans.v1.PlansSend"`, `"plans.v1.PlansFactory"`). The factory's constructor creates `ClaimEscrow` (nonce 1) and the `Pot` implementation (nonce 2). Addresses depend on the salts, the exact bytecode and the AUSD address, not on the deployer account.
 
@@ -41,6 +39,19 @@ Deployment uses the canonical CREATE2 deployer `0x4e59b44847b379578588920cA78FbF
 - Nonces are **unordered**: each `(member, nonce)` can be used once. Apps use random 256-bit nonces. Used nonces are a bitmap (256 per storage word).
 - Signatures are checked with `ecrecover` first, then ERC-1271, so EOA, EIP-7702 and ERC-1271 signers all work.
 - Deposits use AUSD `receiveWithAuthorization` (bytes-signature variant) with `to` = the calling contract, so a third party can't front-run them. The safety net uses AUSD `permit`.
+
+### Calls anyone can make
+
+These need no signature. Each checks its own conditions, so the caller can't change the outcome; they only pay the gas. They are what keeps a plan working [without the relayer](/docs/without-the-relayer).
+
+| Function | What it does |
+|---|---|
+| `settle()` | One-transaction settle-up, once allowed (no pending spends or open disputes, and the end time plus review window has passed or every active member acked). `canSettle()` tells you whether it would succeed. |
+| `collect(member)` | After settle-up, a payout that couldn't be delivered stays reserved for that member; anyone can collect it for them later. |
+| `execute(id)` | Executes an approved spend once it's executable. |
+| `expire(id)` | Cancels a pending or approved spend whose time ran out. |
+| `finalizeDispute(disputeId)` | Closes a dispute after its voting period, or once every eligible member voted. |
+| `applyRules(id)` | Applies an approved rule change after its timelock. |
 
 ### EIP-712 domains
 

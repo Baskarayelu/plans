@@ -31,11 +31,28 @@ const config = {
         ],
       })),
       {
-        source: "/:path*",
+        // Shared plan (/v) and proof (/s) pages: read from the public record; secrets and names stay in "#".
+        source: "/v/:path*",
         headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
+      },
+      {
+        source: "/s/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex" },
+        ],
+      },
+      {
+        source: "/:path*",
+        headers: [{ key: "X-Content-Type-Options", value: "nosniff" }],
+      },
+      {
+        // Everywhere except the link pages above, which keep "no-referrer" (a later match would override it).
+        source: "/:path((?!j/|c/|p/|v/|s/).*)",
+        headers: [{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }],
       },
     ];
   },

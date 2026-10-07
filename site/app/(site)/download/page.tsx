@@ -4,12 +4,14 @@ import { Download } from "lucide-react";
 import release from "@/public/release.json";
 import { Badge, PageShell } from "@/components/ui/primitives";
 import { CopyButton } from "@/components/site/CopyButton";
-import { GITHUB_URL } from "@/lib/site";
+import { QrCode } from "@/components/plans/QrCode";
+import { WebAppButton } from "@/components/plans/WebAppButton";
+import { DOWNLOAD_PATH, GITHUB_URL, SITE_HOST, SITE_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Download for Android",
-  description: "Download the Plans Android beta (APK), check its SHA-256, and install it in a minute.",
+  description: "Download the Plans Android test version (APK), check its SHA-256, and install it in a minute.",
 };
 
 type Apk = (typeof release.apks)[number] & { sha256: string | null; sizeBytes: number | null };
@@ -143,11 +145,41 @@ export default function DownloadPage() {
         )}
       </div>
 
+      {/* Computers (133): the APK is no use on this machine, so lead with a QR that opens this page on the phone. */}
+      <section
+        aria-labelledby="qr-title"
+        className="mx-auto mt-6 hidden max-w-[1000px] items-center gap-7 rounded-[22px] border border-line bg-surface p-6 desktop:flex"
+      >
+        <div className="flex-none rounded-2xl border border-line bg-white p-2.5">
+          <QrCode value={`${SITE_URL}${DOWNLOAD_PATH}`} size={168} label={`QR code that opens ${SITE_HOST}${DOWNLOAD_PATH}`} />
+        </div>
+        <div className="grid flex-1 gap-2">
+          <span className="font-mono text-xs font-semibold tracking-[.08em] text-muted uppercase">On a computer?</span>
+          <h2 id="qr-title" className="m-0 font-display text-2xl font-bold tracking-[-0.02em]">
+            Scan to download on your phone
+          </h2>
+          <p className="m-0 text-[15px] text-pretty text-muted">
+            Opens this page on your Android phone, where the file installs. iPhone or no phone to hand? Plans in your
+            browser is coming soon.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <WebAppButton />
+            <span className="font-mono text-[13px] text-muted">
+              {SITE_HOST}
+              {DOWNLOAD_PATH}
+            </span>
+          </div>
+        </div>
+      </section>
+
       <div className="mx-auto mt-6 grid max-w-[1000px] grid-cols-1 gap-4 min-[861px]:grid-cols-2">
         {apks.map((a) => (
           <ApkCard key={a.id} apk={a} live={live && !!a.sha256} />
         ))}
       </div>
+      <p className="mx-auto mt-4 flex max-w-[1000px] flex-wrap items-center justify-center gap-3 text-[15px] text-muted desktop:hidden">
+        No Android phone? <WebAppButton className="min-h-10 px-4 text-sm" />
+      </p>
       <p className="mx-auto mt-4 max-w-[1000px] text-sm text-muted">
         Check the file before installing (optional): on a computer run{" "}
         <code className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[13px] break-all">shasum -a 256 plans.apk</code>{" "}

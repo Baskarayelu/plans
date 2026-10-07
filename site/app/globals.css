@@ -2,6 +2,9 @@
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 
+/* A computer: wide viewport and a mouse or trackpad. Used for the "scan to get it on your phone" QR. */
+@custom-variant desktop (@media (min-width: 1024px) and (hover: hover) and (pointer: fine));
+
 /* ───────────── Plans tokens (light / dark). Dark = `.dark` on <html> (next-themes, follows system). ───────────── */
 :root {
   --bg: #f4f6f1;

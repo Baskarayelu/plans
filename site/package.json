@@ -13,6 +13,9 @@
     "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "clsx": "^2.1.1",
     "fumadocs-core": "16.16.2",
     "fumadocs-mdx": "15.4.6",
@@ -21,6 +24,7 @@
     "motion": "^14.0.0",
     "next": "16.3.8",
     "next-themes": "^0.4.6",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.3.1"
@@ -29,6 +33,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@types/mdx": "^2.0.14",
     "@types/node": "^22",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotted-map": "^3.1.0",

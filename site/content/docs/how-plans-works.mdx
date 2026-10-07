@@ -98,6 +98,8 @@ Anyone can call `settle()` once there are no pending proposals or open disputes 
 - the end time plus the review window has passed, or
 - every active member has acked (this is how a plan ends early).
 
+`settle()` needs no signature, so anyone can send it, with or without the relayer. See [Using Plans if the relayer is down](/docs/without-the-relayer).
+
 ## Settle-up maths
 
 ### The ledger
@@ -132,7 +134,7 @@ net(m) = contributed + personalPaid − share − withdrawn
 4. Otherwise each creditor gets `net × B / C`, rounded down, and keeps the rest as a claim. Every remaining negative net is recorded as a debt.
 5. The pot is marked settled. Spending stops for good.
 
-A payout that fails is skipped and stays as that member's claim, so one recipient can never block settlement. A debt can be paid later with `payDebt`, and is immediately shared out to the members still owed.
+A payout that fails is skipped, so one recipient can never block settlement. After settle-up, a payout that couldn't be delivered stays reserved for that member and anyone can collect it for them later, with `collect(member)`. A debt can be paid later with `payDebt`, and is immediately shared out to the members still owed.
 
 ### Worked example
 
