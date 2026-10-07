@@ -10,24 +10,25 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 
 | Part | Folder | State | Tests |
 |---|---|---|---|
-| Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **182 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
+| Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **250 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
 | Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 44 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 44 |
-| Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app | **95 passing** (unit, plus integration against anvil) |
-| Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **21 passing** |
-| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.1) (Monad testnet) | **137 passing**, plus a copy check that fails the build on crypto words |
+| Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app | **122 passing** (unit, plus integration against anvil) |
+| Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **26 passing** |
+| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.1) (Monad testnet) | **173 passing**, plus a copy check that fails the build on crypto words |
 | Website and docs | [`site/`](site) | Live at https://plans.0xo.in | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
 
 ## Monad testnet deployment (chain 10143)
 
-All five contracts are verified on MonadVision (Sourcify, exact match). Source of truth: [`contracts/deployments/10143.json`](contracts/deployments/10143.json).
+All six contracts are verified on MonadVision (Sourcify, exact match). Redeployed 7 Oct 2026 with `collect`, FxReference and exchange-rate rounds. Source of truth: [`contracts/deployments/10143.json`](contracts/deployments/10143.json).
 
 | Contract | Address | Deploy transaction |
 |---|---|---|
-| PlansFactory | `0x01F92d40b765516d54ED551da0DC56984CAA2e74` | `0xba15b4a00d7c8ff2bc0ef2891e54ddd573ccc0626879646da52b3bb1a6f73778` |
-| Pot (implementation) | `0x46Fc9796653e648863b8A6720D34Ed4a6F8366c6` | created by the factory |
-| ClaimEscrow | `0x28F6E6095761f003ff413cD99922894bee6e73C7` | created by the factory |
-| KeyRegistry | `0xD5114ff91FD11B343c9193e9463020ca0D12d168` | `0x5ca4e39e1f6a10afce10c1dd82ab3db81e8abfe019823fea63152596e1cafd37` |
-| PlansSend | `0xC73C87fb6E2c57c757eAE2a03F4ee02fF1fc0b8C` | `0x84f213791b9ede5206bc26c54261fe4bd048e74e3ccc8ca91f33e60a856d433b` |
+| PlansFactory | `0xCE282ad9d8CacA94170eB311b12ebFBAbDa203B4` | `0x59aa196379a9cde3e1974701baf7fd34aa0a42c03a1df41c927fb1724696e8f6` |
+| Pot (implementation) | `0x3b93F30f923f8DeE346ef84f3a0a08d5cf7718A8` | created by the factory |
+| ClaimEscrow | `0x720876392Da37b7a3122289F537892E069F91eF5` | created by the factory |
+| KeyRegistry | `0xf514925f5f781455E162148eA5BF3E8f5626d5bb` | `0x6bcae3d2916d37334137eb9db2edec68ceaeed219363147f094753d338088040` |
+| PlansSend | `0x2e29d27dBeE1B9fa6C31f0e4cC21CDCc5dbaf56B` | `0xbfbae34409a6ef26c4b1bd551dec908f6738b8cde1520667c44532797c57bda0` |
+| FxReference | `0xaB7eeDe1DA994137a340155f350A8F81358FFCa2` | `0x1d338153a401122b7019a903eb43b4846f62b016dfc0d1394261979ea82a2751` |
 | AUSD (Agora, testnet) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | — |
 
 Every gas limit was taken from Monad's own `eth_estimateGas` (see [`contracts/GAS-LIMITS.md`](contracts/GAS-LIMITS.md)).
