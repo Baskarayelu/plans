@@ -2,8 +2,7 @@
 #
 # Plans — Envio HyperIndex config.
 #
-# This file is the Monad TESTNET indexer deployed on Envio Cloud (free plan: no env vars, so the
-# deployed addresses are written below). The mainnet indexer uses config.mainnet.yaml.
+# Monad MAINNET indexer config (deploy as a separate Envio indexer with config file config.mainnet.yaml).
 # Pots are never listed here: they are registered dynamically from PlansFactory.PotCreated.
 name: plans-indexer
 description: Plans — group money pots on Monad (pots, ledgers, settle-up graph, corridors, traction stats)
@@ -84,21 +83,19 @@ contracts:
       - event: OwnershipTransferred
 
 chains:
-  # Monad testnet (HyperSync: https://10143.hypersync.xyz). Addresses are written here directly because
-  # Envio Cloud's free plan has no environment variables. Source: contracts/deployments/10143.json.
-  # This deployment indexes testnet only, from the deployment block, to stay within free-plan limits;
-  # mainnet gets its own indexer from config.mainnet.yaml.
-  - id: 10143
-    start_block: 68940999
+  # Monad mainnet (HyperSync: https://143.hypersync.xyz). Fill in from contracts/deployments/143.json after the
+  # mainnet deploy, and set start_block to the deployment block.
+  - id: 143
+    start_block: 0 # TODO: mainnet deployment block
     contracts:
       - name: PlansFactory
-        address: "0xCE282ad9d8CacA94170eB311b12ebFBAbDa203B4"
+        address: "0x00000000000000000000000000000000000f0001" # TODO after mainnet deploy
       - name: Pot
       - name: KeyRegistry
-        address: "0xf514925f5f781455E162148eA5BF3E8f5626d5bb"
+        address: "0x00000000000000000000000000000000000f0002" # TODO after mainnet deploy
       - name: ClaimEscrow
-        address: "0x720876392Da37b7a3122289F537892E069F91eF5"
+        address: "0x00000000000000000000000000000000000f0003" # TODO after mainnet deploy
       - name: PlansSend
-        address: "0x2e29d27dBeE1B9fa6C31f0e4cC21CDCc5dbaf56B"
+        address: "0x00000000000000000000000000000000000f0004" # TODO after mainnet deploy
       - name: FxReference
-        address: "0xaB7eeDe1DA994137a340155f350A8F81358FFCa2"
+        address: "0x00000000000000000000000000000000000f0005" # TODO after mainnet deploy

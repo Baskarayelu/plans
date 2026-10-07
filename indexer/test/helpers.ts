@@ -3,11 +3,12 @@ import { createTestIndexer } from "envio";
 import { expect } from "vitest";
 
 export const CHAIN = 10143;
-export const FACTORY = "0x00000000000000000000000000000000000f1001";
-export const KEYS = "0x00000000000000000000000000000000000f1002";
-export const ESCROW = "0x00000000000000000000000000000000000f1003";
-export const SEND = "0x00000000000000000000000000000000000f1004";
-export const FX = "0x00000000000000000000000000000000000f1005";
+// The deployed testnet addresses in config.yaml (lowercase, as the indexer stores them).
+export const FACTORY = "0xce282ad9d8caca94170eb311b12ebfbabda203b4";
+export const KEYS = "0xf514925f5f781455e162148ea5bf3e8f5626d5bb";
+export const ESCROW = "0x720876392da37b7a3122289f537892e069f91ef5";
+export const SEND = "0x2e29d27dbee1b9fa6c31f0e4cc21cdcc5dbaf56b";
+export const FX = "0xab7eede1da994137a340155f350a8f81358ffca2";
 
 // real users
 export const ALICE = "0xa11ce00000000000000000000000000000000001";
@@ -43,7 +44,7 @@ type Item = Record<string, unknown>;
 
 /** Builds simulate items with increasing block numbers / timestamps. One tx per `tx()` call. */
 export class Sim {
-  block = 1_000;
+  block = 69_000_000; // after config.yaml start_block (68,940,999)
   ts = 1_760_000_000; // 2025-10-09
   private items: Item[] = [];
   indexer = createTestIndexer();
