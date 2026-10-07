@@ -1,4 +1,4 @@
-/** 17 Members & rules: who is in, what each put in, positions in their own money, the rules in plain words. */
+/** 17/149 Members & rules: who is in, what each put in, positions in their own money, the rules in plain words. */
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
@@ -13,7 +13,7 @@ import { personFor, usePlan, type Person } from "../../../lib/state/data";
 import { useColors } from "../../../theme/ThemeProvider";
 import { currentRules, presetName, useTheirMoney } from "../../../ui/core/PlanCore";
 import { Icon, type IconName } from "../../../ui/Icon";
-import { Banner, Btn, Btns, Card, Chip, IconBtn, ListItem, Overline, Row, Skel } from "../../../ui/kit";
+import { Banner, Btn, Btns, Card, Chip, IconBtn, ListItem, Overline, Row, Skel, Tile } from "../../../ui/kit";
 import { AppBar, Screen } from "../../../ui/layout";
 import { PersonAvatar, PersonName, useMoney } from "../../../ui/plan/common";
 import { Txt } from "../../../ui/Text";
@@ -87,11 +87,11 @@ export default function Members() {
 
   const raw = p.raw;
   const rules = currentRules(raw);
-  const words = rulesInWords(rules, { reviewWindowSec: raw.reviewWindow !== undefined ? Number(raw.reviewWindow) : undefined });
+  const active = raw.members.filter((m) => m.status === "Active");
+  const words = rulesInWords(rules, { reviewWindowSec: raw.reviewWindow !== undefined ? Number(raw.reviewWindow) : undefined, active: active.length });
   const applied = raw.ruleChanges.find((r) => r.status === "Applied");
   const agreed = applied?.eta ? Number(applied.eta) : (raw.createdAt ?? Number(raw.startTime));
   const pending = raw.ruleChanges.find((r) => (r.status === "Proposed" && Number(r.expiresAt) > p.now) || r.status === "Approved");
-  const active = raw.members.filter((m) => m.status === "Active");
   const countries = raw.countries.filter(Boolean).length;
   const canAct = p.isMember && !p.settled;
   const safety = p.myMember ? BigInt(p.myMember.safetyNet) : 0n;
@@ -193,6 +193,18 @@ export default function Members() {
             </Txt>
           </Row>
         ) : null}
+      </Card>
+      <Card tint style={{ marginTop: 12 }} onPress={() => router.push({ pathname: "/risks", params: { pot } })} testID="card-what-could-go-wrong" a11y="What could go wrong">
+        <Row>
+          <Tile icon="shield" kind="i" />
+          <View style={{ flex: 1 }}>
+            <Txt v="lt">What could go wrong</Txt>
+            <Txt v="t13" color="muted">
+              Lost phones, people who won't pay, outages, freezes
+            </Txt>
+          </View>
+          <Icon name="chev" size={20} />
+        </Row>
       </Card>
       <Txt v="t13" color="muted" style={{ marginTop: 12 }}>
         Anyone can propose a change or pause spending. No one has extra powers, including whoever started the plan.

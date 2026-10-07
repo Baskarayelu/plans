@@ -137,11 +137,15 @@ export function approvalsRequired(r: Pick<Rules, "instantMax" | "oneApprovalMax"
 
 const hours = (s: number) => (s % 3600 === 0 ? `${s / 3600} h` : `${Math.round(s / 60)} min`);
 
-/** The rules in plain words (screens 11, 14, 17). */
-export function rulesInWords(r: Rules, opts: { reviewWindowSec?: number } = {}): string[] {
+/**
+ * The rules in plain words (screens 11, 14, 17/149). With `active` (people in the plan now) the
+ * majority is spelled out as a count: "Over $200 needs 3 of 4."
+ */
+export function rulesInWords(r: Rules, opts: { reviewWindowSec?: number; active?: number } = {}): string[] {
   const out: string[] = [];
   const big = r.oneApprovalMax >= UINT64_MAX;
-  const high = r.highTier === HighTier.ALL ? "everyone's OK" : "a majority's OK";
+  const n = opts.active ?? 0;
+  const high = r.highTier === HighTier.ALL ? "everyone's OK" : n >= 3 ? `${Math.floor(n / 2) + 1} of ${n}` : "a majority's OK";
   if (r.instantMax === 0n) out.push("Every spend needs at least one friend's OK.");
   else out.push(`Spends up to ${formatUsdShort(r.instantMax)} go through straight away.`);
   if (big) out.push(`Bigger spends need one friend's OK.`);
@@ -155,7 +159,7 @@ export function rulesInWords(r: Rules, opts: { reviewWindowSec?: number } = {}):
   else if (r.payeePolicy === PayeePolicy.MEMBERS_AND_ALLOWLIST) out.push("Only people in the plan and saved businesses can be paid, plus anyone by link.");
   else out.push("Can pay members, businesses, and anyone by link.");
   if (r.minContribution > 0n) out.push(`Spending opens once everyone has put in ${formatUsdShort(r.minContribution)}.`);
-  out.push("Anyone in a split can question a spend; the group votes for 48 hours.");
+  out.push("Anyone in a split can question a spend for 48 hours.");
   if (opts.reviewWindowSec !== undefined) {
     out.push(
       opts.reviewWindowSec > 0

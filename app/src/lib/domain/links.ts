@@ -7,6 +7,11 @@
  *
  * Secrets (invite secret, claim key) travel only in the fragment, which browsers never send to
  * the web server. Names in the fragment are only a hint for the screen before the real data loads.
+ *
+ * Site-only routes (the app doesn't claim them, so they always open in the browser):
+ *   /v/<pot>#…            read-only shared plan for people who aren't members yet (build 2, 122–124)
+ *   /s/<pot>[#n=<name>]   public settle-up proof; the name only when the sharer opted in
+ *                         (lib/share/settleCard.ts builds these links)
  */
 import { fromBase64Url, toBase64Url } from "../crypto/bytes";
 

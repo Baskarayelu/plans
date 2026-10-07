@@ -16,6 +16,8 @@ export type DeviceInfo = {
 type PlansNativeModule = {
   logLine(tag: string, message: string): boolean;
   deviceInfo(): DeviceInfo;
+  shareImage?(contentUri: string, text: string, title: string): Promise<boolean>;
+  saveImage?(path: string, name: string): Promise<boolean>;
 };
 
 const native = requireOptionalNativeModule<PlansNativeModule>("PlansNative");
@@ -32,4 +34,19 @@ export function deviceInfo(): DeviceInfo | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Opens the Android share sheet with an image (a content:// URI) and a line of text.
+ * Returns false when this build has no native helper, so the caller can fall back.
+ */
+export async function shareImageWithText(contentUri: string, text: string, title: string): Promise<boolean> {
+  if (!native?.shareImage) return false;
+  return native.shareImage(contentUri, text, title);
+}
+
+/** Saves a PNG file into Pictures/Plans. False when not possible here (old Android or old build). */
+export async function saveImageToPictures(path: string, name: string): Promise<boolean> {
+  if (!native?.saveImage) return false;
+  return native.saveImage(path, name);
 }

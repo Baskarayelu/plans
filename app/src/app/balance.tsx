@@ -10,11 +10,11 @@ import { useAccountActivity, useBalance, useMe } from "../lib/state/data";
 import { Banner, Btn, Btns, Card, EmojiTile, ListItem, Overline, SectionHead, Skel, Tile } from "../ui/kit";
 import { AppBar, Screen } from "../ui/layout";
 import { useLocal } from "../ui/money";
-import { InfoPill } from "../ui/send/bits";
+import { AusdPill, BackingCard } from "../ui/agora/dollars";
 import { MoneyRowItem, usePlanIndex } from "../ui/send/rows";
 import { Txt } from "../ui/Text";
 
-/** 09 Your Plans account: balance, what it is, safety-net holds and recent money. */
+/** 09/140 Your Plans account: balance, what backs it, safety-net holds and recent money. */
 export default function Balance() {
   const { address, currency } = useMe();
   const bal = useBalance();
@@ -63,17 +63,19 @@ export default function Balance() {
           </>
         )}
         <View style={{ marginTop: 12 }}>
-          <InfoPill label="Digital dollars (AUSD)" info="1 digital dollar is always worth 1 US dollar. Plans keeps your money this way so it's the same in every country." testID="pill-ausd" />
+          <AusdPill testID="pill-ausd" />
         </View>
       </View>
       <Txt v="t13" color="muted" center style={{ marginTop: 10, marginHorizontal: 24 }}>
-        1 digital dollar is always worth 1 US dollar.{currency !== "USD" ? ` ${pluralCap(currency)} use today's rate.` : ""}
+        1 digital dollar is always meant to be worth 1 US dollar.{currency !== "USD" ? ` ${pluralCap(currency)} use today's rate.` : ""}
       </Txt>
       <Btns style={{ marginTop: 20 }}>
         <Btn label="Add" icon="plus" sm flex onPress={() => router.push("/add-balance")} testID="btn-add" />
         <Btn label="Receive" kind="sec" icon="qr" sm flex onPress={() => router.push("/my-code")} testID="btn-receive" />
         <Btn label="Send" kind="sec" icon="send" sm flex onPress={() => router.push("/(tabs)/send")} testID="btn-send" />
       </Btns>
+
+      <BackingCard />
 
       {nets.data && nets.data.length > 0 ? (
         <Card style={{ marginTop: 20, paddingBottom: 4 }} testID="held-for-plans">

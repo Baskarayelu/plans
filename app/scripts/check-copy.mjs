@@ -3,7 +3,9 @@
  * Copy lint: user-visible strings in route and UI files must not use crypto vocabulary.
  *   banned anywhere: wallet, address, gas, token, chain, transaction, blockchain, crypto, sign*
  *   allowed: "Sign out", "sign in to"
- *   "AUSD" / "Digital dollars" only on screens 09 (balance), 43 (send tab), 45 (send amount)
+ *   "AUSD" / "Digital dollars" only on screens 09 (balance), 43 (send tab), 45 (send amount),
+ *   plus the approved build-2 additions: 140/141 (backing card and "About digital dollars", in
+ *   src/ui/agora/dollars.tsx) and 147 ("If the digital dollar is frozen", src/ui/risks/content.ts and its screen)
  * Checks JSX text and string literals that look like prose (contain a space or start upper-case),
  * skipping imports, testIDs, route paths and object keys. Hidden Diagnostics is exempt.
  */
@@ -13,7 +15,7 @@ import path from "node:path";
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const DIRS = ["src/app", "src/ui"];
 const EXEMPT = new Set(["src/app/diagnostics.tsx"]);
-const AUSD_OK = new Set(["src/app/balance.tsx", "src/app/(tabs)/send.tsx", "src/app/send/amount.tsx"]);
+const AUSD_OK = new Set(["src/app/balance.tsx", "src/app/(tabs)/send.tsx", "src/app/send/amount.tsx", "src/ui/agora/dollars.tsx", "src/ui/risks/content.ts", "src/app/risks/[topic].tsx"]);
 const BANNED = /\b(wallets?|address(es)?|gas|tokens?|chains?|transactions?|blockchains?|crypto|sign(ed|ing|s|ature|atures)?)\b/i;
 const ALLOWED = [/sign out/gi, /sign in to/gi];
 
@@ -79,7 +81,7 @@ for (const dir of DIRS) {
         bad++;
       }
       if (!AUSD_OK.has(rel) && /\bAUSD\b|digital dollars/i.test(s)) {
-        console.log(`${rel}: "${s.trim().slice(0, 90)}" → AUSD caption outside 09/43/45`);
+        console.log(`${rel}: "${s.trim().slice(0, 90)}" → AUSD caption outside 09/43/45/140/141/147`);
         bad++;
       }
     }

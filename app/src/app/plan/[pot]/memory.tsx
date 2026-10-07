@@ -1,7 +1,7 @@
 /** 41 Settled plan memory: a keepsake summary of a settled plan, with a CSV of every spend. */
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { Share, View } from "react-native";
 import { formatUsd, formatUsdShort } from "../../../lib/domain/currency";
 import { categoryOf } from "../../../lib/domain/rules";
@@ -13,12 +13,14 @@ import { Band, Banner, Bar, Btn, Card, DemoTag, IconBtn, Overline, Row, Skel } f
 import { AppBar, Bleed, Screen } from "../../../ui/layout";
 import { dateRange } from "../../../ui/planBits";
 import { People } from "../../../ui/plan/common";
+import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Txt } from "../../../ui/Text";
 
 export default function PlanMemory() {
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const spendsQ = useQuery({ queryKey: ["allSpends", (pot ?? "").toLowerCase()], queryFn: () => fetchExecutedSpends(pot!), enabled: !!pot, staleTime: 60_000 });
+  const [sharing, setSharing] = useState(false);
 
   if (q.isLoading) return <PlanSkeleton />;
   if (q.isError || !q.data) return <PlanProblem missing={!q.isError} onRetry={() => void q.refetch()} />;
@@ -67,7 +69,8 @@ export default function PlanMemory() {
         </>
       }
     >
-      <AppBar right={<IconBtn name="share" label="Share" onPress={shareSummary} testID="btn-share-memory" />} />
+      <AppBar right={<IconBtn name="share" label="Share" onPress={plan.settled ? () => setSharing(true) : shareSummary} testID="btn-share-memory" />} />
+      {plan.settled ? <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={BigInt(d.settlements[0]?.paidOut ?? "0")} settleMs={settleMs} /> : null}
       <Bleed style={{ overflow: "hidden", paddingVertical: 12 }}>
         <Band color={plan.meta.color} text={`${plan.meta.name} · ${dates} · ${plan.settled ? "settled" : "ended"}`.toUpperCase()} style={{ marginHorizontal: -40, transform: [{ rotate: "-3deg" }], justifyContent: "center" }} />
       </Bleed>

@@ -13,7 +13,8 @@ import { fromBase64Url, toHex } from "../lib/crypto/bytes";
 import { countryByCode, formatUsd, formatUsdShort, ONE_DOLLAR, parseAmount } from "../lib/domain/currency";
 import { defaultSafetyNet, joinPlan } from "../lib/domain/planOps";
 import { rulesInWords } from "../lib/domain/rules";
-import { handlePasskeyFailure } from "../lib/identity/flows";
+import { handlePasskeyFailure, passkeyNotice } from "../lib/identity/flows";
+import { usePasskeyWait } from "../lib/identity/usePasskeyWait";
 import { createOrRestore, identity, unlockStored } from "../lib/identity/session";
 import { personFor, useBalance, usePotPreview, type Person } from "../lib/state/data";
 import { useStore } from "../lib/state/observable";
@@ -135,6 +136,7 @@ function InviteOpened({
   const [inline, setInline] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const wait = usePasskeyWait();
   const safetyNet = defaultSafetyNet(rules);
 
   // turn "Add now" on by default once we know there's enough
@@ -163,14 +165,17 @@ function InviteOpened({
   const from = people.find((p) => inviter && p.name === inviter);
 
   const onJoin = async () => {
+    if (authBusy && wait.phase !== "stuck") return;
     setInline(null);
     setInfo(null);
     const st = identity.get().status;
     if (st === "none" || st === "locked") {
       setAuthBusy(true);
+      wait.start(st === "none" ? "join" : "unlock");
       try {
         if (st === "none") {
           const r = await createOrRestore("Plans");
+          wait.finish("ok");
           if (!identity.get().profile) {
             router.replace({ pathname: "/profile", params: { next: joinHref } });
             return;
@@ -183,9 +188,11 @@ function InviteOpened({
           }
         } else {
           await unlockStored();
+          wait.finish("ok");
         }
       } catch (e) {
-        const r = handlePasskeyFailure(e);
+        wait.finish(e instanceof Error ? e.message : "failed");
+        const r = handlePasskeyFailure(e, st === "none" ? "create" : "unlock");
         if (r.inline) setInline(r.inline);
         return;
       } finally {
@@ -210,7 +217,10 @@ function InviteOpened({
     onJoined({ deposit: dep, safetyNet });
   };
 
-  const label = status === "unlocked" ? "Join" : "Join with fingerprint";
+  // B5: "Opening passkey…" only when the system sheet takes over a second; 129 after 15 s.
+  const waiting = authBusy && wait.phase === "waiting";
+  const stuck = authBusy && wait.phase === "stuck" ? passkeyNotice("stuck", "create") : null;
+  const label = waiting ? "Opening passkey…" : stuck ? "Try again" : status === "unlocked" ? "Join" : "Join with fingerprint";
   const shownRules = allRules ? words : words.slice(0, 5);
 
   return (
@@ -219,8 +229,9 @@ function InviteOpened({
       dock={
         <>
           {inline ? <Banner kind="neg" icon="alert" title={inline} testID="banner-join-inline" /> : null}
+          {stuck ? <Banner kind="neg" icon={stuck.icon} title={stuck.title} text={stuck.text} testID="banner-join-stuck" /> : null}
           {join.error ? <Banner kind="neg" icon="alert" title={join.error.title} text={join.error.message} testID="banner-join-error" /> : null}
-          <Btn label={label} icon={status === "unlocked" ? "check" : "fp"} loading={authBusy || join.busy} disabled={signedIn && addOn && (tooMuch || deposit === 0n)} onPress={() => void onJoin()} testID="btn-join-with-fingerprint" />
+          <Btn label={label} icon={status === "unlocked" ? "check" : "fp"} loading={waiting || join.busy} disabled={signedIn && addOn && (tooMuch || deposit === 0n)} onPress={() => void onJoin()} testID="btn-join-with-fingerprint" />
         </>
       }
     >

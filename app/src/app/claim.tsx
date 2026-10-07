@@ -107,7 +107,7 @@ export default function Claim() {
       await createOrRestore("Plans");
       await afterIdentity();
     } catch (e) {
-      setMsg(handlePasskeyFailure(e).inline);
+      setMsg(handlePasskeyFailure(e, "create").inline);
     } finally {
       setBusy(null);
     }
@@ -119,7 +119,7 @@ export default function Claim() {
       await restoreWithPasskey();
       await afterIdentity();
     } catch (e) {
-      setMsg(handlePasskeyFailure(e).inline);
+      setMsg(handlePasskeyFailure(e, "restore").inline);
     } finally {
       setBusy(null);
     }

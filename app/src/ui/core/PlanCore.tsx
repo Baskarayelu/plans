@@ -29,8 +29,10 @@ export function currentRules(raw: Pick<PlanDetail, "instantMax" | "oneApprovalMa
 
 /** Name of the preset these rules match, if any ("Balanced"), else "Custom". */
 export function presetName(r: Rules): string {
-  for (const id of ["easygoing", "balanced", "strict", "pilot", "demo"] as PresetId[]) {
+  // Demo before Pilot: same spend tiers, told apart by the demo's 5-minute rule timelock.
+  for (const id of ["easygoing", "balanced", "strict", "demo", "pilot"] as PresetId[]) {
     const p = PRESETS[id].rules;
+    if (id === "demo" && p.ruleTimelock !== r.ruleTimelock) continue;
     if (
       p.instantMax === r.instantMax &&
       p.oneApprovalMax === r.oneApprovalMax &&

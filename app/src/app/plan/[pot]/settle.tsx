@@ -7,7 +7,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Share, View } from "react-native";
+import { View } from "react-native";
 import type { Address } from "viem";
 import { RelayError, settledMs, type RelayResult } from "../../../lib/api/relayer";
 import { settle } from "../../../lib/chain/actions";
@@ -24,6 +24,7 @@ import { Banner, BigIcon, Btn, Btns, Card, Chip, Confetti, formatSeconds, ListIt
 import { AppBar, Screen } from "../../../ui/layout";
 import { dateRange } from "../../../ui/planBits";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
+import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Stub } from "../../../ui/Stub";
 import { Txt } from "../../../ui/Text";
 
@@ -424,23 +425,14 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
   const myPayout = plan.me ? (data.payouts[plan.me] ?? 0n) : 0n;
   const me = plan.me ? personOf(plan, plan.me) : undefined;
 
-  const share = () => {
-    const parts = entries.map(([a, v]) => {
-      const p = personOf(plan, a);
-      return `${p?.name ?? "Friend"} ${money.local(v, p)}`;
-    });
-    const msg = [`${plan.meta.emoji} ${plan.meta.name} is settled.`, `${formatUsd(data.paidOut)} paid out${parts.length ? `: ${parts.join(", ")}` : ""}.`, data.ms !== undefined ? `Settled in ${formatSeconds(data.ms)}.` : ""]
-      .filter(Boolean)
-      .join(" ");
-    void Share.share({ message: msg, title: `${plan.meta.name} is settled` }).catch(() => undefined);
-  };
+  const [sharing, setSharing] = useState(false);
 
   return (
     <Screen
       testID="screen-settled"
       dock={
         <Btns>
-          <Btn label="Share" kind="sec" icon="share" onPress={share} testID="btn-share" />
+          <Btn label="Share" kind="sec" icon="share" onPress={() => setSharing(true)} testID="btn-share" />
           <Btn label="Done" onPress={() => router.replace({ pathname: "/plan/[pot]/memory", params: { pot: plan.pot } })} testID="btn-done" />
         </Btns>
       }
@@ -494,6 +486,7 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
           </Banner>
         </View>
       ) : null}
+      <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={data.paidOut} settleMs={data.ms} />
     </Screen>
   );
 }

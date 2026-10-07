@@ -1,20 +1,28 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { View } from "react-native";
-import { handlePasskeyFailure } from "../lib/identity/flows";
+import { failureKind, passkeyNotice, type PasskeyContext, type PasskeyNotice } from "../lib/identity/flows";
 import { createOrRestore, identity, restoreWithPasskey } from "../lib/identity/session";
+import { usePasskeyWait } from "../lib/identity/usePasskeyWait";
 import { useColors } from "../theme/ThemeProvider";
 import { WRISTBANDS } from "../theme/tokens";
-import { Avatar, Band, Btn, Chip, Logo, Row } from "../ui/kit";
+import { Avatar, Band, Banner, Btn, Logo, Row } from "../ui/kit";
 import { Screen } from "../ui/layout";
 import { Txt } from "../ui/Text";
 
-/** 01 Welcome. Create account → 02 (Android's own passkey sheet) → 03. I already use Plans → 04 → 05. */
+/**
+ * 01/125 Welcome. Create account → 02 (Android's own passkey sheet) → 03. I already use Plans → 04 → 05.
+ * 126: if the sheet takes over a second, the button says so. 127–129: a cancel, a phone without
+ * passkeys, or a failure each get a banner that says what happened and what to do next.
+ */
 export default function Welcome() {
   const c = useColors();
   const { next } = useLocalSearchParams<{ next?: string }>();
-  const [busy, setBusy] = useState<"create" | "restore" | null>(null);
-  const [msg, setMsg] = useState<string | undefined>();
+  const [busy, setBusy] = useState<PasskeyContext | null>(null);
+  const [notice, setNotice] = useState<(PasskeyNotice & { ctx: PasskeyContext }) | null>(null);
+  const wait = usePasskeyWait();
+  const inFlight = useRef(false);
+  const runId = useRef(0);
 
   const after = (restored: boolean) => {
     const hasProfile = !!identity.get().profile;
@@ -23,37 +31,68 @@ export default function Welcome() {
     else router.replace((next as never) ?? "/(tabs)");
   };
 
-  const create = async () => {
-    setMsg(undefined);
-    setBusy("create");
+  const run = async (ctx: "create" | "restore") => {
+    // A second tap while the first is still waiting does nothing (and nothing changes on screen
+    // for the first second, 126), except after 15 s when "Try again" is offered.
+    if (inFlight.current && wait.phase !== "stuck") return;
+    inFlight.current = true;
+    const id = ++runId.current;
+    const current = () => id === runId.current;
+    setNotice(null);
+    setBusy(ctx);
+    wait.start(ctx);
     try {
-      const r = await createOrRestore("Plans");
-      after(r.restored);
+      if (ctx === "create") {
+        const r = await createOrRestore("Plans");
+        if (current()) wait.finish("ok");
+        after(r.restored);
+      } else {
+        await restoreWithPasskey();
+        if (current()) wait.finish("ok");
+        after(true);
+      }
     } catch (e) {
-      setMsg(handlePasskeyFailure(e).inline);
+      if (!current()) return;
+      const kind = failureKind(e);
+      wait.finish(kind);
+      setNotice({ ...passkeyNotice(kind, ctx), ctx });
     } finally {
-      setBusy(null);
+      if (current()) {
+        inFlight.current = false;
+        setBusy(null);
+      }
     }
   };
 
-  const restore = async () => {
-    setMsg(undefined);
-    setBusy("restore");
-    try {
-      await restoreWithPasskey();
-      after(true);
-    } catch (e) {
-      setMsg(handlePasskeyFailure(e).inline);
-    } finally {
-      setBusy(null);
+  // 129 when the sheet hasn't appeared after 15 s: say so and let them try again.
+  const stuck = wait.phase === "stuck";
+  const shown = stuck && busy ? { ...passkeyNotice("stuck", busy), ctx: busy } : notice;
+  const waiting = wait.phase === "waiting" && !!busy;
+
+  const primary = (() => {
+    if (waiting && busy === "create") return <Btn label="Opening passkey…" loading disabled testID="btn-create-account" />;
+    if (!shown || stuck) {
+      if (shown && stuck) return <Btn label="Try again" icon="refresh" onPress={() => void run(shown.ctx === "restore" ? "restore" : "create")} testID="btn-try-again" />;
+      return <Btn label="Create account" icon="fp" onPress={() => void run("create")} testID="btn-create-account" />;
     }
-  };
+    if (shown.action === "setup") return <Btn label="How to turn it on" onPress={() => router.push({ pathname: "/unsupported", params: { why: shown.kind } })} testID="btn-how-to-turn-it-on" />;
+    if (shown.action === "create") return <Btn label="Create account" icon="fp" onPress={() => void run("create")} testID="btn-create-account" />;
+    return <Btn label="Try again" icon={shown.kind === "cancelled" ? "fp" : "refresh"} onPress={() => void run(shown.ctx === "restore" ? "restore" : "create")} testID="btn-try-again" />;
+  })();
+
+  const secondary = (() => {
+    if (waiting && busy === "restore") return <Btn label="Opening passkey…" kind="sec" loading disabled style={{ marginTop: 8 }} testID="btn-restore" />;
+    if (waiting) return <Btn label="I already use Plans" kind="off" disabled style={{ marginTop: 8 }} testID="btn-restore" />;
+    if (shown && !stuck && (shown.action === "setup" || shown.action === "create"))
+      return <Btn label="Try again" kind="sec" onPress={() => void run(shown.ctx === "restore" ? "restore" : "create")} style={{ marginTop: 8 }} testID="btn-try-again-secondary" />;
+    if (shown && !stuck && shown.ctx === "restore") return <Btn label="Create account" kind="sec" onPress={() => void run("create")} style={{ marginTop: 8 }} testID="btn-create-account-secondary" />;
+    return <Btn label="I already use Plans" kind="sec" onPress={() => void run("restore")} style={{ marginTop: 8 }} testID="btn-restore" />;
+  })();
 
   return (
     <Screen testID="screen-welcome">
-      <Row between style={{ height: 52 }}>
+      <Row style={{ height: 52 }}>
         <Logo size={22} />
-        <Chip label="English" ol sm />
       </Row>
       <View style={{ height: 330, marginHorizontal: -16, overflow: "hidden" }}>
         <Band color={WRISTBANDS.lagoon} text="LISBON · 12–16 OCT · 4 PEOPLE" style={{ position: "absolute", width: 600, top: 34, left: -150, transform: [{ rotate: "-11deg" }] }} />
@@ -78,15 +117,15 @@ export default function Welcome() {
         Friends anywhere chip in, spend under rules you agree, and settle up in one tap.
       </Txt>
       <View style={{ flex: 1, minHeight: 16 }} />
-      {msg ? (
-        <Txt v="t13" color="neg" center style={{ marginBottom: 8 }} testID="welcome-message">
-          {msg}
-        </Txt>
+      {shown ? (
+        <View style={{ marginBottom: 12 }}>
+          <Banner kind={shown.tone} icon={shown.icon} title={shown.title} text={shown.text} testID={`welcome-notice-${shown.kind}`} />
+        </View>
       ) : null}
-      <Btn label="Create account" icon="fp" onPress={create} loading={busy === "create"} disabled={!!busy} testID="btn-create-account" />
-      <Btn label="I already use Plans" kind="sec" onPress={restore} loading={busy === "restore"} disabled={!!busy} style={{ marginTop: 8 }} testID="btn-restore" />
-      <Txt v="t13" color="muted" center style={{ marginTop: 12 }}>
-        No passwords. Your fingerprint is your key.
+      {primary}
+      {secondary}
+      <Txt v="t13" color="muted" center style={{ marginTop: 12 }} testID="welcome-foot">
+        {waiting ? "Your phone is getting the passkey ready." : "No passwords. Your fingerprint is your key."}
       </Txt>
     </Screen>
   );

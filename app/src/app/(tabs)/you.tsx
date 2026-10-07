@@ -79,6 +79,7 @@ export default function You() {
         />
         {isTestnet ? <ListItem left={<Tile icon="gift" kind="a" />} title="Get test dollars" sub="Test version only" right={chev} onPress={() => router.push("/test-dollars")} testID="row-test-dollars" /> : null}
         <ListItem left={<Tile icon="sparkle" />} title="Try a settle-up" sub="Two minutes with three demo friends" right={chev} onPress={() => router.push("/demo")} testID="row-try-settle-up" />
+        <ListItem left={<Tile icon="shield" />} title="What could go wrong" sub="Lost phones, people who won't pay, outages, freezes" right={chev} onPress={() => router.push("/risks")} testID="row-what-could-go-wrong" />
         <ListItem left={<Tile icon="help" />} title="Help" right={chev} onPress={() => router.push("/help")} testID="row-help" />
         <Pressable onLongPress={() => router.push("/diagnostics")} delayLongPress={700} testID="row-version" accessibilityHint="Long-press for diagnostics">
           <ListItem left={<Tile icon="info" />} title="About Plans" sub={`Version ${APP_VERSION}${isTestnet ? " · Test version" : ""}`} />

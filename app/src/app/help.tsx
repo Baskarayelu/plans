@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
 import React, { useState } from "react";
 import { Pressable, View } from "react-native";
 import { APP_VERSION, config, isTestnet } from "../config";
@@ -7,6 +8,7 @@ import { useColors } from "../theme/ThemeProvider";
 import { Icon } from "../ui/Icon";
 import { Btn, Card, Row } from "../ui/kit";
 import { AppBar, Screen } from "../ui/layout";
+import { WITHOUT_SERVICE_GUIDE_URL } from "../ui/risks/content";
 import { Txt } from "../ui/Text";
 
 type QA = { q: string; a: React.ReactNode; id: string };
@@ -105,6 +107,19 @@ export default function Help() {
         <>
           <Txt v="t15" color="muted">Try a settle-up runs a short plan with three demo friends, clearly labelled Demo. It takes about two minutes.</Txt>
           <Btn label="Try a settle-up" kind="sec" icon="sparkle" sm onPress={() => router.push("/demo")} testID="btn-help-demo" />
+        </>
+      ),
+    },
+    {
+      id: "risks",
+      q: "What if something goes wrong?",
+      a: (
+        <>
+          <Txt v="t15" color="muted">
+            Lost phones, people who won't pay, Plans' service being down, and freezes: what protects you, and what doesn't. If our service is down, your money stays in the pot, and there's a guide to sending things directly.
+          </Txt>
+          <Btn label="What could go wrong" kind="sec" icon="shield" sm onPress={() => router.push("/risks")} testID="btn-help-risks" />
+          <Btn label="Guide: sending directly" kind="txt" sm onPress={() => void Linking.openURL(WITHOUT_SERVICE_GUIDE_URL)} testID="btn-help-guide-sending-directly" />
         </>
       ),
     },

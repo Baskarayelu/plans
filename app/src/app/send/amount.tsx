@@ -11,7 +11,8 @@ import { Keypad } from "../../ui/Keypad";
 import { Avatar, Banner, Btn, Btns, Card, Chip, Row, Skel } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
-import { BigAmount, InfoPill, Mono, useFxPair } from "../../ui/send/bits";
+import { BigAmount, Mono, useFxPair } from "../../ui/send/bits";
+import { AusdPill } from "../../ui/agora/dollars";
 import { Txt } from "../../ui/Text";
 
 /** 45 / 45b Amount: type in your own money, see what they get in theirs. */
@@ -144,7 +145,7 @@ export default function SendAmount() {
                 </Txt>
                 {balance === undefined ? <Skel w={110} h={18} /> : <Txt v="t15" weight="bold" testID="amount-balance">{[formatUsd(balance), local.fmt(balance)].filter(Boolean).join(" · ")}</Txt>}
               </View>
-              <InfoPill label="Digital dollars (AUSD)" info="1 digital dollar is always worth 1 US dollar." align="flex-end" testID="pill-ausd" />
+              <AusdPill align="flex-end" testID="pill-ausd" />
             </Row>
           </Card>
           <Row style={{ justifyContent: "center", marginTop: 8 }}>

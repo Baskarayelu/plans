@@ -11,7 +11,8 @@ import { Icon } from "../../ui/Icon";
 import { Avatar, Banner, Btn, Card, Field, Hero, IconBtn, ListItem, Row, SectionHead, Skel } from "../../ui/kit";
 import { Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
-import { Big3, InfoPill } from "../../ui/send/bits";
+import { Big3 } from "../../ui/send/bits";
+import { AusdPill } from "../../ui/agora/dollars";
 import { Txt } from "../../ui/Text";
 
 type Pick = Person & { lastAt: number };
@@ -78,7 +79,7 @@ export default function SendHome() {
           )}
         </View>
         <View style={{ marginTop: 8 }}>
-          <InfoPill label="Digital dollars (AUSD)" info="1 digital dollar is always worth 1 US dollar." align="flex-start" testID="pill-ausd" />
+          <AusdPill align="flex-start" testID="pill-ausd" />
         </View>
       </Card>
       <View style={{ marginTop: 12 }}>
