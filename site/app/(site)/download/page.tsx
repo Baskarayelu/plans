@@ -49,7 +49,7 @@ function ApkCard({ apk, live }: { apk: Apk; live: boolean }) {
           aria-disabled="true"
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-dashed border-line bg-surface-2 px-[22px] text-base font-semibold text-muted sm:w-fit"
         >
-          <Download className="size-[18px]" aria-hidden="true" /> Available at release
+          <Download className="size-[18px]" aria-hidden="true" /> {apk.id === "mainnet" ? "Available after launch" : "Available at release"}
         </span>
       )}
       <div className="grid gap-1.5">
@@ -107,13 +107,14 @@ export default function DownloadPage() {
   return (
     <PageShell>
       <div className="grid justify-items-center gap-3.5 text-center">
-        <Badge>Android beta</Badge>
+        <Badge>{live ? "Android test version" : "Android"}</Badge>
         <h1 className="m-0 font-display text-[clamp(36px,5.4vw,60px)] leading-[1.02] font-extrabold tracking-[-0.035em] text-balance">
           Get Plans for Android
         </h1>
         <p className="m-0 max-w-[620px] text-lg text-pretty text-muted">
-          Plans is in beta, installed straight from this page. It takes about a minute. No SIM, VPN or local account
-          needed.
+          {live
+            ? "The test version runs on Monad testnet with free test dollars. It installs straight from this page in about a minute. No SIM, VPN or local account needed."
+            : "Plans installs straight from this page in about a minute. No SIM, VPN or local account needed."}
         </p>
       </div>
 
@@ -144,7 +145,7 @@ export default function DownloadPage() {
 
       <div className="mx-auto mt-6 grid max-w-[1000px] grid-cols-1 gap-4 min-[861px]:grid-cols-2">
         {apks.map((a) => (
-          <ApkCard key={a.id} apk={a} live={live} />
+          <ApkCard key={a.id} apk={a} live={live && !!a.sha256} />
         ))}
       </div>
       <p className="mx-auto mt-4 max-w-[1000px] text-sm text-muted">
