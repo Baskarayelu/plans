@@ -58,5 +58,7 @@ if [ "$LIVE_AT" != "$BUILT_AT" ]; then
 fi
 echo "deploy: $BASE serves this build ($BUILT_AT)"
 
+# Results and screenshots go to the repo (gitignored .runs), not the throwaway checkout.
+OUT="$REPO/e2e/web/.runs/postdeploy-$(date -u +%Y%m%dT%H%M%SZ)-$(git -C "$ROOT" rev-parse --short HEAD)"
 cd "$ROOT/e2e/web"
-node postdeploy.mjs --base "$BASE" "$@"
+node postdeploy.mjs --base "$BASE" --out "$OUT" "$@"
