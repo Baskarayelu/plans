@@ -9,9 +9,10 @@ import { currentDevicesRoot, freshPrfOutputs, LockedError, signOut } from "../id
 import { kvGet, kvSet } from "../state/kv";
 import { createStore } from "../state/observable";
 import { storage } from "../state/storage";
-import { activeDevices, markRemoved, REMOVED_VAULT, updateDevices, upsertSelf, unseenEvents, fetchDevices, type DeviceEntry, type DeviceEvent, type DeviceKind, type DeviceList } from "./devices";
+import { isSlotConflictError, relayerSlotIO, updateSlot, type SlotIO } from "./cas";
+import { activeDevices, isRemovedVault, markRemoved, REMOVED_VAULT, updateDevices, upsertSelf, unseenEvents, fetchDevices, type DeviceEntry, type DeviceEvent, type DeviceKind, type DeviceList } from "./devices";
 import { nowSec, vaultId, vaultKeys } from "./protocol";
-import { putSlot } from "./slots";
+import { ensureNotRemoved } from "./removalWatch";
 
 const DEVICE_KEY = "plans.device.v1";
 /** kv flag: the "New" chip on You → Add a browser goes after the first visit (171). */
@@ -54,6 +55,8 @@ export async function syncThisDevice(opts: { kind: DeviceKind; label: string; va
   const root = currentDevicesRoot();
   const stored = await storage.loadAccount();
   if (!root || !stored) return null;
+  // A linked browser that was removed meanwhile must not list itself again: this locks it instead.
+  if (stored.vault && !opts.vault) await ensureNotRemoved({ maxAgeMs: 0 });
   const id = await myDeviceId();
   const list = await updateDevices(root, (l) => upsertSelf(l, { id, kind: opts.kind, label: opts.label, linked: !!stored.vault, vault: opts.vault }, nowSec()));
   devicesStore.set({ address: stored.address.toLowerCase(), list, myId: id, at: Date.now() });
@@ -94,11 +97,71 @@ export async function removeDevice(target: DeviceEntry): Promise<{ self: boolean
   } finally {
     wipe(out.second);
   }
-  if (vault) await putSlot(vault.id, REMOVED_VAULT, { auth: vault.auth });
-  const list = await updateDevices(root, (l) => markRemoved(l, target.id, myId, nowSec()));
-  devicesStore.set({ address: stored.address.toLowerCase(), list, myId, at: Date.now() });
+  // 1. The vault (what actually shuts the browser out), as a compare-and-set. A conflict that never
+  // resolves here throws SlotConflictError: nothing was changed. 2. The list.
+  const vaultRemoved = vault ? await markVaultRemoved(vault) : false;
+  try {
+    await removeFromList(target, { stored, root, myId });
+  } catch (e) {
+    // The browser is already shut out; only the list is behind. Leave it removed (safer) and let
+    // the person re-run just the list edit (retryRemovalList).
+    if (isSlotConflictError(e) && vaultRemoved) throw new RemovedListBehindError(target);
+    throw e;
+  }
   if (self) await signOut();
   return { self };
+}
+
+/** The "removed" marker is in the browser's vault, but the list kept conflicting and still shows it. */
+export class RemovedListBehindError extends Error {
+  constructor(public target: DeviceEntry) {
+    super(REMOVED_LIST_BEHIND_MESSAGE);
+    this.name = "RemovedListBehindError";
+  }
+  get friendly(): string {
+    return REMOVED_LIST_BEHIND_MESSAGE;
+  }
+}
+export const REMOVED_LIST_BEHIND_MESSAGE =
+  "That browser is removed. Your device list didn't update because it changed on another device at the same moment — it may still show that browser until you try again.";
+export const isRemovedListBehindError = (e: unknown): e is RemovedListBehindError => e instanceof RemovedListBehindError;
+
+async function removeFromList(target: DeviceEntry, c: { stored: { address: string }; root: Uint8Array; myId: string }): Promise<void> {
+  const at = nowSec();
+  const list = await updateDevices(c.root, (l) => markRemoved(l, target.id, c.myId, at));
+  devicesStore.set({ address: c.stored.address.toLowerCase(), list, myId: c.myId, at: Date.now() });
+}
+
+/**
+ * "Try again" after RemovedListBehindError: re-runs only the list edit (no passkey prompt, the vault
+ * is already marked). A browser that removed itself signs out once the list is done. Throws
+ * SlotConflictError again if the list still conflicts.
+ */
+export async function retryRemovalList(target: DeviceEntry): Promise<{ self: boolean }> {
+  const root = currentDevicesRoot();
+  const stored = await storage.loadAccount();
+  if (!root || !stored) throw new LockedError();
+  const myId = await myDeviceId();
+  await removeFromList(target, { stored, root, myId });
+  const self = target.id === myId;
+  if (self) await signOut();
+  return { self };
+}
+
+/**
+ * Overwrites a linked browser's vault with REMOVED_VAULT (compare-and-set, the same retry loop;
+ * nothing to write when it already holds the marker). Resolves true once the vault holds the
+ * marker; throws SlotConflictError when every try conflicted (the marker never landed).
+ */
+export async function markVaultRemoved(vault: { id: string; auth: string }, io: SlotIO = relayerSlotIO): Promise<boolean> {
+  await updateSlot<Uint8Array | null>(vault.id, {
+    decode: (b) => b,
+    apply: (b) => (isRemovedVault(b) ? null : REMOVED_VAULT),
+    encode: (b) => b!,
+    auth: vault.auth,
+    io,
+  });
+  return true;
 }
 
 /**

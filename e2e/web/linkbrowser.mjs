@@ -16,8 +16,16 @@
 //   - a link QR opened as an address on the approving device → Unlock → straight to the pictures
 //   - the approving device shows "… can now use your account" on its next open
 //   - 177 unlock in a linked browser (vault); 178 the browser removes itself (passkey confirmation)
-//     → "This browser was removed" and its passkey no longer opens the account; the approving
-//     device removes another linked browser
+//     → "This browser was removed" and its passkey no longer opens the account
+//   - RACE: a new browser lists itself (end of its link) while the approving device removes another
+//     linked browser, both writes held until both arrive (same rev): one gets SLOT_CONFLICT, retries,
+//     and both changes are in the list afterwards
+//   - the removed browser's open, unlocked tab locks itself within 35 s with nobody touching it
+//   - a marker write that keeps conflicting: "Your devices changed on another device at the same
+//     moment. Nothing was changed here…", and nothing changed (vault as it was, browser listed and open)
+//   - the marker lands but the list write keeps conflicting: "That browser is removed. Your device list
+//     didn't update…" (no rollback); an action on that browser right then is refused (nothing relayed)
+//     and it locks at once; "Try again" re-runs only the list edit and the browser leaves the list
 // With --shots, every screen is saved as link-<item>-<width>-<theme>.png.
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
@@ -39,7 +47,7 @@ if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
 const { ORIGIN, APP_DIR, addPasskeyAuthenticator, launch, newPage, noTestnetWrites, serveLocalApp, sleep, tap, typeInto, waitFor } = await import("./lib/browser.mjs");
 const { installFixtures } = await import("./lib/fixtures.mjs");
-const { accountAddress, createAccount, firstVisible, unlockIfNeeded } = await import("./lib/session.mjs");
+const { accountAddress, createAccount, firstVisible, pushRoute, unlockIfNeeded } = await import("./lib/session.mjs");
 const { SlotStore, installSlots } = await import("./lib/slots.mjs");
 
 const req = createRequire(resolve(HERE, "../../app/package.json"));
@@ -75,15 +83,15 @@ async function shoot(page, name, width) {
   ]);
 }
 
-async function person(browser, width, store, { auth = true, prf = true, fixtures = true } = {}) {
+async function person(browser, width, store, { auth = true, prf = true, fixtures = true, who = "?" } = {}) {
   const ctx = await browser.createBrowserContext();
   const page = await newPage(ctx, { width, height: width < 700 ? 844 : 900, theme: THEMES[0], mobile: width < 700 });
   page.urls = [];
   page.on("request", (r) => page.urls.push(r.url()));
   await serveLocalApp(page);
   await noTestnetWrites(page);
-  await installSlots(page, store);
-  if (fixtures) await installFixtures(page, { balance: 5_000_000n, myCountry: "GB" });
+  await installSlots(page, store, who);
+  if (fixtures) page.__fx = await installFixtures(page, { balance: 5_000_000n, myCountry: "GB" });
   if (auth) {
     page.__auth = await addPasskeyAuthenticator(page);
     if (!prf) {
@@ -194,6 +202,48 @@ async function retype(page, id, text) {
   await el.type(text);
 }
 
+const COPY = "Your devices changed on another device at the same moment. Nothing was changed here — try again.";
+const BEHIND = "That browser is removed. Your device list didn't update because it changed on another device at the same moment — it may still show that browser until you try again.";
+const REMOVED = "\u0000plans/v1/removed";
+/** The linked browser's vault slot: sha256(raw credential id) of its only passkey (docs/crypto.md §9.6). */
+async function vaultIdOf(page) {
+  const creds = await page.__auth.credentials();
+  return createHash("sha256").update(Buffer.from(creds[0].credentialId, "base64")).digest("hex");
+}
+const deviceIdOf = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("plans.kv.plans.device.v1") ?? "{}").id ?? null);
+const isMarker = (store, id) => Buffer.from(store.slots.get(id)?.data ?? "", "base64url").toString("latin1") === REMOVED;
+/** Waits until `id` holds the removed marker; returns when (ms), or 0. */
+async function waitMarker(store, id, timeout) {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    if (isMarker(store, id)) return Date.now();
+    await sleep(100);
+  }
+  return 0;
+}
+/** Waits for the next GET of `id` by page `who` (its removed-browser check); returns when (ms). */
+async function waitTick(store, who, id, timeout) {
+  const from = store.log.length;
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    const e = store.log.slice(from).find((x) => x.who === who && x.method === "GET" && x.id === id);
+    if (e) return e.t;
+    await sleep(100);
+  }
+  return Date.now();
+}
+/** On the approving device: Devices → Remove on that device → the confirmation panel. */
+async function openRemove(page, deviceId) {
+  if (!(await visible(page, "screen-devices"))) {
+    await page.goto(ORIGIN + "/app/devices", { waitUntil: "load" });
+    await reach(page, ["screen-devices"]);
+  }
+  await page.waitForFunction((d) => !!document.querySelector(`[data-testid="btn-remove-${d}"]`), { timeout: 15000 }, deviceId);
+  await sleep(400);
+  await tap(page, `btn-remove-${deviceId}`);
+  await waitFor(page, "panel-remove-browser");
+}
+
 async function run(browser, width) {
   console.log(`\n${width} px`);
   const store = new SlotStore();
@@ -292,10 +342,11 @@ async function run(browser, width) {
   }
 
   // ── the approving device ("phone"; the web app here, lead's decision 7) ──
-  const P = await person(browser, width, store);
-  const B = await person(browser, width, store);
-  const C = await person(browser, width, store);
-  const B2 = await person(browser, width, store);
+  const P = await person(browser, width, store, { who: "P" });
+  const B = await person(browser, width, store, { who: "B" });
+  const C = await person(browser, width, store, { who: "C" });
+  const B2 = await person(browser, width, store, { who: "B2" });
+  const D = await person(browser, width, store, { who: "D" });
   try {
     const phoneAddr = await createAccount(P.page, { name: "Maya", country: "GB", countryName: "United Kingdom", city: "London" });
     const phoneFp = (await stored(P.page)).fingerprint;
@@ -482,25 +533,117 @@ async function run(browser, width) {
     const again = await firstVisible(B.page, ["welcome-notice-removed", "screen-restored", "screen-home"], { timeout: 20000 }).catch(() => null);
     check(`${width} the removed browser's passkey no longer opens the account`, again === "welcome-notice-removed" && !(await stored(B.page)), `got=${again}`);
 
-    // ── the approving device removes the other linked browser ──
+    // ── RACE: D lists itself (end of its link) while P removes C, both from the same rev ──
+    const listSlot = store.log.find((e) => e.who === "P" && e.method === "PUT" && e.auth && e.ttl === null && e.status < 300)?.id;
+    const cId = await deviceIdOf(C.page);
+    const cVault = await vaultIdOf(C.page);
+    check(`${width} found the account's device list slot and the second browser's vault`, !!listSlot && !!cId && store.slots.has(cVault));
+    const race = store.holdPuts(listSlot, ["P", "D"]);
+    const logFrom = store.log.length;
+    const dl = await startLink(D.page, width);
+    await typeCode(P.page, width, dl.code);
+    await waitFor(P.page, "screen-add-browser-check");
+    await tap(P.page, "btn-they-match");
+    await firstVisible(P.page, ["screen-add-browser-sent"], { timeout: 20000 }).catch(() => null);
+    // D now has the account and is writing itself into the list: that write waits for P's.
+    await D.page.waitForFunction(() => !!localStorage.getItem("plans.kv.plans.account.v1"), { timeout: 20000 }).catch(() => null);
+    await openRemove(P.page, cId);
+    await tap(P.page, "btn-confirm-remove");
+    const raced = await race;
+    const cMarkedAt = await waitMarker(store, cVault, 20000);
+    const gone = await P.page.waitForFunction(() => /was removed/.test(document.querySelector('[data-testid="toast"]')?.innerText ?? ""), { timeout: 20000 }).then(() => true).catch(() => false);
+    const dDone = await firstVisible(D.page, ["screen-link-done"], { timeout: 20000 }).catch(() => null);
+    const listPuts = store.log.slice(logFrom).filter((e) => e.id === listSlot && e.method === "PUT");
+    const conflicts = listPuts.filter((e) => e.code === "SLOT_CONFLICT");
+    check(
+      `${width} RACE: both list writes held to the same rev, one SLOT_CONFLICT, then both went through`,
+      !raced.timedOut && raced.released.length === 2 && conflicts.length >= 1 && ["P", "D"].every((w) => listPuts.some((e) => e.who === w && e.status === 200)) && gone && dDone === "screen-link-done",
+      `released=${raced.released} puts=${listPuts.map((e) => `${e.who}:${e.ifRev}:${e.status}`).join(",")}`,
+    );
+    const dId = await deviceIdOf(D.page);
     await P.page.goto(ORIGIN + "/app/devices", { waitUntil: "load" });
     await reach(P.page, ["screen-devices"]);
-    await P.page.waitForFunction(() => /Linked · its own passkey/.test(document.body.innerText), { timeout: 15000 }).catch(() => null);
-    await sleep(600);
-    await shoot(P.page, "devices-phone", width);
-    const removeBtn = await P.page.evaluate(() => [...document.querySelectorAll('[data-testid^="btn-remove-"]')].filter((e) => e.getBoundingClientRect().width > 0 && e.getAttribute("data-testid") !== "btn-remove-this").map((e) => e.getAttribute("data-testid")));
-    if (removeBtn.length) {
-      await tap(P.page, removeBtn[0]);
-      await waitFor(P.page, "panel-remove-browser");
-      await tap(P.page, "btn-confirm-remove");
-      const gone = await P.page.waitForFunction(() => /was removed/.test(document.querySelector('[data-testid="toast"]')?.innerText ?? ""), { timeout: 20000 }).then(() => true).catch(() => false);
-      check(`${width} the approving device removed the other browser (its own passkey confirmed)`, gone && (await stored(P.page))?.address?.toLowerCase() === phoneAddr);
-      await C.page.reload({ waitUntil: "load" });
-      const cGone = await firstVisible(C.page, ["welcome-notice-removed", "screen-home"], { timeout: 20000 }).catch(() => null);
-      check(`${width} that browser, on its next open: "This browser was removed"`, cGone === "welcome-notice-removed");
-    } else check(`${width} the approving device lists the other linked browser with Remove`, false, "no Remove button");
+    const listed = await P.page
+      .waitForFunction((d) => !!document.querySelector(`[data-testid="device-${d}"]`), { timeout: 15000 }, dId)
+      .then(() => true)
+      .catch(() => false);
+    const cListed = await visible(P.page, `device-${cId}`);
+    check(`${width} RACE: afterwards the new browser is listed AND the removed one is gone (no change lost)`, listed && !cListed, `D listed=${listed}, C listed=${cListed}`);
+
+    // ── C's tab was open and unlocked when it was removed: it locks itself, nobody touching it ──
+    const cLocked = await firstVisible(C.page, ["welcome-notice-removed"], { timeout: 40000 }).catch(() => null);
+    const cSecs = (Date.now() - cMarkedAt) / 1000;
+    check(`${width} the removed browser's open tab locks itself without any action (≤ 35 s)`, cLocked === "welcome-notice-removed" && cSecs <= 35 && !(await stored(C.page)), `${cSecs.toFixed(1)} s`);
+    await shoot(C.page, "removed-open-tab", width);
+    await C.page.reload({ waitUntil: "load" });
+    const cGone = await firstVisible(C.page, ["welcome-notice-removed", "screen-home", "btn-create-account"], { timeout: 20000 }).catch(() => null);
+    check(`${width} that browser, on its next open: nothing opens`, cGone !== "screen-home" && !(await stored(C.page)), `got=${cGone}`);
+
+    // ── the marker write itself keeps conflicting: "Nothing was changed here", and nothing changed ──
+    const dVault = await vaultIdOf(D.page);
+    const dBefore = store.slots.get(dVault)?.data;
+    await openRemove(P.page, dId);
+    store.forceConflict.add(dVault);
+    await tap(P.page, "btn-confirm-remove");
+    const msgShown = await P.page
+      .waitForFunction(() => /Nothing was changed here/.test(document.querySelector('[data-testid="remove-message"]')?.innerText ?? ""), { timeout: 30000 })
+      .then(() => true)
+      .catch(() => false);
+    const msg = (await textOf(P.page, "remove-message"))?.trim();
+    store.forceConflict.delete(dVault);
+    const dAfter = store.slots.get(dVault)?.data;
+    check(
+      `${width} a marker write that keeps conflicting → "Nothing was changed here", nothing changed`,
+      msgShown && msg === COPY && dAfter === dBefore && !isMarker(store, dVault) && !!(await stored(D.page)) && (await visible(P.page, "btn-confirm-remove")),
+      `msg=${JSON.stringify(msg)} vault ${dAfter === dBefore ? "unchanged" : "CHANGED"}`,
+    );
+    await shoot(P.page, "remove-conflict", width);
+
+    // ── the marker lands but the list keeps conflicting: D stays removed, the list is behind; an action
+    //    on D right then is refused (nothing relayed) and D locks at once; "Try again" fixes the list ──
+    const lisbon = D.page.__fx?.ids?.lisbon;
+    await pushRoute(D.page, `/app/plan/${lisbon}/pause`);
+    const atPause = await firstVisible(D.page, ["btn-pause-now"], { timeout: 20000 }).catch(() => null);
+    const tick = await waitTick(store, "D", dVault, 40000); // D's next own check is ~30 s away
+    store.forceConflict.add(listSlot);
+    await tap(P.page, "btn-confirm-remove");
+    const dMarkedAt = await waitMarker(store, dVault, 20000);
+    const behindShown = await P.page
+      .waitForFunction(() => /That browser is removed/.test(document.querySelector('[data-testid="remove-message"]')?.innerText ?? ""), { timeout: 30000 })
+      .then(() => true)
+      .catch(() => false);
+    const behindMsg = (await textOf(P.page, "remove-message"))?.trim();
+    const stillListed = await P.page.evaluate((d) => !!document.querySelector(`[data-testid="device-${d}"]`), dId);
+    check(
+      `${width} marker landed, list kept conflicting → "That browser is removed…", it stays removed, "Try again" offered`,
+      behindShown && behindMsg === BEHIND && dMarkedAt > 0 && isMarker(store, dVault) && stillListed && (await visible(P.page, "btn-retry-remove-list")),
+      `msg=${JSON.stringify(behindMsg)}`,
+    );
+    await shoot(P.page, "remove-list-behind", width);
+    // Past the 5 s a passed check is trusted, well before D's next 30 s check.
+    await sleep(Math.max(0, tick + 6500 - Date.now()));
+    const relaysBefore = D.page.urls.filter((u) => /\/v1\/relay/.test(u)).length;
+    const tTap = Date.now();
+    const early = tTap - tick < 25000 && !(await visible(D.page, "welcome-notice-removed"));
+    await tap(D.page, "btn-pause-now").catch(() => undefined);
+    const dLocked = await firstVisible(D.page, ["welcome-notice-removed"], { timeout: 8000 }).catch(() => null);
+    const lockMs = Date.now() - tTap;
+    const relaysAfter = D.page.urls.filter((u) => /\/v1\/relay/.test(u)).length;
+    check(
+      `${width} an action right after removal is refused (nothing relayed) and the tab locks at once`,
+      atPause === "btn-pause-now" && early && dLocked === "welcome-notice-removed" && lockMs < 5000 && relaysAfter === relaysBefore && !(await stored(D.page)),
+      `locked in ${lockMs} ms, ${(tTap - tick) / 1000} s after D's last check, relays ${relaysBefore}→${relaysAfter}`,
+    );
+    store.forceConflict.delete(listSlot);
+    const prompts = (await P.page.__auth.credentials())[0]?.signCount ?? 0;
+    await tap(P.page, "btn-retry-remove-list");
+    const fixed = await P.page.waitForFunction(() => /was removed/.test(document.querySelector('[data-testid="toast"]')?.innerText ?? ""), { timeout: 20000 }).then(() => true).catch(() => false);
+    await sleep(800);
+    const dListed = await P.page.evaluate((d) => !!document.querySelector(`[data-testid="device-${d}"]`), dId);
+    const promptsAfter = (await P.page.__auth.credentials())[0]?.signCount ?? 0;
+    check(`${width} "Try again" re-runs only the list edit (no passkey prompt): the browser leaves the list`, fixed && !dListed && promptsAfter === prompts, `listed=${dListed} prompts ${prompts}→${promptsAfter}`);
   } finally {
-    for (const x of [P, B, C, B2]) await x.ctx.close().catch(() => undefined);
+    for (const x of [P, B, C, B2, D]) await x.ctx.close().catch(() => undefined);
   }
 }
 

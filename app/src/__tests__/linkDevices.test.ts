@@ -92,8 +92,16 @@ const phoneAddress = accountAddress(deriveAccountPrivateKey(new Uint8Array(P1)))
 const phoneFp = deriveKeys(new Uint8Array(P2)).fingerprint;
 const linkFirstAddress = accountAddress(deriveAccountPrivateKey(new Uint8Array(L1)));
 
-// ─────────────── relayer slots (in memory) ───────────────
-const relayer = { slots: new Map<string, { data: string; expiresAt: number | null; auth?: string }>(), down: false, status: 0 };
+// ─────────────── relayer slots (in memory, with rev / ifRev like relayer/src/slots.ts) ───────────────
+const relayer = {
+  slots: new Map<string, { data: string; expiresAt: number | null; auth?: string; rev: number }>(),
+  down: false,
+  status: 0,
+  /** Slot ids whose conditional writes always conflict (a persistent race). */
+  forceConflict: new Set<string>(),
+  puts: [] as { id: string; ifRev?: number; status: number }[],
+  gets: 0,
+};
 const json = (status: number, body: unknown) => ({ status, text: async () => JSON.stringify(body), headers: new Headers() }) as unknown as Response;
 (globalThis as { fetch: unknown }).fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
   if (relayer.down) throw new TypeError("Failed to fetch");
@@ -102,12 +110,16 @@ const json = (status: number, body: unknown) => ({ status, text: async () => JSO
   if ((init.method ?? "GET") === "PUT") {
     const body = JSON.parse(String(init.body));
     const cur = relayer.slots.get(id);
-    if (cur && (!cur.auth || cur.auth !== body.auth)) return json(409, { error: { code: "SLOT_TAKEN" } });
-    relayer.slots.set(id, { data: body.data, expiresAt: body.ttl ? Math.floor(Date.now() / 1000) + body.ttl : null, auth: body.auth });
-    return json(cur ? 200 : 201, { created: !cur });
+    const done = (status: number, out: unknown) => (relayer.puts.push({ id, ifRev: body.ifRev, status }), json(status, out));
+    if (cur && (!cur.auth || cur.auth !== body.auth)) return done(409, { error: { code: "SLOT_TAKEN" } });
+    const rev = cur?.rev ?? 0;
+    if (body.ifRev !== undefined && (body.ifRev !== rev || relayer.forceConflict.has(id))) return done(409, { error: { code: "SLOT_CONFLICT", currentRev: rev } });
+    relayer.slots.set(id, { data: body.data, expiresAt: body.ttl ? Math.floor(Date.now() / 1000) + body.ttl : null, auth: body.auth, rev: rev + 1 });
+    return done(cur ? 200 : 201, { created: !cur, rev: rev + 1 });
   }
+  relayer.gets++;
   const cur = relayer.slots.get(id);
-  return cur ? json(200, { data: cur.data, expiresAt: cur.expiresAt }) : json(404, { error: { code: "NOT_FOUND" } });
+  return cur ? json(200, { data: cur.data, expiresAt: cur.expiresAt, rev: cur.rev }) : json(404, { error: { code: "NOT_FOUND" } });
 });
 
 beforeEach(async () => {
@@ -115,6 +127,9 @@ beforeEach(async () => {
   relayer.slots.clear();
   relayer.down = false;
   relayer.status = 0;
+  relayer.forceConflict.clear();
+  relayer.puts.length = 0;
+  relayer.gets = 0;
   mockPk.calls.length = 0;
   mockPk.ignoreSecond.clear();
   mockPk.createNoSecond = false;
@@ -439,5 +454,251 @@ describe("link screens' helpers", () => {
     expect(u.search).toBe("");
     expect(u.hash).toContain(`c=${link.code}`);
     link.cancel();
+  });
+});
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cas = require("../lib/link/cas") as typeof import("../lib/link/cas");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const watch = require("../lib/link/removalWatch") as typeof import("../lib/link/removalWatch");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const api = require("../lib/api/relayer") as typeof import("../lib/api/relayer");
+
+describe("concurrent changes to the device list (rev / ifRev)", () => {
+  const listSlot = () => devices.devicesSlot(rootA()).id;
+  const vaultSlot = () => vaultId(fromBase64Url(LINK_ID));
+
+  it("every list write is conditional (ifRev = the rev it read)", async () => {
+    await linkBrowser();
+    const writes = relayer.puts.filter((p) => p.id === listSlot());
+    expect(writes.length).toBeGreaterThan(0);
+    for (const w of writes) expect(w.ifRev).toEqual(expect.any(Number));
+    expect(relayer.slots.get(listSlot())!.rev).toBe(writes.filter((w) => w.status < 300).length);
+  });
+
+  it("a conflict on the list is re-read and the same change applied again: both changes survive", async () => {
+    const { phoneKv } = await linkBrowser();
+    session.lock();
+    useKv(phoneKv);
+    await session.unlockStored();
+    // Another device lists itself between the phone's read and its write (once).
+    const realFetch = (globalThis as unknown as { fetch: jest.Mock }).fetch;
+    const impl = realFetch.getMockImplementation()!;
+    let injected = false;
+    realFetch.mockImplementation(async (url: string, init: RequestInit = {}) => {
+      if (!injected && init.method === "PUT" && url.endsWith(listSlot())) {
+        injected = true;
+        await devices.updateDevices(rootA(), (l) => devices.upsertSelf(l, { id: "abcdefabcdef0001", kind: "browser", label: "Firefox on Linux", linked: false }, NOW));
+      }
+      return impl(url, init);
+    });
+    try {
+      await deviceOps.syncThisDevice({ kind: "phone", label: "Pixel 8" });
+    } finally {
+      realFetch.mockImplementation(impl);
+    }
+    const conflicts = relayer.puts.filter((p) => p.id === listSlot() && p.status === 409);
+    expect(conflicts).toHaveLength(1);
+    const ids = (await devices.fetchDevices(rootA())).devices.map((d) => d.label);
+    expect(ids).toEqual(expect.arrayContaining(["Chrome on a Mac", "Firefox on Linux", "Pixel 8"]));
+  });
+
+  it("removal: a conflict on the vault marker is retried; the browser ends up removed", async () => {
+    const { phoneKv } = await linkBrowser();
+    session.lock();
+    useKv(phoneKv);
+    await session.unlockStored();
+    const target = (await devices.fetchDevices(rootA())).devices.find((d) => d.kind === "browser")!;
+    const realFetch = (globalThis as unknown as { fetch: jest.Mock }).fetch;
+    const impl = realFetch.getMockImplementation()!;
+    let once = false;
+    realFetch.mockImplementation(async (url: string, init: RequestInit = {}) => {
+      if (!once && init.method === "PUT" && url.endsWith(vaultSlot())) {
+        once = true;
+        const v = relayer.slots.get(vaultSlot())!;
+        relayer.slots.set(vaultSlot(), { ...v, rev: v.rev + 1 }); // someone wrote the vault meanwhile
+      }
+      return impl(url, init);
+    });
+    try {
+      await deviceOps.removeDevice(target);
+    } finally {
+      realFetch.mockImplementation(impl);
+    }
+    expect(relayer.puts.filter((p) => p.id === vaultSlot()).map((p) => p.status)).toEqual([201, 409, 200]);
+    expect(devices.isRemovedVault(fromBase64Url(relayer.slots.get(vaultSlot())!.data))).toBe(true);
+    expect((await devices.fetchDevices(rootA())).devices.find((d) => d.id === target.id)!.removedAt).toBeDefined();
+  });
+
+  it("removal: when the list keeps conflicting after the marker landed, the browser stays removed; 'Try again' re-runs only the list edit", async () => {
+    const { phoneKv } = await linkBrowser();
+    session.lock();
+    useKv(phoneKv);
+    await session.unlockStored();
+    await deviceOps.syncThisDevice({ kind: "phone", label: "Pixel 8" });
+    const target = (await devices.fetchDevices(rootA())).devices.find((d) => d.kind === "browser")!;
+    const listBefore = relayer.slots.get(listSlot())!.data;
+    relayer.forceConflict.add(listSlot());
+    const e = await deviceOps.removeDevice(target).catch((x) => x);
+    expect(deviceOps.isRemovedListBehindError(e)).toBe(true);
+    expect(e.friendly).toBe(
+      "That browser is removed. Your device list didn't update because it changed on another device at the same moment — it may still show that browser until you try again.",
+    );
+    expect(relayer.puts.filter((p) => p.id === listSlot() && p.status === 409)).toHaveLength(cas.CAS_ATTEMPTS);
+    expect(relayer.slots.get(listSlot())!.data).toBe(listBefore);
+    // no rollback: the browser is shut out
+    expect(devices.isRemovedVault(fromBase64Url(relayer.slots.get(vaultSlot())!.data))).toBe(true);
+    expect(identity.get().status).toBe("unlocked");
+    // "Try again" while it still conflicts: the same situation, no passkey prompt
+    mockPk.calls.length = 0;
+    await expect(deviceOps.retryRemovalList(target)).rejects.toBeInstanceOf(cas.SlotConflictError);
+    // once the race is over: only the list edit runs (no passkey prompt, no vault write)
+    relayer.forceConflict.clear();
+    const vaultPuts = relayer.puts.filter((p) => p.id === vaultSlot()).length;
+    expect(await deviceOps.retryRemovalList(target)).toEqual({ self: false });
+    expect(mockPk.calls).toHaveLength(0);
+    expect(relayer.puts.filter((p) => p.id === vaultSlot())).toHaveLength(vaultPuts);
+    expect((await devices.fetchDevices(rootA())).devices.find((d) => d.id === target.id)!.removedAt).toBeDefined();
+  }, 20_000);
+
+  it("removal: when the marker write itself keeps conflicting, 'Nothing was changed here' and nothing changed", async () => {
+    const { phoneKv } = await linkBrowser();
+    session.lock();
+    useKv(phoneKv);
+    await session.unlockStored();
+    const target = (await devices.fetchDevices(rootA())).devices.find((d) => d.kind === "browser")!;
+    const vaultBefore = relayer.slots.get(vaultSlot())!.data;
+    const listBefore = relayer.slots.get(listSlot())!.data;
+    relayer.forceConflict.add(vaultSlot());
+    const e = await deviceOps.removeDevice(target).catch((x) => x);
+    expect(cas.isSlotConflictError(e)).toBe(true);
+    expect(e.friendly).toBe("Your devices changed on another device at the same moment. Nothing was changed here — try again.");
+    expect(relayer.slots.get(vaultSlot())!.data).toBe(vaultBefore);
+    expect(relayer.slots.get(listSlot())!.data).toBe(listBefore);
+  }, 20_000);
+});
+
+describe("a removed browser's open tab locks itself", () => {
+  const vaultSlot = () => vaultId(fromBase64Url(LINK_ID));
+  const markRemoved = () => {
+    const v = relayer.slots.get(vaultSlot())!;
+    relayer.slots.set(vaultSlot(), { ...v, data: toBase64Url(devices.REMOVED_VAULT), rev: v.rev + 1 });
+  };
+  beforeEach(() => watch.resetRemovalWatch());
+
+  it("the check: present → nothing; removed marker → locked, signed out, stored account gone, BrowserRemovedError", async () => {
+    await linkBrowser();
+    expect(identity.get().status).toBe("unlocked");
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    expect(identity.get().status).toBe("unlocked");
+    markRemoved();
+    const e = await watch.ensureNotRemoved({ maxAgeMs: 0 }).catch((x) => x);
+    expect(watch.isBrowserRemovedError(e)).toBe(true);
+    expect(identity.get().status).toBe("none");
+    expect(session.currentKeys()).toBeNull();
+    expect(session.currentDevicesRoot()).toBeNull();
+    expect(await storage.loadAccount()).toBeNull();
+    expect(watch.browserRemoved.get()).toBe(true);
+  });
+
+  it("an action right after removal is refused before anything is signed or relayed, and locks", async () => {
+    await linkBrowser();
+    const acct = session.currentAccount();
+    await expect(acct.signMessage({ message: "hello" })).resolves.toMatch(/^0x/);
+    markRemoved();
+    watch.resetRemovalWatch(); // the last passed check is older than the cache
+    await expect(acct.signMessage({ message: "hello" })).rejects.toBeInstanceOf(watch.BrowserRemovedError);
+    expect(identity.get().status).toBe("none");
+    expect(() => session.currentAccount()).toThrow();
+  });
+
+  it("relaying is refused too (no request reaches /v1/relay)", async () => {
+    await linkBrowser();
+    markRemoved();
+    const before = (globalThis as unknown as { fetch: jest.Mock }).fetch.mock.calls.length;
+    await expect(api.relay("vote", {})).rejects.toBeInstanceOf(watch.BrowserRemovedError);
+    const urls = (globalThis as unknown as { fetch: jest.Mock }).fetch.mock.calls.slice(before).map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes("/v1/relay"))).toBe(false);
+  });
+
+  it("a passed check is trusted for a few seconds (no request per keystroke)", async () => {
+    await linkBrowser();
+    await watch.ensureNotRemoved();
+    const n = relayer.gets;
+    await watch.ensureNotRemoved();
+    await watch.ensureNotRemoved();
+    expect(relayer.gets).toBe(n);
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    expect(relayer.gets).toBe(n + 1);
+  });
+
+  it("never locks on network trouble, a server error or a missing vault (offline ≠ removed)", async () => {
+    await linkBrowser();
+    relayer.down = true;
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    relayer.down = false;
+    relayer.status = 503;
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    relayer.status = 0;
+    relayer.slots.delete(vaultSlot());
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    expect(identity.get().status).toBe("unlocked");
+    expect(await storage.loadAccount()).not.toBeNull();
+  });
+
+  it("a device using the account's own passkey never checks", async () => {
+    await session.restoreWithPasskey();
+    const n = relayer.gets;
+    await watch.ensureNotRemoved({ maxAgeMs: 0 });
+    await session.currentAccount().signMessage({ message: "x" });
+    expect(relayer.gets).toBe(n);
+  });
+
+  it("a removed browser's open tab doesn't list itself again; it locks instead", async () => {
+    await linkBrowser();
+    markRemoved();
+    const list0 = relayer.slots.get(devices.devicesSlot(rootA()).id)!.data;
+    await expect(deviceOps.syncThisDevice({ kind: "browser", label: "Chrome on a Mac" })).rejects.toBeInstanceOf(watch.BrowserRemovedError);
+    expect(relayer.slots.get(devices.devicesSlot(rootA()).id)!.data).toBe(list0);
+    expect(identity.get().status).toBe("none");
+  });
+
+  it("the watcher checks on focus, on becoming visible and on its interval only while visible; then locks", async () => {
+    await linkBrowser();
+    const listeners: Record<string, (() => void)[]> = {};
+    const add = (t: string, f: () => void) => (listeners[t] ??= []).push(f);
+    const g = globalThis as Record<string, unknown>;
+    const doc = { visibilityState: "visible", addEventListener: add, removeEventListener: jest.fn() };
+    g.document = doc;
+    g.window = { addEventListener: add, removeEventListener: jest.fn() };
+    const settle = () => new Promise((r) => setTimeout(r, 20));
+    const stop = watch.startRemovalWatch({ pollMs: 60 });
+    try {
+      let n = relayer.gets;
+      listeners.focus[0]();
+      await settle();
+      expect(relayer.gets).toBe(n + 1);
+      watch.resetRemovalWatch();
+      n = relayer.gets;
+      listeners.visibilitychange[0]();
+      await settle();
+      expect(relayer.gets).toBe(n + 1);
+      // hidden: the interval doesn't read
+      doc.visibilityState = "hidden";
+      watch.resetRemovalWatch();
+      n = relayer.gets;
+      await new Promise((r) => setTimeout(r, 150));
+      expect(relayer.gets).toBe(n);
+      // visible again, and removed meanwhile: the interval finds it and the tab locks without any action
+      markRemoved();
+      doc.visibilityState = "visible";
+      await new Promise((r) => setTimeout(r, 150));
+      expect(identity.get().status).toBe("none");
+      expect(watch.browserRemoved.get()).toBe(true);
+    } finally {
+      stop();
+      delete g.document;
+      delete g.window;
+    }
   });
 });

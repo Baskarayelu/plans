@@ -53,6 +53,7 @@ const putSlotSchema = z.object({
   data: z.string().min(1),
   ttl: z.number().int().min(SLOT_TTL_MIN).max(SLOT_TTL_MAX).optional(),
   auth: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
+  ifRev: z.number().int().min(0).optional(),
 });
 
 const trySettleUpSchema = z.object({
@@ -331,8 +332,10 @@ export function createApp(s: AppServices) {
 
   /**
    * Keyed slots (browser linking, app/docs/crypto.md §9). PUT {data: base64url (≤ 8192 bytes),
-   * ttl?: 60–600 s (omitted = permanent), auth?: 64 hex}. 201 created; 200 overwritten (same auth);
-   * 409 SLOT_TAKEN for an unexpired slot without matching auth.
+   * ttl?: 60–600 s (omitted = permanent), auth?: 64 hex, ifRev?: int ≥ 0}. 201 created; 200
+   * overwritten (same auth); 409 SLOT_TAKEN for an unexpired slot without matching auth; 409
+   * SLOT_CONFLICT {currentRev} when ifRev is given and isn't the stored rev (0 = no slot).
+   * Responses carry the new `rev`; GET returns {data, expiresAt, rev}.
    */
   app.put("/v1/slots/:id", async (c) => {
     if (!s.slots) throw new RelayError(404, "SLOTS_DISABLED", "Slot storage isn't enabled on this relayer.");
@@ -344,7 +347,7 @@ export function createApp(s: AppServices) {
       c.header("retry-after", String(Math.ceil(r.retryAfterMs / 1000)));
       throw new RelayError(429, "RATE_LIMITED", "Too many uploads from this network. Please try again later.", { retryAfterMs: r.retryAfterMs });
     }
-    const out = s.slots.put(id, bytes, { ttl: body.ttl, auth: body.auth });
+    const out = s.slots.put(id, bytes, { ttl: body.ttl, auth: body.auth, ifRev: body.ifRev });
     return c.json(out, out.created ? 201 : 200, { "cache-control": "no-store" });
   });
 
@@ -354,7 +357,7 @@ export function createApp(s: AppServices) {
     const slot = s.slots.get(id);
     c.header("cache-control", "no-store");
     if (!slot) throw new RelayError(404, "NOT_FOUND", "No slot with that id.");
-    return c.json({ data: Buffer.from(slot.data).toString("base64url"), expiresAt: slot.expiresAt });
+    return c.json({ data: Buffer.from(slot.data).toString("base64url"), expiresAt: slot.expiresAt, rev: slot.rev });
   });
 
   app.get("/v1/demo/accounts", (c) => {

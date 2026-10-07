@@ -11,14 +11,20 @@
  * otherwise 409 SLOT_TAKEN.
  *
  * Files: <dir>/<aa>/<id> (dir defaults to <BLOB_DIR>/slots), JSON
- *   {"v":1,"data":"<base64url>","expiresAt":<unix s>|null,"authHash":"<hex>"|null}
+ *   {"v":1,"data":"<base64url>","expiresAt":<unix s>|null,"authHash":"<hex>"|null,"rev":<int>}
  * written atomically (temp file + rename). All slot I/O is synchronous: records are at most a few
  * KB, and it makes check-then-write atomic within the (single-replica) process, so two racing
- * PUTs to an empty write-once slot can't both win. Expired slots are deleted lazily on read or
+ * PUTs to an empty write-once slot can't both win.
+ *
+ * Revisions: every slot has a monotonic `rev` (1 on create, +1 on every successful overwrite;
+ * files written before revisions existed read as rev 1). A PUT may carry `ifRev` (compare-and-set):
+ * when the stored rev differs (an absent or expired slot counts as rev 0), the write is refused
+ * with 409 SLOT_CONFLICT and `currentRev`, and nothing is written. The auth check runs first and
+ * is unchanged, so `ifRev` never lets anyone write who couldn't before. Expired slots are deleted lazily on read or
  * write, and by `sweep()` (run hourly by the server).
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, fsyncSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { RelayError } from "./errors.js";
 
@@ -45,9 +51,12 @@ export interface SlotOptions {
   now?: () => number;
 }
 
-type SlotFile = { v: 1; data: string; expiresAt: number | null; authHash: string | null };
+type SlotFile = { v: 1; data: string; expiresAt: number | null; authHash: string | null; rev?: number };
 
-export type PutSlotOptions = { ttl?: number; auth?: string };
+export type PutSlotOptions = { ttl?: number; auth?: string; ifRev?: number };
+
+/** A stored rev (files written before revisions existed have none → 1). */
+const revOf = (rec: SlotFile) => (Number.isSafeInteger(rec.rev) && (rec.rev as number) >= 1 ? (rec.rev as number) : 1);
 
 const sha256 = (b: Uint8Array) => createHash("sha256").update(b).digest();
 
@@ -116,7 +125,7 @@ export class SlotStore {
   }
 
   /** Reads a slot; expired slots are deleted and reported missing. */
-  get(idIn: string): { data: Uint8Array; expiresAt: number | null } | undefined {
+  get(idIn: string): { data: Uint8Array; expiresAt: number | null; rev: number } | undefined {
     const id = normaliseSlotId(idIn);
     const path = this.pathFor(id);
     const cur = this.#read(path);
@@ -125,19 +134,24 @@ export class SlotStore {
       this.#delete(path, cur.size);
       return undefined;
     }
-    return { data: new Uint8Array(Buffer.from(cur.rec.data, "base64url")), expiresAt: cur.rec.expiresAt };
+    return { data: new Uint8Array(Buffer.from(cur.rec.data, "base64url")), expiresAt: cur.rec.expiresAt, rev: revOf(cur.rec) };
   }
 
   /**
    * Creates (no slot, or an expired one) → created: true; overwrites an unexpired slot only if it
    * has an auth hash and sha256(auth) matches → created: false; otherwise 409 SLOT_TAKEN.
+   * With `ifRev`, the write happens only if the current rev (0 = absent/expired) equals it;
+   * otherwise 409 SLOT_CONFLICT {currentRev}. Check and write run in one synchronous section.
    */
-  put(idIn: string, data: Uint8Array, o: PutSlotOptions = {}): { id: string; created: boolean; expiresAt: number | null } {
+  put(idIn: string, data: Uint8Array, o: PutSlotOptions = {}): { id: string; created: boolean; expiresAt: number | null; rev: number } {
     const id = normaliseSlotId(idIn);
     if (data.byteLength === 0) throw new RelayError(400, "EMPTY_BODY", "The slot data is empty.");
     if (data.byteLength > this.maxBytes) throw new RelayError(413, "SLOT_TOO_LARGE", `Slots are limited to ${this.maxBytes} bytes.`);
     if (o.ttl !== undefined && (!Number.isInteger(o.ttl) || o.ttl < SLOT_TTL_MIN || o.ttl > SLOT_TTL_MAX)) {
       throw new RelayError(400, "INVALID_TTL", `ttl must be a whole number of seconds from ${SLOT_TTL_MIN} to ${SLOT_TTL_MAX}.`);
+    }
+    if (o.ifRev !== undefined && (!Number.isSafeInteger(o.ifRev) || o.ifRev < 0)) {
+      throw new RelayError(400, "INVALID_IF_REV", "ifRev must be a whole number of 0 or more.");
     }
     if (o.auth !== undefined && !/^[0-9a-fA-F]{64}$/.test(o.auth)) throw new RelayError(400, "INVALID_AUTH", "auth must be 64 hex characters.");
     const authHash = o.auth !== undefined ? sha256(Buffer.from(o.auth.toLowerCase(), "hex")) : null;
@@ -146,6 +160,7 @@ export class SlotStore {
     const cur = this.#read(path);
     let replacedSize = 0;
     let created = true;
+    let currentRev = 0;
     if (cur) {
       if (this.#expired(cur.rec)) {
         replacedSize = cur.size;
@@ -156,11 +171,16 @@ export class SlotStore {
         }
         replacedSize = cur.size;
         created = false;
+        currentRev = revOf(cur.rec);
       }
     }
+    if (o.ifRev !== undefined && o.ifRev !== currentRev) {
+      throw new RelayError(409, "SLOT_CONFLICT", "This slot changed since you read it.", { currentRev });
+    }
+    const rev = currentRev + 1;
 
     const expiresAt = o.ttl !== undefined ? this.#nowSec() + o.ttl : null;
-    const rec: SlotFile = { v: 1, data: Buffer.from(data).toString("base64url"), expiresAt, authHash: authHash ? authHash.toString("hex") : null };
+    const rec: SlotFile = { v: 1, data: Buffer.from(data).toString("base64url"), expiresAt, authHash: authHash ? authHash.toString("hex") : null, rev };
     const bytes = Buffer.from(JSON.stringify(rec), "utf8");
     const other = this.opts.otherUsedBytes?.() ?? 0;
     if (other + this.#used - replacedSize + bytes.byteLength > this.opts.diskCapBytes) {
@@ -168,10 +188,18 @@ export class SlotStore {
     }
     mkdirSync(join(this.opts.dir, id.slice(0, 2)), { recursive: true });
     const tmp = `${path}.${randomBytes(6).toString("hex")}.tmp`;
-    writeFileSync(tmp, bytes, { flag: "wx" });
+    // Temp file, flushed to disk, then renamed over the record: a crash leaves the old record or
+    // the new one, never a torn file (a stray *.tmp is ignored by reads, scans and the sweep).
+    const fd = openSync(tmp, "wx");
+    try {
+      for (let off = 0; off < bytes.byteLength; ) off += writeSync(fd, bytes, off);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
     renameSync(tmp, path);
     this.#used += bytes.byteLength - replacedSize;
-    return { id, created, expiresAt };
+    return { id, created, expiresAt, rev };
   }
 
   /** Deletes every expired slot; returns how many. */

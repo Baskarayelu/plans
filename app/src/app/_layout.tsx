@@ -28,7 +28,8 @@ import { ThemeProvider, useColors } from "../theme/ThemeProvider";
 import { NO_MOTION } from "../ui/motion";
 import { AppShell } from "../ui/shell/AppShell";
 import { ToastHost } from "../ui/Toast";
-import { DeviceWatch } from "../ui/link/devices";
+import { DeviceWatch, RemovalWatch } from "../ui/link/devices";
+import { browserRemoved } from "../lib/link/removalWatch";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 mark("app_boot");
@@ -56,7 +57,8 @@ function WebGate() {
       .join("&");
     const next = q ? `${path}?${q}` : path;
     if (status === "locked" && !OPEN_LOCKED.test(path)) router.replace({ pathname: "/unlock", params: { next } });
-    else if (status === "none" && !OPEN_NONE.test(path)) router.replace({ pathname: "/welcome", params: { next } });
+    // A linked browser that locked itself because it was removed goes to "This browser was removed".
+    else if (status === "none" && !OPEN_NONE.test(path)) router.replace({ pathname: "/welcome", params: browserRemoved.get() ? { removed: "1" } : { next } });
   }, [status, path, nav?.key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
@@ -145,6 +147,7 @@ export default function RootLayout() {
             <WebGate />
             <AppEffects />
             <DeviceWatch />
+            <RemovalWatch />
             <ToastHost />
           </QueryClientProvider>
         </ThemeProvider>

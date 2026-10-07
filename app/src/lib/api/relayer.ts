@@ -7,6 +7,7 @@
 import { mark, markTx } from "../timing";
 import type { Hex } from "viem";
 import { config } from "../../config";
+import { beforeSensitive } from "../identity/guard";
 import { fetchJson, jsonStringify, NetworkError } from "./http";
 
 export type RelayEvent = { address?: string; name: string; logIndex?: number; args: Record<string, unknown> };
@@ -37,6 +38,8 @@ export class RelayError extends Error {
 }
 
 export async function relay(action: string, params: Record<string, unknown>): Promise<RelayResult> {
+  // A linked browser that was removed from the account stops here (lib/link/removalWatch.ts).
+  await beforeSensitive();
   const t0 = Date.now();
   const r = await fetchJson<RelayResult & { error?: { code: string; message: string; reason?: number } }>(`${config.relayerUrl}/v1/relay`, {
     method: "POST",

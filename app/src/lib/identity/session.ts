@@ -24,6 +24,7 @@ import { LinkError, openVault, wipeBundle, type AccountBundle } from "../link/pr
 import { SlotError } from "../link/slots";
 import { createStore } from "../state/observable";
 import { storage, type Profile, type StoredAccount } from "../state/storage";
+import { guardAccount } from "./guard";
 import * as passkeyBridge from "./passkeyBridge";
 import {
   clearSecondOutput,
@@ -141,7 +142,8 @@ function openSessionFromKey(pk: Uint8Array): void {
   try {
     session?.end();
     session = createSecp256k1SigningSession({ privateKey: pk });
-    account = toViemAccount(session) as unknown as LocalAccount;
+    // Every signature first runs the before-sensitive check (a removed linked browser locks instead).
+    account = guardAccount(toViemAccount(session) as unknown as LocalAccount);
   } finally {
     wipe(pk);
   }

@@ -22,7 +22,7 @@ import { hkdf } from "@noble/hashes/hkdf.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { concatBytes, equalBytes, fromUtf8, randomBytes, toHex, utf8, wipe } from "../crypto/bytes";
 import { BOX_VERSION, LinkError } from "./protocol";
-import { getSlot, putSlot } from "./slots";
+import { relayerSlotIO, updateSlot, type SlotIO } from "./cas";
 
 export const DEVICES_VERSION = 1;
 export const MAX_DEVICES = 24;
@@ -246,29 +246,26 @@ export function unseenEvents(list: DeviceList, myId: string, since: number): Dev
 // ─────────────── network ───────────────
 
 /** The account's device list (empty when none was saved yet). Throws SlotError on network trouble, LinkError when it doesn't open. */
-export async function fetchDevices(root: Uint8Array): Promise<DeviceList> {
-  const box = await getSlot(devicesSlot(root).id);
-  return box ? openDevices(root, box) : emptyDevices();
-}
-
-export async function saveDevices(root: Uint8Array, list: DeviceList): Promise<void> {
-  const { id, auth } = devicesSlot(root);
-  await putSlot(id, sealDevices(root, list), { auth });
+export async function fetchDevices(root: Uint8Array, io: SlotIO = relayerSlotIO): Promise<DeviceList> {
+  const cur = await io.get(devicesSlot(root).id);
+  return cur ? openDevices(root, cur.data) : emptyDevices();
 }
 
 /**
- * Read → change → write. Two devices writing at the same moment can lose one change (last writer
- * wins), so the write is read back and redone once if the change isn't there. `change` returns
- * null for "nothing to do".
+ * Changes the list without losing anyone else's change: read (list, rev) → `change` → write with
+ * ifRev; on a conflict, read again and apply the same `change` again (cas.ts). `change` must be an
+ * idempotent edit by device id (upsertSelf, markRemoved) and return null for "nothing to do".
+ * Throws SlotConflictError when every try conflicted (nothing written), SlotError on network
+ * trouble, LinkError when the stored list doesn't open.
  */
-export async function updateDevices(root: Uint8Array, change: (list: DeviceList) => DeviceList | null, attempts = 2): Promise<DeviceList> {
-  let list = await fetchDevices(root);
-  for (let i = 0; i < attempts; i++) {
-    const next = change(list);
-    if (!next) return list;
-    await saveDevices(root, next);
-    list = await fetchDevices(root);
-    if (!change(list)) return list;
-  }
-  return list;
+export async function updateDevices(root: Uint8Array, change: (list: DeviceList) => DeviceList | null, opts: { io?: SlotIO; attempts?: number } = {}): Promise<DeviceList> {
+  const { id, auth } = devicesSlot(root);
+  const r = await updateSlot<DeviceList>(id, {
+    decode: (bytes) => (bytes ? openDevices(root, bytes) : emptyDevices()),
+    apply: change,
+    encode: (list) => sealDevices(root, list),
+    auth,
+    ...opts,
+  });
+  return trimDevices(r.value);
 }

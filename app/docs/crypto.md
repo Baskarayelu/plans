@@ -345,8 +345,8 @@ output is never used.
 ### 9.8a Devices with your passkey, and removing a linked browser
 
 Every device on an account keeps one shared list (designs 171, 174, 178) in a permanent slot.
-Code: `src/lib/link/devices.ts` (constructions), `deviceOps.ts` (sync, remove, notices). Tests:
-`src/__tests__/linkDevices.test.ts`.
+Code: `src/lib/link/devices.ts` (constructions), `deviceOps.ts` (sync, remove, notices), `cas.ts` (compare-and-set), `removalWatch.ts` (open-tab lock). Tests:
+`src/__tests__/linkDevices.test.ts`, `linkCas.test.ts`.
 
 ```
 root  = HKDF(ikm = keys-namespace PRF output (the IKM of §3; `k` of the bundle), salt = "", info = "plans/v1/devices", 32)
@@ -362,30 +362,64 @@ PUT /v1/slots/<id> {data: b64u(box), auth}                                   (pe
 `root` is derived next to the keys at every unlock (`applyKeys`) and wiped on lock, like the keys.
 Device ids are 8 random bytes per install (`plans.device.v1`, not secret). Every device on the
 account (the phone from its PRF `second`, a linked browser from the bundle's `k`) derives the same
-slot. Writes are read → change → write → read back, redone once if the change was lost (two
-devices writing in the same instant can still lose one change; the list is advisory).
+slot.
+
+**Concurrent writes never lose a change** (`src/lib/link/cas.ts`, `updateDevices`). Every write is
+a compare-and-set on the slot's revision (§9.8):
+
+```
+GET /v1/slots/<id>            → {data, rev}            (absent → list = empty, rev = 0)
+list' = change(open(data))                             (null → nothing to do, no write)
+PUT /v1/slots/<id> {data: b64u(seal(list')), auth, ifRev: rev}
+409 SLOT_CONFLICT             → wait 30–150 ms × min(try, 4) (random), GET again, apply the SAME change again
+```
+
+up to 6 tries; then `SlotConflictError` and the screen says "Your devices changed on another device
+at the same moment. Nothing was changed here — try again." Changes are idempotent edits by device
+id, never a whole list computed from an older read: `upsertSelf` (add or refresh this entry),
+`markRemoved` (mark that id removed, add the event). A relayer without revisions (no `rev` in GET)
+gets the old behaviour: an unconditional write, read back, redone if the change is missing.
 
 - A linked browser lists itself right after linking with `vault = {id: vaultId, auth: hex(vaultAuth)}`
   (§9.6) and an `added` event. Other devices show "… can now use your account" once on their next
   open (they remember the newest event time they've shown in `plans.devices.seen.<address>`; a
   device's first read only sets that mark).
 - **Remove** (any device with the account): one fresh ceremony pinned to *that device's own*
-  passkey (the confirmation), then `PUT /v1/slots/<vaultId> {data: b64u(REMOVED_VAULT), auth: vaultAuth}`
-  with `REMOVED_VAULT = 0x00 ‖ UTF-8("plans/v1/removed")`, then the entry gets `removedAt` (its vault
-  auth is dropped) and a `removed` event. A browser removing itself takes `vaultAuth` from its own
-  ceremony's `b2` and signs out.
+  passkey (the confirmation), then `PUT /v1/slots/<vaultId> {data: b64u(REMOVED_VAULT), auth: vaultAuth, ifRev}`
+  with `REMOVED_VAULT = 0x00 ‖ UTF-8("plans/v1/removed")` (the same compare-and-set loop; nothing to
+  do when it already holds the marker), then the entry gets `removedAt` (its vault auth is dropped)
+  and a `removed` event. If the marker write itself still conflicts after 6 tries, nothing was
+  written ("Nothing was changed here — try again."). If the marker landed but the list write still
+  conflicts, the browser stays removed (no rollback: the safer side) and the screen says "That
+  browser is removed. Your device list didn't update because it changed on another device at the
+  same moment — it may still show that browser until you try again."; its "Try again" re-runs only
+  the list edit (`retryRemovalList`, no passkey prompt).
+  A browser removing itself takes `vaultAuth` from its own ceremony's `b2` and signs out.
 - Afterwards the browser's passkey finds `REMOVED_VAULT` instead of a vault: `unlockStored` and
   discoverable sign-in fail with `LinkedBrowserError("removed")` and nothing opens ("This browser
   was removed from your account"). A missing vault is `LinkedBrowserError("gone")` → link again.
 - Only linked browsers can be removed. A device that uses the account's own passkey (the phone, or
   a browser where that passkey synced) can't be shut out from another device: the passkey is the
   account.
+- **An open tab of a removed browser locks itself** (`src/lib/link/removalWatch.ts`). A linked,
+  unlocked browser GETs its own vault slot and compares it with `REMOVED_VAULT` (no decryption):
+  (a) before anything signs or relays (`guard.ts` wraps the signing account and `relay()`; a check
+  that passed is trusted for 5 s), (b) on window focus and when the tab becomes visible, (c) every
+  30 s while visible. On the marker it wipes the session, keys and device root, deletes its stored
+  account and encrypted cache, and shows "This browser was removed"; the action is refused
+  (`BrowserRemovedError`). Network errors, 5xx and a missing vault never lock (offline ≠ removed).
+  Devices on the account's own passkey never check. A linked browser also checks before listing
+  itself again, so a removed tab can't re-add itself.
 
 Threat notes: the relayer sees the list's slot id and ciphertext size only. Putting `vaultAuth` in
 the list lets every device on the account overwrite that browser's vault, which they could anyway
 (they hold the account key). As in §9.7, removal doesn't revoke the account key: a browser that
-copied the key out while linked keeps it, and an open tab keeps its unlocked session until it
-locks. Removal stops the browser's passkey from opening Plans.
+copied the key out while linked keeps it. Locking an open tab is cooperative: it relies on the
+browser running Plans' own code. Gaps: an idle tab can keep its session for up to 30 s (plus one
+request); an action within 5 s of a passed check isn't re-checked; anything signed before the
+marker landed still goes through; an offline tab keeps working until it reaches the relayer again.
+Real revocation would mean moving the account to new keys. Removal stops the browser's passkey
+from opening Plans.
 
 ### 9.8b Web: "Create account" and the phone's passkey over the browser's QR
 
@@ -402,9 +436,14 @@ invites: the fragment goes to memory (`src/lib/link/pending.ts`), the history en
 ### 9.8 Relayer slots API
 
 `PUT /v1/slots/<64 hex>` with JSON `{"data": b64u (≤ 8192 bytes decoded), "ttl"?: 60–600 (omitted =
-permanent), "auth"?: 64 hex}`. No slot, or an expired one → 201 created. An unexpired slot is
-overwritten (200) only if it was created with `auth` and `sha256(auth)` matches; otherwise 409
-`SLOT_TAKEN`. `GET /v1/slots/<id>` → 200 `{"data", "expiresAt": unix | null}` with
+permanent), "auth"?: 64 hex, "ifRev"?: integer ≥ 0}`. No slot, or an expired one → 201 created. An
+unexpired slot is overwritten (200) only if it was created with `auth` and `sha256(auth)` matches;
+otherwise 409 `SLOT_TAKEN`. Every slot has a revision `rev`: 1 when created, +1 per successful write
+(files from before revisions read as 1); responses carry the new `rev`. With `ifRev`, after the auth
+check, the write happens only if the stored rev equals it (a missing or expired slot is 0); otherwise
+409 `SLOT_CONFLICT` with `currentRev` and nothing is written (check and write are one synchronous
+section in the single relayer process). `GET /v1/slots/<id>` → 200 `{"data", "expiresAt": unix | null, "rev"}` with
 `Cache-Control: no-store`, or 404 `NOT_FOUND` (missing or expired). Also 400 bad id/body, 413 over
 8192 bytes, 429 over 60 writes per IP per hour, 507 storage full (shared with blobs), 404
-`SLOTS_DISABLED`. Files: `<BLOB_DIR>/slots/<aa>/<id>`, written atomically. See `relayer/README.md`.
+`SLOTS_DISABLED`. Files: `<BLOB_DIR>/slots/<aa>/<id>`, written atomically (temp file, fsync,
+rename). See `relayer/README.md`.

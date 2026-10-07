@@ -142,30 +142,38 @@ writes are guarded. `:id` is 64 hex characters (case-insensitive; stored lowerca
 **Write.** `PUT` with `Content-Type: application/json`:
 
 ```json
-{ "data": "<base64url, at most 8192 decoded bytes>", "ttl": 600, "auth": "<64 hex>" }
+{ "data": "<base64url, at most 8192 decoded bytes>", "ttl": 600, "auth": "<64 hex>", "ifRev": 3 }
 ```
 
 - `ttl` (optional) is 60–600 seconds; omitted means permanent.
 - `auth` (optional) is a 64-hex secret. The server keeps only `sha256(auth bytes)`.
-- No slot, or an expired one: created, **201** `{ "id", "created": true, "expiresAt": <unix s> | null }`.
-- An unexpired slot that was created with `auth`, and the request carries the same `auth`: overwritten, **200** (`created: false`).
+- `ifRev` (optional) is a whole number ≥ 0: compare-and-set. The write happens only if the slot's
+  current `rev` equals it (a missing or expired slot counts as `0`); otherwise **409** `SLOT_CONFLICT`
+  with `"currentRev"` in the error, and nothing is written. The `auth` rules below are checked first
+  and are unchanged.
+- No slot, or an expired one: created, **201** `{ "id", "created": true, "expiresAt": <unix s> | null, "rev": 1 }`.
+- An unexpired slot that was created with `auth`, and the request carries the same `auth`: overwritten, **200** (`created: false`, `rev` + 1).
 - Any other write to an unexpired slot: **409** `SLOT_TAKEN`. Without `auth`, a slot is write-once until it expires.
+
+Every slot has a monotonic revision `rev`: 1 when created, +1 on every successful write (files
+written before revisions existed read as 1). Clients do read-modify-write as GET (`data`, `rev`) →
+change → PUT with `ifRev: rev`, and on `SLOT_CONFLICT` read again and redo the change.
 
 | Status | Meaning |
 |---|---|
-| 400 | `INVALID_SLOT_ID`, `INVALID_PARAMS` (missing `data`, `ttl` out of range, `auth` not 64 hex), `INVALID_BASE64`, `EMPTY_BODY`, `INVALID_JSON` |
+| 400 | `INVALID_SLOT_ID`, `INVALID_PARAMS` (missing `data`, `ttl` out of range, `auth` not 64 hex, `ifRev` not a whole number ≥ 0), `INVALID_BASE64`, `EMPTY_BODY`, `INVALID_JSON` |
 | 404 | `SLOTS_DISABLED` when the relayer has no blob storage |
-| 409 | `SLOT_TAKEN` |
+| 409 | `SLOT_TAKEN`; `SLOT_CONFLICT` `{ "currentRev" }` when `ifRev` doesn't match |
 | 413 | `SLOT_TOO_LARGE` (over 8192 decoded bytes) |
 | 429 | Over `SLOT_PUT_PER_IP_PER_HOUR` (60) writes per IP per hour |
 | 507 | `STORAGE_FULL`: slots and blobs together reached `BLOB_DISK_CAP_BYTES` |
 
-**Read.** `GET` returns **200** `{ "data": "<base64url>", "expiresAt": <unix s> | null }` with
+**Read.** `GET` returns **200** `{ "data": "<base64url>", "expiresAt": <unix s> | null, "rev": <int> }` with
 `Cache-Control: no-store`, or **404** `NOT_FOUND` when the slot is missing or expired.
 
-Slots live in `<BLOB_DIR>/slots/<aa>/<id>` as small JSON files (`data`, `expiresAt`, `authHash`),
-written atomically (temp file + rename). Writes are synchronous so check-then-write is atomic in the
-single-replica process. Expired slots are deleted when read or rewritten, and an hourly sweep
+Slots live in `<BLOB_DIR>/slots/<aa>/<id>` as small JSON files (`data`, `expiresAt`, `authHash`, `rev`),
+written atomically (temp file, fsync, rename). Writes are synchronous so check-then-write (auth,
+`ifRev`) is atomic in the single-replica process. Expired slots are deleted when read or rewritten, and an hourly sweep
 deletes the rest.
 
 ### `GET /v1/fx/round`

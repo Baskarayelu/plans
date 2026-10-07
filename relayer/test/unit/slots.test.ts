@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Hex } from "viem";
@@ -66,13 +66,14 @@ describe("keyed slots", () => {
     const data = new Uint8Array(randomBytes(500));
     const r = await put(app, id, { data: b64(data), ttl: 600 });
     expect(r.status).toBe(201);
-    expect(await r.json()).toEqual({ id, created: true, expiresAt: Math.floor(clock.ms / 1000) + 600 });
+    expect(await r.json()).toEqual({ id, created: true, expiresAt: Math.floor(clock.ms / 1000) + 600, rev: 1 });
     expect(existsSync(join(dir, "slots", id.slice(0, 2), id))).toBe(true);
 
     const g = await app.request(`/v1/slots/${id}`);
     expect(g.status).toBe(200);
     expect(g.headers.get("cache-control")).toBe("no-store");
-    const body = (await g.json()) as { data: string; expiresAt: number };
+    const body = (await g.json()) as { data: string; expiresAt: number; rev: number };
+    expect(body.rev).toBe(1);
     expect(Buffer.from(body.data, "base64url").equals(Buffer.from(data))).toBe(true);
     expect(body.expiresAt).toBe(Math.floor(clock.ms / 1000) + 600);
 
@@ -212,5 +213,148 @@ describe("keyed slots", () => {
     const raw = (await import("node:fs")).readFileSync(slots.pathFor(id), "utf8");
     expect(raw).not.toContain(auth);
     expect(raw).toContain(createHash("sha256").update(Buffer.from(auth, "hex")).digest("hex"));
+  });
+
+  describe("revisions (rev / ifRev compare-and-set)", () => {
+    type Got = { data: string; expiresAt: number | null; rev: number };
+    const get = async (app: App, id: string) => (await (await app.request(`/v1/slots/${id}`)).json()) as Got;
+    const one = (n: number) => b64(new Uint8Array([n]));
+
+    it("starts at 1 and adds 1 on every successful write; PUT returns the new rev", async () => {
+      const { app } = build();
+      const id = hex32();
+      const auth = hex32();
+      const r1 = await put(app, id, { data: one(1), auth });
+      expect(((await r1.json()) as { rev: number }).rev).toBe(1);
+      expect((await get(app, id)).rev).toBe(1);
+      for (let i = 2; i <= 5; i++) {
+        const r = await put(app, id, { data: one(i), auth });
+        expect(r.status).toBe(200);
+        expect(((await r.json()) as { rev: number }).rev).toBe(i);
+      }
+      expect(await get(app, id)).toMatchObject({ rev: 5, data: one(5) });
+      // refused writes don't move rev
+      expect((await put(app, id, { data: one(9), auth: hex32() })).status).toBe(409);
+      expect((await get(app, id)).rev).toBe(5);
+    });
+
+    it("ifRev: matching rev writes; a stale rev is 409 SLOT_CONFLICT with currentRev and writes nothing", async () => {
+      const { app, slots } = build();
+      const id = hex32();
+      const auth = hex32();
+      expect((await put(app, id, { data: one(1), auth, ifRev: 0 })).status).toBe(201);
+      const ok = await put(app, id, { data: one(2), auth, ifRev: 1 });
+      expect(ok.status).toBe(200);
+      expect(((await ok.json()) as { rev: number }).rev).toBe(2);
+      const used = slots.usedBytes;
+      const stale = await put(app, id, { data: one(3), auth, ifRev: 1 });
+      expect(stale.status).toBe(409);
+      const err = (await stale.json()) as { error: { code: string; currentRev: number } };
+      expect(err.error.code).toBe("SLOT_CONFLICT");
+      expect(err.error.currentRev).toBe(2);
+      expect(await get(app, id)).toMatchObject({ rev: 2, data: one(2) });
+      expect(slots.usedBytes).toBe(used);
+      // ahead of the stored rev is a conflict too
+      expect(await code(await put(app, id, { data: one(3), auth, ifRev: 7 }))).toBe("SLOT_CONFLICT");
+      // without ifRev, a write still just overwrites (unchanged behaviour)
+      expect((await put(app, id, { data: one(4), auth })).status).toBe(200);
+      expect((await get(app, id)).rev).toBe(3);
+    });
+
+    it("ifRev on an absent slot: only 0 creates; anything else is SLOT_CONFLICT currentRev 0 and nothing is written", async () => {
+      const { app, dir } = build();
+      const id = hex32();
+      const r = await put(app, id, { data: one(1), auth: hex32(), ifRev: 1 });
+      expect(r.status).toBe(409);
+      expect(((await r.json()) as { error: { code: string; currentRev: number } }).error).toMatchObject({ code: "SLOT_CONFLICT", currentRev: 0 });
+      expect(existsSync(join(dir, "slots", id.slice(0, 2), id))).toBe(false);
+      expect((await put(app, id, { data: one(1), auth: hex32(), ifRev: 0 })).status).toBe(201);
+      // ifRev 0 on an existing slot conflicts (create-only)
+      const id2 = hex32();
+      const auth2 = hex32();
+      await put(app, id2, { data: one(1), auth: auth2 });
+      expect(await code(await put(app, id2, { data: one(2), auth: auth2, ifRev: 0 }))).toBe("SLOT_CONFLICT");
+    });
+
+    it("an expired slot counts as absent (rev 0) and a new one starts again at 1", async () => {
+      const { app, clock } = build();
+      const id = hex32();
+      await put(app, id, { data: one(1), ttl: 60 });
+      clock.ms += 61_000;
+      expect(await code(await put(app, id, { data: one(2), ttl: 60, ifRev: 1 }))).toBe("SLOT_CONFLICT");
+      const r = await put(app, id, { data: one(2), ttl: 60, ifRev: 0 });
+      expect(r.status).toBe(201);
+      expect(((await r.json()) as { rev: number }).rev).toBe(1);
+    });
+
+    it("auth rules are unchanged: a wrong auth is SLOT_TAKEN even with the right ifRev, and write-once stays write-once", async () => {
+      const { app } = build();
+      const id = hex32();
+      const auth = hex32();
+      await put(app, id, { data: one(1), auth });
+      expect(await code(await put(app, id, { data: one(2), auth: hex32(), ifRev: 1 }))).toBe("SLOT_TAKEN");
+      expect(await code(await put(app, id, { data: one(2), ifRev: 1 }))).toBe("SLOT_TAKEN");
+      const once = hex32();
+      await put(app, once, { data: one(1), ttl: 600 });
+      expect(await code(await put(app, once, { data: one(2), ttl: 600, ifRev: 1 }))).toBe("SLOT_TAKEN");
+      expect((await get(app, id)).rev).toBe(1);
+    });
+
+    it("reads a file written before revisions existed as rev 1, and the next write makes it 2", async () => {
+      const { app, slots } = build();
+      const id = hex32();
+      const auth = hex32();
+      const authHash = createHash("sha256").update(Buffer.from(auth, "hex")).digest("hex");
+      mkdirSync(join(slots.opts.dir, id.slice(0, 2)), { recursive: true });
+      writeFileSync(slots.pathFor(id), JSON.stringify({ v: 1, data: one(1), expiresAt: null, authHash }));
+      expect((await get(app, id)).rev).toBe(1);
+      expect(await code(await put(app, id, { data: one(2), auth, ifRev: 0 }))).toBe("SLOT_CONFLICT");
+      const r = await put(app, id, { data: one(2), auth, ifRev: 1 });
+      expect(r.status).toBe(200);
+      expect(((await r.json()) as { rev: number }).rev).toBe(2);
+      expect(JSON.parse(readFileSync(slots.pathFor(id), "utf8")).rev).toBe(2);
+    });
+
+    it("rejects a bad ifRev", async () => {
+      const { app } = build();
+      for (const ifRev of [-1, 1.5, "1", null]) expect((await put(app, hex32(), { data: one(1), ifRev })).status, String(ifRev)).toBe(400);
+    });
+
+    it("RACE: many concurrent PUTs with the same ifRev → exactly one wins, the rest get SLOT_CONFLICT", async () => {
+      const { app, slots } = build({ putPerIpPerHour: 10_000 });
+      const id = hex32();
+      const auth = hex32();
+      expect((await put(app, id, { data: one(0), auth })).status).toBe(201);
+      for (let round = 1; round <= 5; round++) {
+        const N = 40;
+        const rs = await Promise.all(Array.from({ length: N }, (_, i) => put(app, id, { data: one(i + 1), auth, ifRev: round }, `10.0.${round}.${i}`)));
+        const bodies = await Promise.all(rs.map(async (r) => ({ status: r.status, body: (await r.json()) as { rev?: number; error?: { code: string; currentRev: number } } })));
+        const wins = bodies.filter((b) => b.status === 200);
+        const lost = bodies.filter((b) => b.status === 409);
+        expect(wins).toHaveLength(1);
+        expect(lost).toHaveLength(N - 1);
+        expect(wins[0].body.rev).toBe(round + 1);
+        for (const l of lost) expect(l.body.error).toMatchObject({ code: "SLOT_CONFLICT", currentRev: round + 1 });
+        // the stored data is the winner's
+        const g = await get(app, id);
+        expect(g.rev).toBe(round + 1);
+        const winner = bodies.indexOf(wins[0]);
+        expect(g.data).toBe(one(winner + 1));
+      }
+      // no temp files left behind, and the byte count matches the disk
+      const shard = join(slots.opts.dir, id.slice(0, 2));
+      expect(readdirSync(shard)).toEqual([id]);
+      expect(new SlotStore({ dir: slots.opts.dir, diskCapBytes: 1e9 }).usedBytes).toBe(slots.usedBytes);
+    });
+
+    it("RACE: concurrent first writes with ifRev 0 → exactly one creates", async () => {
+      const { app } = build({ putPerIpPerHour: 10_000 });
+      const id = hex32();
+      const rs = await Promise.all(Array.from({ length: 30 }, (_, i) => put(app, id, { data: one(i), auth: hex32(), ifRev: 0 }, `10.9.0.${i}`)));
+      const st = rs.map((r) => r.status);
+      expect(st.filter((x) => x === 201)).toHaveLength(1);
+      // losers: SLOT_TAKEN (different auth) — the auth rule runs first and is unchanged
+      expect(st.filter((x) => x === 409)).toHaveLength(29);
+    });
   });
 });

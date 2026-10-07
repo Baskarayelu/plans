@@ -9,9 +9,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { failureKind, handlePasskeyFailure } from "../../lib/identity/flows";
 import { identity } from "../../lib/identity/session";
+import { isSlotConflictError } from "../../lib/link/cas";
 import { thisBrowserLabel } from "../../lib/link/deviceLabel";
-import { activeDevices, devicesStore, refreshDevices, removeDevice, syncThisDevice, takeDeviceNotices } from "../../lib/link/deviceOps";
+import { activeDevices, devicesStore, isRemovedListBehindError, REMOVED_LIST_BEHIND_MESSAGE as REMOVED_LIST_BEHIND, refreshDevices, removeDevice, retryRemovalList, syncThisDevice, takeDeviceNotices } from "../../lib/link/deviceOps";
 import type { DeviceEntry } from "../../lib/link/devices";
+import { browserRemoved, startRemovalWatch } from "../../lib/link/removalWatch";
+import { queryClient } from "../../lib/state/data";
 import { useStore } from "../../lib/state/observable";
 import { useColors } from "../../theme/ThemeProvider";
 import { ComputerIcon, IconWell } from "../desk/money";
@@ -98,18 +101,25 @@ export function RemoveConfirm({ d, me, onCancel, onDone }: { d: DeviceEntry; me:
   const confirmLabel = useConfirmLabel();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
-  const go = async () => {
+  // The browser is already shut out but the list didn't update: "Try again" re-runs only the list edit.
+  const [listBehind, setListBehind] = useState(false);
+  const go = async (onlyList = false) => {
     setBusy(true);
     setMsg(undefined);
     try {
-      const r = await removeDevice(d);
+      const r = onlyList ? await retryRemovalList(d) : await removeDevice(d);
+      setListBehind(false);
       if (r.self) router.replace({ pathname: "/welcome", params: { removed: "1" } });
       else {
         showToast({ title: `${d.label} was removed`, sub: "Its passkey no longer opens your account." });
         onDone?.();
       }
     } catch (e) {
-      if (failureKind(e) === "cancelled") setMsg(undefined);
+      if (isRemovedListBehindError(e) || (onlyList && isSlotConflictError(e))) {
+        setListBehind(true);
+        setMsg(isRemovedListBehindError(e) ? e.friendly : REMOVED_LIST_BEHIND);
+      } else if (isSlotConflictError(e)) setMsg(e.friendly);
+      else if (failureKind(e) === "cancelled") setMsg(undefined);
       else setMsg(handlePasskeyFailure(e, "restore").inline ?? "That didn't work. Check your connection and try again.");
     } finally {
       setBusy(false);
@@ -146,7 +156,11 @@ export function RemoveConfirm({ d, me, onCancel, onDone }: { d: DeviceEntry; me:
         </Txt>
       ) : null}
       <View style={{ gap: 8, marginTop: 20 }}>
-        <Btn label={`Remove · ${confirmLabel}`} kind="dng" icon="key" onPress={() => void go()} loading={busy} testID="btn-confirm-remove" />
+        {listBehind ? (
+          <Btn label="Try again" kind="pri" onPress={() => void go(true)} loading={busy} testID="btn-retry-remove-list" />
+        ) : (
+          <Btn label={`Remove · ${confirmLabel}`} kind="dng" icon="key" onPress={() => void go()} loading={busy} testID="btn-confirm-remove" />
+        )}
         <Btn label="Cancel" kind="sec" onPress={onCancel} disabled={busy} testID="btn-cancel-remove" />
       </View>
     </View>
@@ -186,6 +200,29 @@ export function DeviceWatch() {
       }
     })();
   }, [status, keysPending, address]);
+  return null;
+}
+
+/**
+ * Mounted once at the root: while a linked browser is open, it checks it hasn't been removed from
+ * the account (on focus, when the tab becomes visible, every 30 s; actions check too). When it
+ * was, the tab has already locked itself; this drops what's on screen and shows "This browser was
+ * removed" (lib/link/removalWatch.ts).
+ */
+export function RemovalWatch() {
+  const status = useStore(identity, (s) => s.status);
+  const removed = useStore(browserRemoved);
+  useEffect(() => {
+    if (status !== "unlocked") return;
+    browserRemoved.set(false);
+    return startRemovalWatch();
+  }, [status]);
+  useEffect(() => {
+    if (!removed) return;
+    queryClient.clear();
+    devicesStore.set({ list: null, at: 0 });
+    router.replace({ pathname: "/welcome", params: { removed: "1" } });
+  }, [removed]);
   return null;
 }
 
