@@ -18,6 +18,8 @@ import { useAction } from "../../lib/state/useAction";
 import { WRISTBANDS } from "../../theme/tokens";
 import { Band, Banner, Btn, Card, ListItem, Skel, Step } from "../../ui/kit";
 import { AppBar, Bleed, Screen } from "../../ui/layout";
+import { DeskColumn } from "../../ui/desk/plan";
+import { useLayout } from "../../ui/shell/responsive";
 import { PersonAvatar, PersonName, useMoney } from "../../ui/plan/common";
 import { Txt } from "../../ui/Text";
 
@@ -28,6 +30,7 @@ const ERR: Record<string, { title: string; text: string }> = {
 };
 
 export default function TrySettleUp() {
+  const { desk } = useLayout();
   const me = useMe();
   const money = useMoney();
   const demo = useDemoAccounts();
@@ -65,11 +68,7 @@ export default function TrySettleUp() {
   const err = act.error ? (ERR[act.error.code] ?? { title: act.error.title, text: act.error.message }) : null;
   const accounts = demo.data?.accounts ?? [];
 
-  return (
-    <Screen
-      testID="screen-demo-intro"
-      dock={
-        disabled ? (
+  const dockNode = disabled ? (
           <Btn label="Back home" kind="sec" onPress={() => router.replace("/")} testID="btn-back-home" />
         ) : (
           <>
@@ -78,9 +77,11 @@ export default function TrySettleUp() {
             ) : null}
             <Btn label="Start the demo" icon="play" loading={act.busy} disabled={demo.isLoading || !me.address} onPress={() => void start()} testID="btn-start-the-demo" />
           </>
-        )
-      }
-    >
+        );
+
+  return (
+    <Screen testID="screen-demo-intro" dock={desk ? undefined : dockNode}>
+      <DeskColumn dock={desk ? dockNode : undefined}>
       <AppBar icon="x" onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
       <Bleed style={{ overflow: "hidden", paddingVertical: 10 }}>
         <Band color={WRISTBANDS.coral} text="DEMO · TRY A SETTLE-UP · 2 MIN" style={{ marginHorizontal: -40, transform: [{ rotate: "-3deg" }], justifyContent: "center" }} />
@@ -153,6 +154,7 @@ export default function TrySettleUp() {
           <Banner kind="neg" icon="alert" title={err.title} text={err.text} testID="demo-error" />
         </View>
       ) : null}
+      </DeskColumn>
     </Screen>
   );
 }

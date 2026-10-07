@@ -5,8 +5,10 @@ import { View } from "react-native";
 import { countryByCode, currencyFor, formatUsd } from "../lib/domain/currency";
 import { identity, saveProfile } from "../lib/identity/session";
 import { useStore } from "../lib/state/observable";
-import { Avatar, Banner, Btn, Card, Field, Row } from "../ui/kit";
+import { Avatar, Banner, Btn, Card, Field, Logo, Row } from "../ui/kit";
+import { DeskCard } from "../ui/desk/entry";
 import { AppBar, Screen } from "../ui/layout";
+import { useLayout } from "../ui/shell/responsive";
 import { useLocal } from "../ui/money";
 import { CountrySheet, CurrencySheet } from "../ui/pickers";
 import { Txt } from "../ui/Text";
@@ -29,6 +31,7 @@ export default function ProfileSetup() {
   const cty = countryByCode(country);
   const cur = currencyFor(currency);
   const local = useLocal(currency);
+  const { desk } = useLayout();
   const valid = name.trim().length >= 1 && name.trim().length <= 30;
 
   const save = async () => {
@@ -39,10 +42,8 @@ export default function ProfileSetup() {
     else router.replace((next as never) ?? "/(tabs)");
   };
 
-  return (
-    <Screen testID="screen-profile" dock={<Btn label={edit ? "Save" : "Continue"} onPress={save} disabled={!valid} loading={saving} testID="btn-continue" />}>
-      <AppBar noBack={!edit} right={!edit ? <Txt v="t13" color="muted" style={{ marginRight: 12 }}>Step 2 of 2</Txt> : undefined} title={edit ? "Country & money" : undefined} />
-      {!edit ? <Banner kind="pos" icon="shieldok" title="Your Plans account is ready" text="Your fingerprint is the key. There is no password to forget." /> : null}
+  const form = (
+    <>
       <Txt v="d28" style={{ marginTop: 24 }}>
         {edit ? "How friends see you" : "What should friends call you?"}
       </Txt>
@@ -81,6 +82,10 @@ export default function ProfileSetup() {
           </View>
         </Row>
       </Card>
+    </>
+  );
+  const sheets = (
+    <>
       <CountrySheet
         visible={pick === "country"}
         onClose={() => setPick(null)}
@@ -91,6 +96,43 @@ export default function ProfileSetup() {
         }}
       />
       <CurrencySheet visible={pick === "currency"} onClose={() => setPick(null)} value={currency} onPick={setCurrency} />
+    </>
+  );
+
+  if (desk) {
+    // On a laptop: the same fields as 03 in a centred card (102 → passkey → this).
+    return (
+      <Screen testID="screen-profile" pad={false} bottomInset={false}>
+        <View style={{ paddingHorizontal: 40, paddingVertical: 28 }}>
+          <Logo size={24} />
+        </View>
+        <View style={{ paddingHorizontal: 24, paddingBottom: 48 }}>
+          <DeskCard width={520} testID="profile-card">
+            {edit ? (
+              <AppBar title="Country & money" />
+            ) : (
+              <>
+                <Txt v="ov" color="muted" style={{ marginBottom: 12 }}>
+                  Step 2 of 2
+                </Txt>
+                <Banner kind="pos" icon="shieldok" title="Your Plans account is ready" text="Your passkey is the key. There is no password to forget." />
+              </>
+            )}
+            {form}
+            <Btn label={edit ? "Save" : "Continue"} onPress={save} disabled={!valid} loading={saving} style={{ marginTop: 20 }} testID="btn-continue" />
+          </DeskCard>
+        </View>
+        {sheets}
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen testID="screen-profile" dock={<Btn label={edit ? "Save" : "Continue"} onPress={save} disabled={!valid} loading={saving} testID="btn-continue" />}>
+      <AppBar noBack={!edit} right={!edit ? <Txt v="t13" color="muted" style={{ marginRight: 12 }}>Step 2 of 2</Txt> : undefined} title={edit ? "Country & money" : undefined} />
+      {!edit ? <Banner kind="pos" icon="shieldok" title="Your Plans account is ready" text="Your fingerprint is the key. There is no password to forget." /> : null}
+      {form}
+      {sheets}
     </Screen>
   );
 }

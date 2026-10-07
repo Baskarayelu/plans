@@ -17,8 +17,11 @@ import { Screen } from "../../../ui/layout";
 import { PositionChip } from "../../../ui/planBits";
 import { PersonAvatar, PersonName, PlanTop } from "../../../ui/plan/common";
 import { Txt } from "../../../ui/Text";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function ReviewPlan() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const c = useColors();
@@ -79,7 +82,8 @@ export default function ReviewPlan() {
     );
 
   return (
-    <Screen dock={dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-review">
+    <Screen dock={desk ? undefined : dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-review">
+      <DeskColumn dock={dock} max={680}>
       <PlanTop plan={plan} band={band} right={<View />} />
       <Txt v="d28" style={{ marginTop: 16 }}>
         {title}
@@ -199,6 +203,7 @@ export default function ReviewPlan() {
             : "Settle-up opens when everyone has checked."}
         </Txt>
       ) : null}
+    </DeskColumn>
     </Screen>
   );
 }

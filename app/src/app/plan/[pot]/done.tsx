@@ -20,6 +20,10 @@ import { PlanGate, useRateLine } from "../../../ui/spend/parts";
 import { Stub } from "../../../ui/Stub";
 import { Txt } from "../../../ui/Text";
 import { ActivityIndicator } from "react-native";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { SidePanel } from "../../../ui/shell/panel";
+import PlanHome from "./index";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function SpendDone() {
   const { pot, tx } = useLocalSearchParams<{ pot: string; tx?: string }>();
@@ -34,6 +38,7 @@ export default function SpendDone() {
 const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
 
 function DoneBody({ plan, tx }: { plan: PlanVM; tx?: string }) {
+  const { desk } = useLayout();
   const c = useColors();
   const r = useStore(receipts, (s) => (tx ? s[tx] : undefined));
   const [late, setLate] = useState(false);
@@ -46,7 +51,8 @@ function DoneBody({ plan, tx }: { plan: PlanVM; tx?: string }) {
 
   if (!r)
     return (
-      <Screen testID="screen-spend-done" dock={late ? <Btn label="Back to the plan" kind="sec" onPress={home} testID="btn-back-to-plan" /> : undefined}>
+      <Screen testID="screen-spend-done" dock={desk ? undefined : late ? <Btn label="Back to the plan" kind="sec" onPress={home} testID="btn-back-to-plan" /> : undefined}>
+        <DeskColumn dock={late ? <Btn label="Back to the plan" kind="sec" onPress={home} testID="btn-back-to-plan" /> : undefined} max={560}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
           <ActivityIndicator color={c.ink} size="large" />
           <Txt v="d22" center>
@@ -56,12 +62,14 @@ function DoneBody({ plan, tx }: { plan: PlanVM; tx?: string }) {
             <Banner kind="mut" icon="clock" title="Taking longer than usual" text="You can leave this screen. The spend shows up in the plan as soon as it lands." testID="banner-still-confirming" />
           ) : null}
         </View>
+      </DeskColumn>
       </Screen>
     );
   return <Receipt plan={plan} r={r} onDone={home} />;
 }
 
 function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: () => void }) {
+  const { desk } = useLayout();
   const m = useMoney();
   const rate = useRateLine();
   const personal = r.kind === "personal";
@@ -96,16 +104,14 @@ function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: ()
     void Share.share({ message: `${head}${note ? ` · ${note}` : ""}\nProof: ${explorerTxUrl(r.txHash)}` }).catch(() => undefined);
   };
 
-  return (
-    <Screen
-      testID="screen-spend-done"
-      dock={
-        <Btns>
-          <Btn label="Share" kind="sec" icon="share" onPress={share} testID="btn-share" />
-          <Btn label="Done" onPress={onDone} testID="btn-done" />
-        </Btns>
-      }
-    >
+  const buttons = (
+    <Btns>
+      <Btn label="Share" kind="sec" icon="share" onPress={share} testID="btn-share" />
+      <Btn label="Done" onPress={onDone} testID="btn-done" />
+    </Btns>
+  );
+  const content = (
+    <>
       <View style={{ alignItems: "center", marginTop: 16 }}>
         <BigIcon icon="check" kind="p" />
         <Txt v="d28" center style={{ marginTop: 12 }} testID="done-title">
@@ -149,6 +155,25 @@ function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: ()
           </>
         }
       />
+    </>
+  );
+  if (desk)
+    // 110/24: on a laptop the receipt opens in the right panel over the plan, with the new row in its feed.
+    return (
+      <>
+        <PlanHome />
+        <SidePanel kind="detail" onClose={onDone}>
+          <View testID="screen-spend-done" style={{ flex: 1 }}>
+            {content}
+            <View style={{ flex: 1, minHeight: 20 }} />
+            {buttons}
+          </View>
+        </SidePanel>
+      </>
+    );
+  return (
+    <Screen testID="screen-spend-done" dock={buttons}>
+      {content}
     </Screen>
   );
 }

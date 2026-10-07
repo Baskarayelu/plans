@@ -19,6 +19,9 @@ export type RiskTopic = {
   todo?: string;
 };
 
+/** 147's button to 141 (kept with the 147 copy). */
+export const ABOUT_DOLLARS_LABEL = "About digital dollars";
+
 export const WITHOUT_SERVICE_GUIDE_URL = "https://plans.0xo.in/docs/without-the-relayer";
 
 export const RISK_TOPICS: RiskTopic[] = [

@@ -11,15 +11,28 @@ import {
   getPasskeyPrfOutput,
   isMeraError,
   type Secp256k1SigningSession,
+  type WebAuthnClient,
 } from "@category-labs/mera";
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { LocalAccount } from "viem";
 import { config } from "../../config";
-import { toHex, wipe } from "../crypto/bytes";
+import { concatBytes, equalBytes, fromBase64Url, randomBytes, toHex, utf8, wipe } from "../crypto/bytes";
 import { deriveAccountPrivateKey, deriveKeys, KEYS_PRF_SALT, type PlansKeys } from "../crypto/keys";
+import { fetchVaultBox } from "../link/browserLink";
+import { LinkError, openVault, wipeBundle, type AccountBundle } from "../link/protocol";
+import { SlotError } from "../link/slots";
 import { createStore } from "../state/observable";
 import { storage, type Profile, type StoredAccount } from "../state/storage";
-import { clearSecondOutput, createDualPrfClient, describeNativeError, lastCeremonyDiagnostics, nativeErrorCode, takeSecondOutput } from "./webauthnClient";
+import * as passkeyBridge from "./passkeyBridge";
+import {
+  clearSecondOutput,
+  createDualPrfClient,
+  describeNativeError,
+  lastCeremonyDiagnostics,
+  nativeErrorCode,
+  takeSecondOutput,
+  type DualClientOptions,
+} from "./webauthnClient";
 
 export type IdentityStatus = "loading" | "none" | "locked" | "unlocked";
 
@@ -100,14 +113,22 @@ export function classifyPasskeyError(e: unknown): PasskeyError {
   return new PasskeyError("failed", detail);
 }
 
-function openSession(prfFirst: Uint8Array): void {
-  const pk = deriveAccountPrivateKey(prfFirst);
+/** Opens the Mera signing session from an account private key, then wipes the key. */
+function openSessionFromKey(pk: Uint8Array): void {
   try {
     session?.end();
     session = createSecp256k1SigningSession({ privateKey: pk });
     account = toViemAccount(session) as unknown as LocalAccount;
   } finally {
-    wipe(pk, prfFirst);
+    wipe(pk);
+  }
+}
+
+function openSession(prfFirst: Uint8Array): void {
+  try {
+    openSessionFromKey(deriveAccountPrivateKey(prfFirst));
+  } finally {
+    wipe(prfFirst);
   }
 }
 
@@ -121,7 +142,11 @@ function applyKeys(prfSecond: Uint8Array | null): void {
   }
 }
 
-async function finishUnlock(credentialId: string, prev: StoredAccount | null): Promise<{ isNew: boolean; switched: boolean }> {
+async function finishUnlock(
+  credentialId: string,
+  prev: StoredAccount | null,
+  extra: { vault?: boolean; profile?: Profile } = {},
+): Promise<{ isNew: boolean; switched: boolean }> {
   const address = account!.address as `0x${string}`;
   const switched = !!prev && prev.address.toLowerCase() !== address.toLowerCase();
   const stored: StoredAccount = {
@@ -130,9 +155,10 @@ async function finishUnlock(credentialId: string, prev: StoredAccount | null): P
     credentialId,
     x25519Public: keys ? toHex(keys.x25519Public) : switched ? undefined : prev?.x25519Public,
     fingerprint: keys ? keys.fingerprint : switched ? undefined : prev?.fingerprint,
-    profile: switched ? undefined : prev?.profile,
+    profile: (switched ? undefined : prev?.profile) ?? extra.profile,
     createdAt: switched || !prev ? Date.now() : prev.createdAt,
     keyRegistered: switched ? false : prev?.keyRegistered,
+    ...(extra.vault ? { vault: true } : {}),
   };
   await storage.saveAccount(stored);
   identity.set({
@@ -152,6 +178,8 @@ const rp = () => ({ id: config.rpId, name: "Plans" });
 
 /** App start: read stored metadata (no prompt). */
 export async function loadIdentity(): Promise<void> {
+  // A remount of the root layout (web history navigation, fast refresh) must not lock an open session.
+  if (identity.get().status === "unlocked" && account) return;
   const a = await storage.loadAccount();
   if (!a) {
     identity.set({ status: "none", keysPending: false });
@@ -169,24 +197,194 @@ export async function loadIdentity(): Promise<void> {
   });
 }
 
-/** "I already use Plans": the system picker lists every Plans passkey (incl. other devices). */
-export async function restoreWithPasskey(): Promise<{ isNew: boolean }> {
-  const prev = await storage.loadAccount();
+// ─────────────── linked browsers (docs/crypto.md §9) ───────────────
+
+/**
+ * A browser's own link passkey carries a recognisable user handle (web only can read it back):
+ * UTF-8("plans-link/v1:") ‖ 18 random bytes. It lets a discoverable sign-in that picked a link
+ * passkey whose vault is gone fail loudly instead of opening a different, empty account.
+ */
+const LINK_HANDLE_PREFIX = utf8("plans-link/v1:");
+
+function linkHandle(): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(32);
+  out.set(concatBytes(LINK_HANDLE_PREFIX, randomBytes(32 - LINK_HANDLE_PREFIX.length)));
+  return out;
+}
+
+/** The userHandle of the last assertion, where the transport exposes it (the web bridge does). */
+function takeAssertionUserHandle(): Uint8Array | null {
+  const take = (passkeyBridge as unknown as { takeLastUserHandle?: () => string | undefined }).takeLastUserHandle;
+  const h = typeof take === "function" ? take() : undefined;
+  if (!h) return null;
   try {
-    const r = await getPasskeyPrfOutput({ rpId: config.rpId, webAuthnClient: createDualPrfClient() });
-    openSession(r.prfOutput);
-    applyKeys(takeSecondOutput());
-    return finishUnlock(r.credentialId, prev);
+    return fromBase64Url(h);
+  } catch {
+    return null;
+  }
+}
+
+function isLinkHandle(h: Uint8Array | null): boolean {
+  return !!h && h.length >= LINK_HANDLE_PREFIX.length && equalBytes(h.slice(0, LINK_HANDLE_PREFIX.length), LINK_HANDLE_PREFIX);
+}
+
+function withUserHandle(base: WebAuthnClient, handle: Uint8Array<ArrayBuffer>): WebAuthnClient {
+  return {
+    createCredential: (req) => base.createCredential({ ...req, user: { ...req.user, id: handle } }),
+    getCredential: (req) => base.getCredential(req),
+  };
+}
+
+function vaultFailure(detail: string): PasskeyError {
+  return new PasskeyError("failed", detail);
+}
+
+/** GET the vault ciphertext; a network problem is an error, never "no vault". */
+async function lookupVault(credentialIdBytes: Uint8Array): Promise<Uint8Array | null> {
+  try {
+    return await fetchVaultBox(credentialIdBytes);
+  } catch (e) {
+    const why = e instanceof SlotError ? `${e.kind} (${e.status} ${e.code})` : String(e);
+    throw vaultFailure(`Couldn't check this passkey's linked account: ${why}`);
+  }
+}
+
+function openVaultOrFail(b2: Uint8Array, credentialIdBytes: Uint8Array, box: Uint8Array): AccountBundle {
+  try {
+    return openVault(b2, credentialIdBytes, box);
+  } catch (e) {
+    const kind = e instanceof LinkError ? `${e.kind}: ${e.detail}` : String(e);
+    throw vaultFailure(`This browser's linked account couldn't be opened (${kind}). Link this browser again from your phone.`);
+  }
+}
+
+/** One ceremony pinned to `credentialId` asking for the keys salt alone (no `second` support). */
+async function keysOnlyCeremony(credentialId: string): Promise<Uint8Array> {
+  const r = await getPasskeyPrfOutput({
+    rpId: config.rpId,
+    credential: { credentialId },
+    prfSalt: KEYS_PRF_SALT,
+    webAuthnClient: createDualPrfClient({ secondSalt: null }),
+  });
+  return r.prfOutput;
+}
+
+/**
+ * A fresh ceremony pinned to the stored credential, returning both PRF outputs (one prompt; a
+ * second, keys-only prompt only when the provider ignores the `second` salt). The caller wipes
+ * both. Errors are classified PasskeyErrors.
+ */
+export async function freshPrfOutputs(credentialId: string): Promise<{ credentialId: string; first: Uint8Array; second: Uint8Array }> {
+  try {
+    const r = await getPasskeyPrfOutput({ rpId: config.rpId, credential: { credentialId }, webAuthnClient: createDualPrfClient() });
+    const second = takeSecondOutput() ?? (await keysOnlyCeremony(r.credentialId));
+    return { credentialId: r.credentialId, first: r.prfOutput, second };
   } catch (e) {
     clearSecondOutput();
     throw classifyPasskeyError(e);
   }
 }
 
+/**
+ * Opens the session from an account bundle (a linked browser): the Mera session from the account
+ * private key, the Plans keys from `k`, and saves the StoredAccount with THIS browser's credential
+ * id and `vault: true`. Consumes the bundle (its key bytes are wiped). The vault must already be
+ * saved (browserLink's wait() does it when given b2) or the next unlock can't find the account.
+ */
+export async function openFromBundle(
+  bundle: AccountBundle,
+  credentialId: string,
+  opts: { vault?: boolean } = {},
+): Promise<{ isNew: boolean; switched: boolean }> {
+  const prev = await storage.loadAccount();
+  try {
+    const keysIkm = new Uint8Array(bundle.keysIkm);
+    openSessionFromKey(new Uint8Array(bundle.accountKey));
+    applyKeys(keysIkm);
+    if (account!.address.toLowerCase() !== bundle.address.toLowerCase()) {
+      lock();
+      throw new PasskeyError("failed", "The linked account doesn't match its own key.");
+    }
+    if (keys && keys.fingerprint !== bundle.fingerprint) {
+      lock();
+      throw new PasskeyError("failed", "The linked account's keys don't match.");
+    }
+    return await finishUnlock(credentialId, prev, { vault: opts.vault ?? true, profile: bundle.profile });
+  } finally {
+    wipeBundle(bundle);
+  }
+}
+
+/**
+ * The discoverable sign-in shared by restore and findExistingAccount. After the ceremony the vault
+ * for the returned credential is always looked up: found → the linked account; not found → the
+ * account from PRF first. A failed lookup (not a 404) throws instead of falling back.
+ */
+async function discoverableSignIn(opts: { hints?: string[] } = {}): Promise<{ isNew: boolean; linked: boolean }> {
+  const prev = await storage.loadAccount();
+  let r: Awaited<ReturnType<typeof getPasskeyPrfOutput>>;
+  let second: Uint8Array | null;
+  try {
+    r = await getPasskeyPrfOutput({ rpId: config.rpId, webAuthnClient: createDualPrfClient(opts.hints ? { hints: opts.hints } : {}) });
+    second = takeSecondOutput();
+  } catch (e) {
+    clearSecondOutput();
+    throw classifyPasskeyError(e);
+  }
+  const handle = takeAssertionUserHandle();
+  const first = r.prfOutput;
+  try {
+    const credIdBytes = fromBase64Url(r.credentialId);
+    const box = await lookupVault(credIdBytes);
+    if (box) {
+      wipe(first);
+      let b2: Uint8Array;
+      if (second) b2 = second;
+      else {
+        try {
+          b2 = second = await keysOnlyCeremony(r.credentialId);
+        } catch (e) {
+          throw classifyPasskeyError(e);
+        }
+      }
+      const bundle = openVaultOrFail(b2, credIdBytes, box);
+      const f = await openFromBundle(bundle, r.credentialId);
+      return { isNew: f.isNew, linked: true };
+    }
+    if (isLinkHandle(handle)) {
+      throw vaultFailure("This browser passkey was made for linking, and its linked account is no longer stored. Link this browser again from your phone.");
+    }
+    openSession(first);
+    applyKeys(second);
+    second = null;
+    const f = await finishUnlock(r.credentialId, prev);
+    return { isNew: f.isNew, linked: false };
+  } finally {
+    wipe(first, second);
+  }
+}
+
+/** "I already use Plans": the system picker lists every Plans passkey (incl. other devices). Vault-aware. */
+export async function restoreWithPasskey(opts: { hints?: string[] } = {}): Promise<{ isNew: boolean; linked: boolean }> {
+  return discoverableSignIn(opts);
+}
+
+/**
+ * Web create flow, step 1: a discoverable sign-in with UI (no allowCredentials), e.g. hints
+ * ["hybrid"] to lead with "use a phone". Resolves when an existing account answered; throws a
+ * classified PasskeyError otherwise ("cancelled", "no-credentials", and "prf-unavailable" when
+ * the phone's passkey gave no PRF over hybrid, which is when the UI should offer linking).
+ */
+export async function findExistingAccount(opts: { hints?: string[] } = {}): Promise<{ kind: "restored"; isNew: boolean; linked: boolean }> {
+  const r = await discoverableSignIn(opts);
+  return { kind: "restored", ...r };
+}
+
 /** Unlock the stored account: pinned to its credential, so the sheet goes straight to the fingerprint. */
 export async function unlockStored(): Promise<void> {
   const prev = await storage.loadAccount();
   if (!prev) throw new PasskeyError("no-credentials", "no stored account");
+  if (prev.vault) return unlockVault(prev);
   try {
     const r = await getPasskeyPrfOutput({
       rpId: config.rpId,
@@ -203,8 +401,79 @@ export async function unlockStored(): Promise<void> {
 }
 
 /**
- * "Create account": first look for a Plans passkey already on this phone (no UI when there is
- * none), so nobody makes a second account by accident; only then create a new passkey.
+ * Linked browser: the vault is fetched first (no prompt if it's gone or offline), then one
+ * ceremony pinned to the browser's passkey gives b2 (a keys-only second prompt only if the
+ * provider ignores the `second` salt; the PRF first output is not used), and the account opens
+ * from the decrypted bundle.
+ */
+async function unlockVault(prev: StoredAccount): Promise<void> {
+  const credIdBytes = fromBase64Url(prev.credentialId);
+  const box = await lookupVault(credIdBytes);
+  if (!box) throw vaultFailure("This browser's linked account is no longer stored. Link this browser again from your phone.");
+  const out = await freshPrfOutputs(prev.credentialId);
+  wipe(out.first);
+  try {
+    const bundle = openVaultOrFail(out.second, credIdBytes, box);
+    await openFromBundle(bundle, out.credentialId);
+  } finally {
+    wipe(out.second);
+  }
+}
+
+/** Create a new passkey and account (no lookup first). Web step 2 when nothing was found. */
+export async function createNewAccount(displayName: string): Promise<{ isNew: boolean }> {
+  const prev = await storage.loadAccount();
+  try {
+    const created = await createPasskeyWithPrfOutput({
+      rp: rp(),
+      user: { name: displayName || "Plans", displayName: displayName || "Plans account" },
+      webAuthnClient: createDualPrfClient(),
+    });
+    openSession(created.prfOutput);
+    applyKeys(takeSecondOutput());
+    const f = await finishUnlock(created.credentialId, prev);
+    return { isNew: f.isNew };
+  } catch (e) {
+    clearSecondOutput();
+    throw classifyPasskeyError(e);
+  }
+}
+
+/**
+ * Create this browser's own passkey for linking (dual salt). Returns its credential id and the
+ * keys-namespace output b2 WITHOUT opening any session; the caller passes them to
+ * startBrowserLink and then openFromBundle, and wipes b2. If create gives no `second` output, one
+ * get pinned to the new passkey asks for both salts. The passkey's user handle is marked as a
+ * link passkey (see LINK_HANDLE_PREFIX).
+ */
+export async function createLinkPasskey(
+  displayName: string,
+  opts: Pick<DualClientOptions, "hints"> = {},
+): Promise<{ credentialId: string; credentialIdBytes: Uint8Array; b2: Uint8Array }> {
+  try {
+    const created = await createPasskeyWithPrfOutput({
+      rp: rp(),
+      user: { name: displayName || "Plans", displayName: displayName || "Plans account" },
+      webAuthnClient: withUserHandle(createDualPrfClient(opts.hints ? { hints: opts.hints } : {}), linkHandle()),
+    });
+    wipe(created.prfOutput);
+    let b2 = takeSecondOutput();
+    if (!b2) {
+      const r = await getPasskeyPrfOutput({ rpId: config.rpId, credential: { credentialId: created.credentialId }, webAuthnClient: createDualPrfClient() });
+      wipe(r.prfOutput);
+      b2 = takeSecondOutput();
+    }
+    if (!b2) throw new PasskeyError("prf-unavailable", "This passkey provider returned no keys output.");
+    return { credentialId: created.credentialId, credentialIdBytes: fromBase64Url(created.credentialId), b2 };
+  } catch (e) {
+    clearSecondOutput();
+    throw classifyPasskeyError(e);
+  }
+}
+
+/**
+ * Android "Create account": first look for a Plans passkey already on this phone (no UI when there
+ * is none), so nobody makes a second account by accident; only then create a new passkey.
  * Returns `restored: true` when an existing passkey answered instead.
  */
 export async function createOrRestore(displayName: string): Promise<{ restored: boolean; isNew: boolean }> {
@@ -222,20 +491,8 @@ export async function createOrRestore(displayName: string): Promise<{ restored: 
     // Anything else (none on this phone, provider without the "immediate" option) → create.
     if (c.kind === "cancelled" || c.kind === "domain-not-verified") throw c;
   }
-  try {
-    const created = await createPasskeyWithPrfOutput({
-      rp: rp(),
-      user: { name: displayName || "Plans", displayName: displayName || "Plans account" },
-      webAuthnClient: createDualPrfClient(),
-    });
-    openSession(created.prfOutput);
-    applyKeys(takeSecondOutput());
-    const f = await finishUnlock(created.credentialId, prev);
-    return { restored: false, isNew: f.isNew };
-  } catch (e) {
-    clearSecondOutput();
-    throw classifyPasskeyError(e);
-  }
+  const f = await createNewAccount(displayName);
+  return { restored: false, isNew: f.isNew };
 }
 
 /** Fallback when the provider gave no `second` output: one ceremony for the keys salt alone. */

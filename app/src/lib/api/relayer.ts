@@ -4,6 +4,7 @@
  * Errors come back as {error: {code, message, reason?}}; `friendlyError` turns them into the
  * app's own plain words (the relayer's messages may use words the app never shows).
  */
+import { mark, markTx } from "../timing";
 import type { Hex } from "viem";
 import { config } from "../../config";
 import { fetchJson, jsonStringify, NetworkError } from "./http";
@@ -49,6 +50,7 @@ export async function relay(action: string, params: Record<string, unknown>): Pr
   }
   const res = { ...r.body, clientMs: Date.now() - t0 };
   if (res.status === "reverted") throw new RelayError(200, "REVERTED_ONCHAIN", "The request was included but failed because things changed.", undefined);
+  markTx("relay_ok", { action, txHash: res.txHash, latencyMs: res.latencyMs, clientMs: res.clientMs });
   return res;
 }
 
@@ -111,6 +113,7 @@ export async function requestFaucet(address: string): Promise<{ txHash?: Hex; am
     body: jsonStringify({ address }),
   });
   if (r.status >= 400 || r.body?.error) throw new RelayError(r.status, r.body?.error?.code ?? "FAUCET_FAILED", r.body?.error?.message ?? "");
+  if (r.body?.txHash) markTx("faucet_ok", { txHash: r.body.txHash });
   return r.body;
 }
 
@@ -147,6 +150,7 @@ export async function startTrySettleUp(body: { member: string; meta?: Hex; invit
     timeoutMs: 45_000,
   });
   if (r.status >= 400 || r.body?.error) throw new RelayError(r.status, r.body?.error?.code ?? "DEMO_FAILED", r.body?.error?.message ?? "");
+  mark("demo_started", { pot: (r.body as { pot?: string }).pot });
   return r.body;
 }
 

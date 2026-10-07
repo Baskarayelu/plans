@@ -12,7 +12,10 @@ import { paidBefore } from "../../../lib/spend/logic";
 import { usePlan, type PlanVM } from "../../../lib/state/data";
 import { useColors } from "../../../theme/ThemeProvider";
 import { Icon } from "../../../ui/Icon";
-import { Banner, Btn, Btns, EmojiTile, Field, ListItem, Overline, Tile } from "../../../ui/kit";
+import { Banner, Btn, Btns, Card, EmojiTile, Field, ListItem, Overline, Row, Tile } from "../../../ui/kit";
+import { Columns } from "../../../ui/desk/plan";
+import { Crumbs } from "../../../ui/shell/desk";
+import { useLayout } from "../../../ui/shell/responsive";
 import { AppBar, Screen } from "../../../ui/layout";
 import { PersonAvatar } from "../../../ui/plan/common";
 import { BusinessScanner } from "../../../ui/spend/BusinessScanner";
@@ -31,6 +34,7 @@ export default function PayWho() {
 
 function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
   const c = useColors();
+  const { desk } = useLayout();
   const [q, setQ] = useState("");
   const [scan, setScan] = useState(false);
   const rules = planRules(plan.raw);
@@ -61,7 +65,19 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
 
   return (
     <Screen testID="screen-pay">
-      <AppBar icon="x" title="Pay from the pot" sub={`${plan.meta.name} · ${formatUsd(balance)} left`} />
+      {desk ? (
+        <View style={{ marginBottom: 16 }}>
+          <Crumbs items={[{ label: "Plans", href: "/" }, { label: plan.meta.name, href: { pathname: "/plan/[pot]", params: { pot: plan.pot } } }, { label: "Pay" }]} />
+          <Txt v="d34" style={{ marginTop: 8 }}>
+            Pay from the pot
+          </Txt>
+          <Txt v="t15" color="muted" style={{ marginTop: 4 }}>
+            {plan.meta.name} · {formatUsd(balance)} left · who are you paying?
+          </Txt>
+        </View>
+      ) : (
+        <AppBar icon="x" title="Pay from the pot" sub={`${plan.meta.name} · ${formatUsd(balance)} left`} />
+      )}
       {closed ? (
         <Banner
           kind="mut"
@@ -82,7 +98,7 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
       ) : null}
       {!closed ? (
         <>
-          <View style={{ marginTop: plan.frozen ? 12 : 0 }}>
+          <View style={{ marginTop: plan.frozen ? 12 : 0, maxWidth: desk ? 480 : undefined }}>
             <Field
               value={q}
               onChangeText={setQ}
@@ -118,7 +134,7 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
           {businessesAllowed ? (
             <>
               <Overline style={{ marginTop: 24 }}>A business</Overline>
-              {!needle ? (
+              {!needle && !desk ? (
                 <ListItem
                   testID="btn-scan-business"
                   left={<Tile icon="scan" kind="a" />}
@@ -128,7 +144,43 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
                   onPress={() => setScan(true)}
                 />
               ) : null}
-              {shownBefore.map((b, i) => {
+              {desk ? (
+                <Columns
+                  items={[...(!needle ? ["scan" as const] : []), ...shownBefore.map((b, i) => ({ b, i }))]}
+                  gap={12}
+                  style={{ marginTop: 8 }}
+                  render={(x) =>
+                    x === "scan" ? (
+                      <Card p={12} onPress={() => setScan(true)} testID="btn-scan-business" a11y="Scan a business's Plans code" style={{ flex: 1 }}>
+                        <Row>
+                          <Tile icon="scan" kind="a" />
+                          <View style={{ flex: 1 }}>
+                            <Txt v="lt">Scan a business's Plans code</Txt>
+                            <Txt v="t13" color="muted">
+                              Or upload a photo of it
+                            </Txt>
+                          </View>
+                        </Row>
+                      </Card>
+                    ) : (
+                      <Card p={12} onPress={() => goForm({ payee: x.b.payee, kind: "PAY", name: x.b.name ?? "", category: x.b.category })} testID={`payee-before-${x.i}`} a11y={x.b.name ?? "Paid before"} style={{ flex: 1 }}>
+                        <Row>
+                          <EmojiTile emoji={categoryOf(x.b.category).emoji} color={plan.meta.color} size={40} />
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Txt v="lt" numberOfLines={1}>
+                              {x.b.name ?? "Paid before"}
+                            </Txt>
+                            <Txt v="t13" color="muted" numberOfLines={1}>
+                              {`${x.b.name ? "Paid before · " : ""}${categoryOf(x.b.category).name} · last ${formatUsdShort(x.b.amount)}`}
+                            </Txt>
+                          </View>
+                        </Row>
+                      </Card>
+                    )
+                  }
+                />
+              ) : null}
+              {(desk ? [] : shownBefore).map((b, i) => {
                 const cat = categoryOf(b.category);
                 return (
                   <ListItem
@@ -168,6 +220,7 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
           ) : null}
 
           <View style={{ flex: 1, minHeight: 24 }} />
+          <View style={desk ? { maxWidth: 680 } : undefined}>
           <Banner
             kind="inf"
             icon="info"
@@ -175,6 +228,7 @@ function PayWhoBody({ plan, amount }: { plan: PlanVM; amount?: string }) {
             title={rules.instantMax > 0n ? `Under ${formatUsdShort(rules.instantMax)} goes through now` : "Every spend needs a friend's OK"}
             text={rules.instantMax > 0n ? "Bigger spends wait for a friend's OK." : "The money stays in the pot until someone says yes."}
           />
+          </View>
         </>
       ) : null}
 

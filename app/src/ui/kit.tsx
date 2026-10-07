@@ -4,6 +4,7 @@
  * from the label so uiautomator / Maestro can find it by id or by text.
  */
 import * as Haptics from "expo-haptics";
+import { NO_MOTION } from "./motion";
 import * as Linking from "expo-linking";
 import React, { useEffect, useRef } from "react";
 import {
@@ -120,6 +121,8 @@ export function Btn({
       style={({ pressed }) => [
         {
           height: h,
+          // react-native-web reads flex: 1 as "flex: 1 1 0%", which can squash a button in a column.
+          minHeight: h,
           borderRadius: 999,
           backgroundColor: bg[k],
           flexDirection: "row",
@@ -503,6 +506,7 @@ export function LiveDot({ color }: { color?: string }) {
   const c = useColors();
   const a = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (NO_MOTION) return;
     const loop = Animated.loop(Animated.sequence([Animated.timing(a, { toValue: 1, duration: 900, useNativeDriver: true }), Animated.timing(a, { toValue: 0, duration: 900, useNativeDriver: true })]));
     loop.start();
     return () => loop.stop();
@@ -782,6 +786,7 @@ export function Skel({ w, h, r = 10, style }: { w: number | `${number}%`; h: num
   const c = useColors();
   const a = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
+    if (NO_MOTION) return;
     const loop = Animated.loop(Animated.sequence([Animated.timing(a, { toValue: 1, duration: 700, useNativeDriver: true }), Animated.timing(a, { toValue: 0.6, duration: 700, useNativeDriver: true })]));
     loop.start();
     return () => loop.stop();

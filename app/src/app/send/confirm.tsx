@@ -16,6 +16,8 @@ import { Icon } from "../../ui/Icon";
 import { Avatar, Banner, Btn, Card, Chip, Field, Row, Skel } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
 import { KV, Mono, useFxPair } from "../../ui/send/bits";
+import { DeskSend } from "../../ui/send/desk";
+import { useConfirmLabel, useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
 
 /** 46 Check and send. The rate is refreshed when it is over a minute old. */
@@ -54,6 +56,11 @@ export default function SendConfirm() {
   }, [q?.theirE8]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useAction(sendMoney, { fatal: true, context: draft ? `You were sending money to ${draft.to.name}.` : undefined });
+  const { desk } = useLayout();
+  const confirmLabel = useConfirmLabel();
+
+  // 114 on a laptop: the check lives in the Send page's panel.
+  if (desk) return <DeskSend to={draft?.to ?? null} text={draft?.text} inDollars={draft?.inDollars} />;
 
   if (!draft || !q) {
     return (
@@ -122,7 +129,7 @@ export default function SendConfirm() {
       dock={
         <>
           {send.error ? <Banner kind="neg" icon="alert" title={send.error.title} text={send.error.message} /> : null}
-          <Btn label="Confirm with fingerprint" icon="fp" onPress={() => void confirm()} disabled={!ready} loading={send.busy} testID="btn-confirm-with-fingerprint" />
+          <Btn label={confirmLabel} icon={confirmLabel === "Confirm with fingerprint" ? "fp" : "key"} onPress={() => void confirm()} disabled={!ready} loading={send.busy} testID="btn-confirm-with-fingerprint" />
         </>
       }
     >

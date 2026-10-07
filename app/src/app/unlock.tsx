@@ -5,7 +5,9 @@ import { handlePasskeyFailure } from "../lib/identity/flows";
 import { identity, signOut, unlockStored } from "../lib/identity/session";
 import { useStore } from "../lib/state/observable";
 import { Avatar, Btn, FingerprintPill, Logo } from "../ui/kit";
+import { EntryHeader, EntrySplit, useEntryRoomy } from "../ui/desk/entry";
 import { Screen } from "../ui/layout";
+import { useLayout } from "../ui/shell/responsive";
 import { Txt } from "../ui/Text";
 
 /**
@@ -15,6 +17,8 @@ import { Txt } from "../ui/Text";
 export default function Unlock() {
   const { next } = useLocalSearchParams<{ next?: string }>();
   const st = useStore(identity, (s) => s);
+  const { desk } = useLayout();
+  const roomy = useEntryRoomy();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
   const tried = useRef(false);
@@ -42,6 +46,43 @@ export default function Unlock() {
   }, []);
 
   const name = st.profile?.name;
+  const different = async () => {
+    await signOut();
+    router.replace("/welcome");
+  };
+
+  if (desk) {
+    // On a laptop: the welcome split (102) with the unlock on the right.
+    return (
+      <Screen testID="screen-unlock" pad={false} scroll={false} bottomInset={false}>
+        <EntrySplit>
+          <View style={{ flex: 1, paddingTop: 56, paddingBottom: 40, paddingHorizontal: roomy ? 88 : 56, minHeight: 600 }}>
+            <EntryHeader />
+            <View style={{ flex: 1, minHeight: 32 }} />
+            <Avatar initial={(name?.[0] ?? "P").toUpperCase()} color="#D9634B" size={80} />
+            <Txt v="d56" style={{ marginTop: 20 }} accessibilityRole="header">
+              {name ? `Welcome back, ${name}` : "Welcome back"}
+            </Txt>
+            <Txt v="t17" color="muted" style={{ fontSize: 19, lineHeight: 27, marginTop: 12, marginBottom: 20, maxWidth: 520 }}>
+              Confirm it's you to open your plans. Your passkey unlocks with your fingerprint, face or screen lock.
+            </Txt>
+            {st.fingerprint ? <FingerprintPill emoji={st.fingerprint} /> : null}
+            {msg ? (
+              <Txt v="t15" color="neg" style={{ marginTop: 16, maxWidth: 520 }} testID="unlock-message">
+                {msg}
+              </Txt>
+            ) : null}
+            <View style={{ width: 400, maxWidth: "100%", marginTop: 24, gap: 8 }}>
+              <Btn label="Unlock with passkey" icon="key" onPress={unlock} loading={busy} testID="btn-unlock" />
+              <Btn label="Use a different account" kind="sec" onPress={() => void different()} testID="btn-different-account" />
+            </View>
+            <View style={{ flex: 1, minHeight: 32 }} />
+          </View>
+        </EntrySplit>
+      </Screen>
+    );
+  }
+
   return (
     <Screen
       testID="screen-unlock"
@@ -51,10 +92,7 @@ export default function Unlock() {
           <Btn
             label="Use a different account"
             kind="txt"
-            onPress={async () => {
-              await signOut();
-              router.replace("/welcome");
-            }}
+            onPress={() => void different()}
             testID="btn-different-account"
           />
         </>

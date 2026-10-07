@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { getLocales } from "expo-localization";
 import { router, useLocalSearchParams } from "expo-router";
+import { takeClaimKey } from "../lib/domain/webLinks";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { settledMs, type RelayResult } from "../lib/api/relayer";
 import { fromBase64Url } from "../lib/crypto/bytes";
 import { countryByCode, CURRENCIES, formatLocal, formatUsdShort } from "../lib/domain/currency";
@@ -14,7 +15,9 @@ import { personFor, queryClient, qk, useFx, useMe } from "../lib/state/data";
 import { useStore } from "../lib/state/observable";
 import { useAction } from "../lib/state/useAction";
 import { Avatar, Banner, BigIcon, Btn, Logo, Proof, Row, SettledIn, Skel, Step } from "../ui/kit";
+import { ClaimFeatures, WebPageFrame } from "../ui/desk/entry";
 import { Screen } from "../ui/layout";
+import { useLayout } from "../ui/shell/responsive";
 import { Stub } from "../ui/Stub";
 import { Txt } from "../ui/Text";
 
@@ -31,9 +34,12 @@ function viewerCurrency(profileCurrency?: string): string {
 
 /** 51 Claim a link: who sent it, how much in my money, and one button. */
 export default function Claim() {
-  const p = useLocalSearchParams<{ k?: string; n?: string; m?: string; a?: string; go?: string }>();
+  const rp = useLocalSearchParams<{ k?: string; n?: string; m?: string; a?: string; go?: string }>();
+  // Web links keep the claim key out of the URL: it waits in memory (lib/domain/webLinks.ts).
+  const p = { ...rp, k: rp.k ?? takeClaimKey() };
   const st = useStore(identity, (s) => s);
   const { address } = useMe();
+  const { desk } = useLayout();
   const key = useMemo(() => {
     try {
       const k = p.k ? fromBase64Url(p.k) : null;
@@ -69,7 +75,8 @@ export default function Claim() {
   const open = c?.status === "Open" && !expired;
   const usdText = amountUnits !== undefined ? formatUsdShort(amountUnits) : "";
   const localText = amountUnits !== undefined && cur !== "USD" ? formatLocal(amountUnits, cur, fx.data?.rateE8) : undefined;
-  const thisPath = `/claim?${Object.entries({ k: p.k, n: p.n, m: p.m, a: p.a, go: "1" })
+  // On the web the claim key stays in memory (webLinks.ts), never in the address bar.
+  const thisPath = `/claim?${Object.entries({ k: Platform.OS === "web" ? undefined : p.k, n: p.n, m: p.m, a: p.a, go: "1" })
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join("&")}`;
@@ -147,6 +154,14 @@ export default function Claim() {
   );
 
   if (!key) {
+    if (desk)
+      return (
+        <WebPageFrame testID="screen-claim" footer={<ClaimFeatures />}>
+          <View style={{ width: 560, maxWidth: "100%", alignSelf: "center" }}>
+            <Banner kind="neg" icon="alert" title="This link isn't complete" text="Ask the person who sent it to share it again. The secret part after # may have been cut off." testID="claim-status" />
+          </View>
+        </WebPageFrame>
+      );
     return (
       <Screen testID="screen-claim">
         {header}
@@ -156,6 +171,29 @@ export default function Claim() {
   }
 
   if (done || mine) {
+    if (desk)
+      return (
+        <WebPageFrame testID="screen-claim">
+          <View style={{ alignItems: "center", alignSelf: "center", width: 560, maxWidth: "100%" }}>
+            <BigIcon icon="check" kind="p" />
+            <Txt v="d44" center style={{ marginTop: 16 }} testID="claim-status">
+              {usdText ? `${usdText} is in your Plans account` : "It's in your Plans account"}
+            </Txt>
+            {localText ? (
+              <Txt v="t17" color="muted" style={{ marginTop: 4 }}>
+                {localText}
+              </Txt>
+            ) : null}
+            <Row gap={16} style={{ marginTop: 16 }}>
+              {done ? <SettledIn ms={settledMs(done)} /> : null}
+              <Proof hash={done?.txHash} />
+            </Row>
+            <View style={{ width: 320, marginTop: 28 }}>
+              <Btn label="Done" onPress={() => router.replace("/balance")} testID="btn-done" />
+            </View>
+          </View>
+        </WebPageFrame>
+      );
     return (
       <Screen testID="screen-claim" dock={<Btn label="Done" onPress={() => router.replace("/balance")} testID="btn-done" />}>
         {header}
@@ -200,77 +238,110 @@ export default function Claim() {
 
   const showStub = !c || open;
   const label = usdText ? `Claim ${usdText}` : "Claim";
+  const actions = (
+    <>
+      {msg ? (
+        <Txt v="t13" color="neg" center testID="claim-message">
+          {msg}
+        </Txt>
+      ) : null}
+      {run.error ? <Banner kind="neg" icon="alert" title={run.error.title} text={run.error.message} /> : null}
+      {st.status === "none" ? (
+        <>
+          <Btn label="Create account & claim" icon="fp" onPress={() => void create()} loading={busy === "create"} disabled={!!busy} testID="btn-create-account-and-claim" />
+          <Btn label="I already use Plans" kind="sec" onPress={() => void restore()} loading={busy === "restore"} disabled={!!busy} testID="btn-i-already-use-plans" />
+        </>
+      ) : st.status === "locked" ? (
+        <Btn label={label} icon="fp" onPress={() => void unlockAndClaim()} loading={busy === "unlock" || run.busy} testID="btn-claim" />
+      ) : (
+        <Btn label={label} icon="fp" onPress={() => void (st.profile ? doClaim() : afterIdentity())} loading={run.busy} testID="btn-claim" />
+      )}
+    </>
+  );
+  const stubEl = (
+    <Stub
+      testID="claim-stub"
+      head={
+        <>
+          <Row>
+            <Avatar initial={(sender[0] ?? "?").toUpperCase()} color={senderP?.color ?? "#D9634B"} size={44} />
+            <View>
+              <Txt v="lt">{sender} sent you</Txt>
+              {c?.fromCountry ? (
+                <Txt v="t13" color="muted">
+                  {countryByCode(c.fromCountry)?.name ?? c.fromCountry} {countryByCode(c.fromCountry)?.flag ?? ""}
+                </Txt>
+              ) : null}
+            </View>
+          </Row>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+            {amountUnits !== undefined ? (
+              <Txt v="d56" tnum testID="claim-amount">
+                {usdText}
+              </Txt>
+            ) : (
+              <Skel w={120} h={56} />
+            )}
+            {localText ? (
+              <Txt v="d22" color="muted">
+                (≈ {localText})
+              </Txt>
+            ) : null}
+          </View>
+          {p.m ? (
+            <Txt v="t15" style={{ marginTop: 10 }}>
+              “{p.m}”
+            </Txt>
+          ) : null}
+        </>
+      }
+      lines={[
+        ["Expires", expiry ? `${dayText(expiry)} · ${left === 1 ? "1 day left" : `${left} days left`}` : "…"],
+        ["Fee", "None"],
+      ]}
+    />
+  );
+
+  if (desk) {
+    // 116 on a laptop: the stub on the left, how to claim and one button on the right.
+    return (
+      <WebPageFrame testID="screen-claim" footer={<ClaimFeatures />}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 64, rowGap: 32, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 490, maxWidth: "100%" }}>
+            {showStub ? stubEl : null}
+            {statusBlock}
+            <Txt v="t13" color="muted" style={{ marginTop: 12 }}>
+              The secret part of this link stays in your browser. Plans never sees it.
+            </Txt>
+          </View>
+          {open ? (
+            <View style={{ width: 460, maxWidth: "100%" }}>
+              <Txt v="d44" accessibilityRole="header">
+                {st.status === "none" ? "Claim it in a minute" : "Claim it now"}
+              </Txt>
+              <View style={{ gap: 14, marginTop: 16 }}>
+                {st.status === "none" ? <Step n={1}>Create your Plans account with a passkey. No password, no bank details.</Step> : <Step n={1}>Confirm it's you with your passkey.</Step>}
+                <Step n={2}>The money lands straight away.</Step>
+                <Step n={3}>Keep it as dollars, or send it on to anyone.</Step>
+              </View>
+              <View style={{ width: 380, maxWidth: "100%", marginTop: 24, gap: 8 }}>{actions}</View>
+              <Txt v="t13" color="muted" style={{ marginTop: 14 }}>
+                Works right here in your browser. On Android you can get the app later; your account comes with you.
+              </Txt>
+            </View>
+          ) : null}
+        </View>
+      </WebPageFrame>
+    );
+  }
 
   return (
     <Screen
       testID="screen-claim"
-      dock={
-        open ? (
-          <>
-            {msg ? (
-              <Txt v="t13" color="neg" center testID="claim-message">
-                {msg}
-              </Txt>
-            ) : null}
-            {run.error ? <Banner kind="neg" icon="alert" title={run.error.title} text={run.error.message} /> : null}
-            {st.status === "none" ? (
-              <>
-                <Btn label="Create account & claim" icon="fp" onPress={() => void create()} loading={busy === "create"} disabled={!!busy} testID="btn-create-account-and-claim" />
-                <Btn label="I already use Plans" kind="sec" onPress={() => void restore()} loading={busy === "restore"} disabled={!!busy} testID="btn-i-already-use-plans" />
-              </>
-            ) : st.status === "locked" ? (
-              <Btn label={label} icon="fp" onPress={() => void unlockAndClaim()} loading={busy === "unlock" || run.busy} testID="btn-claim" />
-            ) : (
-              <Btn label={label} icon="fp" onPress={() => void (st.profile ? doClaim() : afterIdentity())} loading={run.busy} testID="btn-claim" />
-            )}
-          </>
-        ) : undefined
-      }
+      dock={open ? actions : undefined}
     >
       {header}
-      {showStub ? (
-        <Stub
-          testID="claim-stub"
-          head={
-            <>
-              <Row>
-                <Avatar initial={(sender[0] ?? "?").toUpperCase()} color={senderP?.color ?? "#D9634B"} size={44} />
-                <View>
-                  <Txt v="lt">{sender} sent you</Txt>
-                  {c?.fromCountry ? (
-                    <Txt v="t13" color="muted">
-                      {countryByCode(c.fromCountry)?.name ?? c.fromCountry} {countryByCode(c.fromCountry)?.flag ?? ""}
-                    </Txt>
-                  ) : null}
-                </View>
-              </Row>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-                {amountUnits !== undefined ? (
-                  <Txt v="d56" tnum testID="claim-amount">
-                    {usdText}
-                  </Txt>
-                ) : (
-                  <Skel w={120} h={56} />
-                )}
-                {localText ? (
-                  <Txt v="d22" color="muted">
-                    (≈ {localText})
-                  </Txt>
-                ) : null}
-              </View>
-              {p.m ? (
-                <Txt v="t15" style={{ marginTop: 10 }}>
-                  “{p.m}”
-                </Txt>
-              ) : null}
-            </>
-          }
-          lines={[
-            ["Expires", expiry ? `${dayText(expiry)} · ${left === 1 ? "1 day left" : `${left} days left`}` : "…"],
-            ["Fee", "None"],
-          ]}
-        />
-      ) : null}
+      {showStub ? stubEl : null}
       {statusBlock}
       {open ? (
         <>

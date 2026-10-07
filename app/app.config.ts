@@ -45,6 +45,12 @@ const AUSD = {
 
 const env = (k: string, d: string): string => process.env[k] ?? d;
 
+/**
+ * Web build (PLANS_WEB=1, set by scripts/build-web.sh): the same app served at plans.0xo.in/app.
+ * baseUrl is applied only to web builds so Android deep links stay exactly as they are.
+ */
+const isWeb = process.env.PLANS_WEB === "1";
+
 const plans = {
   network,
   chainId,
@@ -84,7 +90,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/icon.png",
   scheme,
   userInterfaceStyle: "automatic",
-  platforms: ["android"],
+  platforms: ["android", "web"],
+  web: {
+    bundler: "metro",
+    // One index.html for every route (SPA); the site rewrites /app/* to it (see site/next.config.mjs).
+    output: "single",
+    favicon: "./assets/favicon.png",
+    name: isMainnet ? "Plans" : "Plans Test",
+    shortName: "Plans",
+    lang: "en",
+    themeColor: "#10231B",
+    backgroundColor: "#F4F6F1",
+  },
   android: {
     // Firebase Cloud Messaging for Expo push on Android: add google-services.json here (not committed) to enable it.
     ...(fs.existsSync(path.resolve(__dirname, "google-services.json")) ? { googleServicesFile: "./google-services.json" } : {}),
@@ -149,7 +166,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "./plugins/withPlansAndroid",
   ],
-  experiments: { typedRoutes: false },
+  experiments: { typedRoutes: false, ...(isWeb ? { baseUrl: "/app" } : {}) },
   extra: {
     plans,
     eas: { projectId: process.env.EXPO_PROJECT_ID ?? "0fa08a8e-1503-4b2a-984a-2001371c1e75" },

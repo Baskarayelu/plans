@@ -27,7 +27,8 @@ content is needed the app runs one more ceremony for the keys salt alone ("Unloc
 
 Create flow: before creating, the app asks for an existing Plans passkey with Android's
 "immediately available" flag (no UI when there is none), so nobody makes a second account by
-accident. Restore flow: `getPasskeyPrfOutput` with no credential → the system picker.
+accident. Restore flow: `getPasskeyPrfOutput` with no credential → the system picker, then the vault lookup
+for that credential (§9.6), so a browser passkey made for linking opens the linked account.
 
 Nothing derived from the passkey is stored. The PRF outputs, the signing key, the X25519 secret
 and the cache key live in memory and are re-derived at every unlock (one fingerprint per app
@@ -180,3 +181,173 @@ once. Different phones draw different prefixes, so they never collide.
 
 Claim links (`/c/…#k=<claim key>`), invite links (`/j/<pot>#s=<invite secret>`) keep their secret
 in the URL fragment, which browsers never send to a server.
+
+## 9. Linking a browser
+
+A person whose passkey lives in one password manager (say Google Password Manager on their Android
+phone) opens the web app (`https://plans.0xo.in/app`) in a browser that uses another (say iCloud
+Keychain). PRF outputs are per credential, so a new passkey there would be a **different account**.
+Instead the browser makes its own passkey, and the phone sends it the account, end to end
+encrypted, through the relayer. Code: `src/lib/link/protocol.ts` (pure constructions),
+`browserLink.ts`, `phoneLink.ts`, `slots.ts`, and `openFromBundle` / vault-aware
+`unlockStored` / `restoreWithPasskey` in `src/lib/identity/session.ts`. Tests:
+`src/__tests__/link.test.ts` (vectors checked against `node:crypto`) and `linkSession.test.ts`.
+
+Notation: HKDF = HKDF-SHA256, AEAD = XChaCha20-Poly1305, b64u = base64url without padding, `‖` =
+concatenation, strings are UTF-8, `hex` is lowercase without `0x`.
+
+### 9.1 Link code, secret and slots
+
+```
+code      = 12 characters of Crockford base32 "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+            (the first 60 bits of 8 random bytes, 5 bits per character, big-endian),
+            shown "XXXX-XXXX-XXXX"
+typed     → uppercase, drop spaces and dashes, I/L → 1, O → 0; U or any other character is invalid
+s         = HKDF(ikm = code (12 normalised chars), salt = "plans/v1/link", info = "plans/v1/link-secret", L = 32)
+offerSlot = hex(SHA-256("plans/v1/link-offer|" ‖ s))
+replySlot = hex(SHA-256("plans/v1/link-reply|" ‖ s))
+```
+
+Vector: code `0123456789AB` → `s = f52ea686…47058128`, offerSlot `bd8296e5…0a1614ca`, replySlot
+`16a77a31…bc44e7e3` (full values in the tests).
+
+### 9.2 Browser: one-time key, offer and QR
+
+```
+(linkSecret, linkPub) ← random X25519 key pair     (memory only; wiped on success, expiry, error or cancel)
+exp      = now + 600                                (unix seconds; the link lives 10 minutes)
+offerKey = HKDF(ikm = s, salt = "", info = "plans/v1/link-offer", 32)
+pt       = {"v":1,"k":b64u(linkPub),"e":exp,"d":deviceLabel}
+offer    = 0x01 ‖ nonce(24) ‖ AEAD(offerKey, nonce, pt, aad = "plans/v1/link-offer")
+PUT /v1/slots/<offerSlot> {data: b64u(offer), ttl: 600}
+QR       = https://plans.0xo.in/app/link#c=<code>&k=<b64u(linkPub)>&e=<exp>   (host = config.linkHost)
+```
+
+The offer exists only for the typed-code path; a phone that scans the QR has everything it needs
+and fetches nothing.
+
+### 9.3 Fingerprint
+
+```
+d  = SHA-256("plans/v1/link-fp" ‖ s ‖ linkPub)
+fp = EMOJI[d[0]] ‖ EMOJI[d[1]] ‖ EMOJI[d[2]]       (the table of §3, emojiFromDigest)
+```
+
+Both screens show these three emoji and the person checks they match before the phone sends.
+
+### 9.4 Phone: account bundle and reply
+
+At send time the phone runs a **fresh** passkey ceremony pinned to its stored credential, asking
+for both salts in one prompt (a second keys-only prompt only if the provider ignores the `second`
+salt). The unlocked session can't be used: it wipes the PRF outputs after deriving. The phone
+refuses to send if the address derived from this ceremony isn't the stored account's.
+
+```
+bundle = {"v":1,
+          "a":   hex(deriveAccountPrivateKey(PRF first)),    32 bytes (§2), never the PRF output or mnemonic
+          "k":   hex(PRF second),                            32 bytes, the IKM of §3
+          "addr":"0x…" checksummed address of a,
+          "fp":  key fingerprint (§3) of deriveKeys(k).x25519Public,
+          "p":   profile {name, country, currency, city?} or absent,
+          "t":   now (unix seconds)}
+reply  = seal(linkPub, bundle, context = "link|" + hex(s) + "|" + exp)    (§4: aad "plans/v1/seal|" + context)
+PUT /v1/slots/<replySlot> {data: b64u(reply), ttl: min(600, exp − now + 60), at least 60}   (no auth: write-once)
+```
+
+The account private key is sent rather than the PRF `first` output or the mnemonic (least
+privilege: it is what the browser needs to sign, and nothing that derives other accounts). Every
+buffer (PRF outputs, key, plaintext) is zeroed after use; JSON strings can't be zeroed in
+JavaScript and are dropped as soon as possible. A device that is itself a linked browser sends the
+bundle from its vault (§9.6). On the phone a link counts as expired only after `exp + 60` (clock
+differences); the browser's clock decides.
+
+### 9.5 Browser: receive and verify
+
+The browser polls `GET /v1/slots/<replySlot>` every 2 s until `exp` (network errors are retried
+until then), then:
+
+```
+reject "expired"       if now > exp
+pt = open(linkSecret, reply, "link|" + hex(s) + "|" + exp)    → "tampered" if it fails
+reject "expired"       if t ∉ [now − 660, now + 60]
+reject "wrong-account" if address(a) ≠ addr, or keyFingerprint(deriveKeys(k).x25519Public) ≠ fp
+wipe linkSecret
+```
+
+A reply that fails to open ends the link (the reply slot is write-once, so no second reply can
+arrive).
+
+### 9.6 Vault: keeping the account in this browser
+
+The browser's own passkey (rpId `plans.0xo.in`, created for linking with both salts; its user
+handle is `"plans-link/v1:" ‖ 18 random bytes` so the web app can recognise it) gives `b2`, its
+keys-namespace PRF output:
+
+```
+vaultKey  = HKDF(ikm = b2, salt = "", info = "plans/v1/vault", 32)
+vaultAuth = HKDF(ikm = b2, salt = "", info = "plans/v1/vault-auth", 32)
+vaultId   = hex(SHA-256(raw credential id bytes))
+pt        = the bundle JSON with "t" replaced by "linkedAt"
+box       = 0x01 ‖ nonce(24) ‖ AEAD(vaultKey, nonce, pt, aad = "plans/v1/vault|" + vaultId)
+PUT /v1/slots/<vaultId> {data: b64u(box), auth: hex(vaultAuth)}           (permanent)
+```
+
+The vault is saved before the session opens; the StoredAccount then holds the browser's
+credential id and `vault: true` (nothing secret is stored locally). The browser's PRF `first`
+output is never used.
+
+- **Unlock** (`unlockStored`, vault account): GET the vault (no prompt if it's gone or the network is
+  down), one ceremony pinned to the browser's passkey → `b2` (keys-only second prompt if the
+  provider ignores `second`), decrypt, open the Mera session from `a` and the keys from `k`. A
+  missing or undecryptable vault is an error ("link this browser again"); it never falls back to
+  the passkey's own PRF account.
+- **Restore** (`restoreWithPasskey` / `findExistingAccount`, any browser where that passkey is
+  synced): discoverable ceremony → credential id → **always** GET `vaultId`. Found → decrypt with
+  `b2` → the linked account. 404 → the passkey's own account from PRF `first` (§2), unless the web
+  bridge reports the link user handle, in which case it's an error. Any other failure of the
+  lookup (offline, 5xx) or a vault that doesn't decrypt is an error, never a silent fallback to a
+  different account.
+- On the web, a hybrid ("use a phone") sign-in whose provider returns no PRF output fails as
+  `prf-unavailable`, which is when the app offers linking.
+
+### 9.7 Threat model
+
+- **The relayer is untrusted.** It sees slot ids (SHA-256 of secrets it doesn't know), ciphertext,
+  sizes, timing and IP addresses. It never sees `s`, `linkSecret`, `b2` or `vaultAuth` (only
+  `SHA-256(vaultAuth)` is stored). It can't forge an offer (it needs `s` for the AEAD key) or a reply
+  (the sealed box's AAD binds `s` and `exp`, so a box sealed by someone who only knows `linkPub`
+  doesn't open). It can withhold, delay or delete records: that makes a link fail, never succeed
+  with the wrong account.
+- **Code path brute force.** The code has 60 bits. Online, a guess needs a GET per candidate code,
+  rate-limited, inside a 10-minute window. Offline, someone holding an offer box (the relayer) must
+  run HKDF + AEAD per guess: 2⁶⁰ guesses in 10 minutes is about 2·10¹⁵ per second. Even a guessed
+  code only reveals `linkPub`, not the account: the account goes only to `linkPub`. A guesser could
+  at most answer the link first with *their own* account (the real phone would then get
+  `used`), which is why the browser should show the received account's name and
+  key fingerprint (`p`, `fp`) for the person to recognise before using it.
+- **Why the fingerprint must be compared.** It covers the cases the cryptography can't: a QR or code
+  read from the wrong screen (someone else's link shown to you), or a code typed into the phone
+  that belongs to an attacker who is racing to get your account. If the three emoji on the phone
+  aren't the three on the browser in front of you, don't send.
+- **One-time key, 10-minute expiry.** `linkSecret` exists only in that browser tab's memory and is
+  wiped when the link settles. Offer and reply slots expire after at most 10 minutes (the relayer
+  deletes them lazily on read and in an hourly sweep). The reply slot is write-once, so a link can
+  be answered once.
+- **Vault overwrite needs `vaultAuth`.** Only the holder of that browser passkey can replace its
+  vault. Anyone who knows the credential id can read the ciphertext; it opens only with `b2`.
+- **If the relayer loses a vault**, that browser can no longer open the account: it must be linked
+  again from the phone. The phone's account is never affected: it still comes from the phone's own
+  passkey, and the account, its plans and its money are onchain.
+- **Compromise of a linked browser's passkey** gives the account key, the same as compromise of the
+  phone's passkey. Linking adds one more device that can sign for the account; there is no
+  "unlink" that revokes the key (it is the same account), only deleting the browser passkey.
+
+### 9.8 Relayer slots API
+
+`PUT /v1/slots/<64 hex>` with JSON `{"data": b64u (≤ 8192 bytes decoded), "ttl"?: 60–600 (omitted =
+permanent), "auth"?: 64 hex}`. No slot, or an expired one → 201 created. An unexpired slot is
+overwritten (200) only if it was created with `auth` and `sha256(auth)` matches; otherwise 409
+`SLOT_TAKEN`. `GET /v1/slots/<id>` → 200 `{"data", "expiresAt": unix | null}` with
+`Cache-Control: no-store`, or 404 `NOT_FOUND` (missing or expired). Also 400 bad id/body, 413 over
+8192 bytes, 429 over 60 writes per IP per hour, 507 storage full (shared with blobs), 404
+`SLOTS_DISABLED`. Files: `<BLOB_DIR>/slots/<aa>/<id>`, written atomically. See `relayer/README.md`.

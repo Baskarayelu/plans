@@ -1,5 +1,6 @@
 /** Building blocks shared by the spending screens (20–32). Colours only from useColors(). */
 import type { UseQueryResult } from "@tanstack/react-query";
+import { NO_MOTION } from "../motion";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -242,7 +243,7 @@ export function ReceiptThumbRow({ state, title }: { state: PhotoState; title: st
 export function PhotoViewer({ uri, visible, onClose }: { uri: string; visible: boolean; onClose: () => void }) {
   const ins = useSafeAreaInsets();
   return (
-    <Modal visible={visible} onRequestClose={onClose} animationType="fade" statusBarTranslucent>
+    <Modal visible={visible} onRequestClose={onClose} animationType={NO_MOTION ? "none" : "fade"} statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: "#000" }} testID="photo-viewer">
         <Image source={{ uri }} resizeMode="contain" style={{ flex: 1 }} />
         <View style={{ position: "absolute", top: ins.top + 8, left: 8 }}>

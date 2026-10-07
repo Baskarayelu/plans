@@ -28,6 +28,8 @@ import { useMoney } from "../../../ui/plan/common";
 import { ErrorScreen, LoadingScreen, PlanGate } from "../../../ui/spend/parts";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function PayLink() {
   const { pot, id } = useLocalSearchParams<{ pot: string; id: string; tx?: string }>();
@@ -48,6 +50,7 @@ function LinkLoader({ plan, id }: { plan: PlanVM; id: string }) {
 }
 
 function LinkBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
+  const { desk } = useLayout();
   const c = useColors();
   const m = useMoney();
   const [copied, setCopied] = useState(false);
@@ -183,7 +186,8 @@ function LinkBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
   );
 
   return (
-    <Screen testID="screen-pay-link" dock={dock}>
+    <Screen testID="screen-pay-link" dock={desk ? undefined : dock}>
+      <DeskColumn dock={dock}>
       <AppBar icon="x" onBack={home} />
       <View style={{ alignItems: "center" }}>
         <BigIcon icon={icon} kind={tone} />
@@ -269,6 +273,7 @@ function LinkBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
         </Txt>
         <Btn label="Got it" kind="sec" onPress={() => setCancelInfo(false)} style={{ marginTop: 16 }} testID="btn-got-it" />
       </Sheet>
+    </DeskColumn>
     </Screen>
   );
 }

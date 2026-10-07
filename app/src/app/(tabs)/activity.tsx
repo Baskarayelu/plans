@@ -3,13 +3,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { Address } from "viem";
-import { fetchPlanActivity, fetchPlanDetail, type PlanDetail, type SpendRow } from "../../lib/api/envio";
+import { fetchPlanActivity, fetchPlanDetail } from "../../lib/api/envio";
 import { claimRefund, vote } from "../../lib/chain/actions";
-import { fromHex } from "../../lib/crypto/bytes";
-import { decodeMemo } from "../../lib/crypto/seal";
 import { formatUsdShort } from "../../lib/domain/currency";
-import { groupKeyFor } from "../../lib/domain/groups";
-import { CATEGORIES } from "../../lib/domain/rules";
 import { isToday } from "../../lib/send/convert";
 import { moneyRows, planRows, type MoneyRow, type PlanRow } from "../../lib/send/history";
 import { personFor, queryClient, qk, useAccountActivity, useMe, useMyPlans, type PlanCardVM } from "../../lib/state/data";
@@ -17,38 +13,16 @@ import { useAction } from "../../lib/state/useAction";
 import { Avatar, Banner, Btn, Btns, Card, Chip, EmojiTile, Overline, Row, Skel } from "../../ui/kit";
 import { Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
+import { MoneyPanel, NeedTile, OtherNeedPanel, PlanEventPanel, SpendNeedPanel, spendWhat, timeLeft, type Need } from "../../ui/send/activity";
 import { MoneyRowItem, PlanRowItem, usePlanIndex } from "../../ui/send/rows";
+import { DeskTitle, Grid } from "../../ui/shell/desk";
+import { SidePanel } from "../../ui/shell/panel";
+import { useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
 
 type Filter = "all" | "needs" | "money" | "plans";
 const MAX_PLANS = 8;
 const lc = (s?: string | null) => (s ?? "").toLowerCase();
-
-type Need =
-  | { kind: "spend"; id: string; plan: PlanCardVM; spend: SpendRow; detail: PlanDetail }
-  | { kind: "rules"; id: string; plan: PlanCardVM; ruleId: string; proposer?: string; expiresAt: number }
-  | { kind: "debt"; id: string; plan: PlanCardVM };
-
-function timeLeft(sec: number): string {
-  const d = sec - Date.now() / 1000;
-  if (d <= 0) return "ending now";
-  if (d < 3600) return `${Math.max(1, Math.floor(d / 60))} min left`;
-  if (d < 86400 * 2) return `${Math.floor(d / 3600)} h left`;
-  return `${Math.floor(d / 86400)} days left`;
-}
-
-function spendWhat(spend: SpendRow, detail: PlanDetail, me?: string): string {
-  const gk = groupKeyFor(detail.id, { me, keyWraps: detail.keyWraps, inviteKeyWrap: detail.inviteKeyWrap });
-  try {
-    if (spend.memo && spend.memo !== "0x") {
-      const m = decodeMemo(gk ?? undefined, detail.id, "memo", fromHex(spend.memo));
-      if (m?.text) return m.text;
-    }
-  } catch {
-    /* locked note */
-  }
-  return CATEGORIES.find((c) => c.id === spend.category)?.name.toLowerCase() ?? "a spend";
-}
 
 function SpendCard({ n, me, onVote, voting }: { n: Extract<Need, { kind: "spend" }>; me?: string; onVote: (n: Extract<Need, { kind: "spend" }>, approve: boolean) => void; voting: string | null }) {
   const local = useLocal();
@@ -104,6 +78,9 @@ export default function Activity() {
   const [refunding, setRefunding] = useState<string | null>(null);
   const voteA = useAction(vote);
   const refundA = useAction(claimRefund, { fatal: true, context: "You were getting link money back." });
+  const { desk } = useLayout();
+  // 117: the row or card open in the panel (laptop only).
+  const [picked, setPicked] = useState<string | null>(null);
 
   const needs = useMemo<Need[]>(() => {
     const out: Need[] = [];
@@ -176,6 +153,117 @@ export default function Activity() {
   const today = items.filter((i) => isToday(i.r.at));
   const earlier = items.filter((i) => !isToday(i.r.at));
   const nothing = !loading && !failed && (filter === "needs" ? needs.length === 0 : items.length === 0 && (filter !== "all" || needs.length === 0));
+
+  if (desk) {
+    const pickedNeed = needs.find((n) => n.id === picked);
+    const pickedItem = items.find((i) => i.r.id === picked);
+    const pick = (id: string) => setPicked((p) => (p === id ? null : id));
+    const chips = (
+      <>
+        <Chip label="All" on={filter === "all"} onPress={() => setFilter("all")} testID="chip-all" />
+        <Chip label={needs.length ? `Needs you · ${needs.length}` : "Needs you"} on={filter === "needs"} onPress={() => setFilter("needs")} testID="chip-needs-you" />
+        <Chip label="Money" on={filter === "money"} onPress={() => setFilter("money")} testID="chip-money" />
+        <Chip label="Plans" on={filter === "plans"} onPress={() => setFilter("plans")} testID="chip-plans" />
+      </>
+    );
+    const row = (i: Item, last: boolean) =>
+      i.t === "m" ? (
+        <MoneyRowItem key={i.r.id} r={i.r} me={me} plans={planIndex} onRefund={(r) => void onRefund(r)} refunding={refunding === i.r.id} last={last} onSelect={() => pick(i.r.id)} selected={picked === i.r.id} />
+      ) : (
+        <PlanRowItem key={i.r.id} r={i.r} me={me} plans={planIndex} last={last} onSelect={() => pick(i.r.id)} selected={picked === i.r.id} />
+      );
+    return (
+      <Screen testID="screen-activity" bottomInset={false}>
+        <DeskTitle title="Activity" right={chips} />
+        {voteA.error ? (
+          <View style={{ marginBottom: 12 }}>
+            <Banner kind="neg" icon="alert" title={voteA.error.title} text={voteA.error.message} />
+          </View>
+        ) : null}
+        {showNeeds && needs.length > 0 ? (
+          <View testID="needs-you" style={{ marginBottom: 8 }}>
+            <Overline style={{ marginBottom: 8 }}>Needs you</Overline>
+            <Grid cols={2} gap={14}>
+              {needs.map((n) => (
+                <NeedTile
+                  key={n.id}
+                  n={n}
+                  me={me}
+                  selected={picked === n.id}
+                  onOpen={() =>
+                    n.kind === "spend"
+                      ? pick(n.id)
+                      : n.kind === "rules"
+                        ? router.push({ pathname: "/plan/[pot]/rules-change", params: { pot: n.plan.pot, id: n.ruleId } })
+                        : router.push({ pathname: "/plan/[pot]/debt", params: { pot: n.plan.pot } })
+                  }
+                />
+              ))}
+            </Grid>
+          </View>
+        ) : null}
+        {loading ? (
+          <View style={{ gap: 12, marginTop: 12 }}>
+            <Skel w="25%" h={14} />
+            <Skel w="100%" h={56} />
+            <Skel w="100%" h={56} />
+          </View>
+        ) : failed ? (
+          <View style={{ marginTop: 12 }}>
+            <Banner kind="mut" icon="wifioff" title="Couldn't load your activity" text="Check your connection.">
+              <Btn label="Try again" kind="sec" icon="refresh" sm onPress={refresh} style={{ marginTop: 8 }} testID="btn-activity-retry" />
+            </Banner>
+          </View>
+        ) : nothing ? (
+          <View style={{ marginTop: 64, alignItems: "center", paddingHorizontal: 24 }} testID="activity-empty">
+            <Txt v="d22" center>
+              {filter === "needs" ? "Nothing needs you" : "All quiet"}
+            </Txt>
+            <Txt v="t15" color="muted" center style={{ marginTop: 6 }}>
+              {filter === "needs"
+                ? "Approvals, votes and anything you owe show up here."
+                : filter === "money"
+                  ? "Money you send, get and claim shows up here."
+                  : filter === "plans"
+                    ? "Spends, money in and settle-ups from your plans show up here."
+                    : "Spends, money in and settle-ups show up here."}
+            </Txt>
+          </View>
+        ) : filter !== "needs" ? (
+          <>
+            {today.length > 0 ? (
+              <>
+                <Overline style={{ marginTop: 12 }}>Today</Overline>
+                {today.map((i, k) => row(i, k === today.length - 1))}
+              </>
+            ) : null}
+            {earlier.length > 0 ? (
+              <>
+                <Overline style={{ marginTop: 16 }}>Earlier</Overline>
+                {earlier.map((i, k) => row(i, k === earlier.length - 1))}
+              </>
+            ) : null}
+          </>
+        ) : null}
+        <View style={{ height: 24 }} />
+        {pickedNeed || pickedItem ? (
+          <SidePanel kind="detail" onClose={() => setPicked(null)}>
+            {pickedNeed ? (
+              pickedNeed.kind === "spend" ? (
+                <SpendNeedPanel n={pickedNeed} me={me} voting={voting} onVote={(a) => void onVote(pickedNeed, a)} />
+              ) : (
+                <OtherNeedPanel n={pickedNeed} me={me} />
+              )
+            ) : pickedItem!.t === "m" ? (
+              <MoneyPanel r={pickedItem!.r as MoneyRow} me={me} plans={planIndex} />
+            ) : (
+              <PlanEventPanel r={pickedItem!.r as PlanRow} me={me} plans={planIndex} />
+            )}
+          </SidePanel>
+        ) : null}
+      </Screen>
+    );
+  }
 
   const renderItem = (i: Item, last: boolean) =>
     i.t === "m" ? (

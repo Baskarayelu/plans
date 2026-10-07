@@ -2,7 +2,8 @@
  * Full-screen scanner for a business's Plans code (screen 20 → camera). A Plans code link
  * (https://plans.0xo.in/p/<payee>#n=<name>…) gives the payee and its name. A pasted link works too.
  */
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { CameraView, ScanFromPhoto, useCameraPermissions, type BarcodeScanningResult } from "../camera";
+import { NO_MOTION } from "../motion";
 import * as Linking from "expo-linking";
 import React, { useRef, useState } from "react";
 import { Modal, View } from "react-native";
@@ -39,7 +40,7 @@ export function BusinessScanner({ visible, onClose, onCode }: { visible: boolean
   };
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} animationType="slide" statusBarTranslucent>
+    <Modal visible={visible} onRequestClose={onClose} animationType={NO_MOTION ? "none" : "slide"} statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: "#000" }} testID="screen-scan-business">
         {perm?.granted ? (
           <CameraView style={{ flex: 1 }} facing="back" barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={visible ? onScan : undefined} />
@@ -72,6 +73,7 @@ export function BusinessScanner({ visible, onClose, onCode }: { visible: boolean
         </View>
         <View style={{ position: "absolute", left: 16, right: 16, bottom: ins.bottom + 16, gap: 8 }}>
           {err ? <Banner kind="neg" icon="alert" title="Try again" text={err} testID="scan-error" /> : null}
+          <ScanFromPhoto dark onScan={(d) => void handle(d)} onNone={() => setErr("We couldn't find a Plans code in that photo.")} />
           <View style={{ backgroundColor: c.surface, borderRadius: 16, padding: 10, gap: 8 }}>
             <Field label="Or paste their code link" value={paste} onChangeText={(t) => { setPaste(t); setErr(null); }} placeholder="plans.0xo.in/p/…" testID="field-paste-code" inputProps={{ autoCapitalize: "none", autoCorrect: false }} />
             <Btn label="Use this link" kind="sec" sm disabled={!paste.trim()} onPress={() => handle(paste)} testID="btn-use-this-link" />

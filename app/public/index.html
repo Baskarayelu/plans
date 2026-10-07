@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <meta name="description" content="Plans in your browser: one pot for the whole plan." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F4F6F1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0C1511" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Plans" />
+    <link rel="manifest" href="/app/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/app/icons/icon-192.png" />
+    <title>Plans</title>
+    <script>
+      // Plans links (/app/j/<pot>#s=…, /app/v/<pot>#s=…, /app/join#pot=…&s=…, /app/c/1#k=…, /app/claim#k=…,
+      // /app/p/<addr>#…) are handled HERE, before the app's router reads the address: the "#" part (which
+      // holds the invite secret or claim key) is kept in memory for the app (window.__plansLink, read once
+      // by src/lib/domain/webEntry.web.ts) and the history entry is replaced with the app route without it.
+      (function () {
+        try {
+          var B = "/app", l = window.location, h = l.hash || "", r = l.pathname;
+          if (r.indexOf(B) !== 0) return;
+          r = r.slice(B.length).replace(/\/+$/, "") || "/";
+          var f = {}, m, route = null;
+          h.replace(/^#/, "").split("&").forEach(function (kv) {
+            var i = kv.indexOf("=");
+            if (i > 0) { try { f[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) {} }
+          });
+          var qs = function (o) {
+            var a = [];
+            for (var k in o) if (o[k]) a.push(k + "=" + encodeURIComponent(o[k]));
+            return a.length ? "?" + a.join("&") : "";
+          };
+          if ((m = /^\/(j|v)\/([^/]*)$/.exec(r))) route = "/join" + qs({ pot: m[2].toLowerCase(), n: f.n });
+          else if (r === "/join" && h) route = "/join" + qs({ pot: (f.pot || "").toLowerCase(), n: f.n });
+          else if (/^\/c\/[^/]*$/.test(r) || (r === "/claim" && h)) route = "/claim" + qs({ n: f.n, m: f.m, a: f.a });
+          else if ((m = /^\/p\/([^/]*)$/.exec(r))) route = "/send/amount" + qs({ to: m[1].toLowerCase(), n: f.n, c: f.c, cc: f.cc, cur: f.cur, a: f.a });
+          if (!route) return;
+          window.__plansLink = { path: r, hash: h };
+          window.history.replaceState(null, "", B + route);
+        } catch (e) {}
+      })();
+    </script>
+    <style id="expo-reset">
+      html, body { height: 100%; }
+      body { overflow: hidden; margin: 0; background: #F4F6F1; }
+      @media (prefers-color-scheme: dark) { body { background: #0C1511; } }
+      #root { display: flex; height: 100%; flex: 1; }
+      /* No motion anywhere in the web app. */
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+      /* Focus rings use marigold (design 101). */
+      :focus-visible { outline: 2px solid #F5B83D !important; outline-offset: 2px; }
+      :focus:not(:focus-visible) { outline: none; }
+      /* Text fields draw their own focused border; no second ring. */
+      input:focus-visible, textarea:focus-visible { outline: none !important; }
+    </style>
+  </head>
+  <body>
+    <noscript>Plans needs JavaScript to run in your browser.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -11,7 +11,7 @@
  * exported from the package.
  */
 import type { WebAuthnClient } from "@category-labs/mera";
-import { Passkey } from "react-native-passkey";
+import { Passkey } from "./passkeyBridge";
 import { fromBase64Url, toBase64Url } from "../crypto/bytes";
 import { KEYS_PRF_SALT } from "../crypto/keys";
 
@@ -112,6 +112,8 @@ export type DualClientOptions = {
   secondSalt?: Uint8Array | null;
   /** Only offer passkeys already on this phone, without UI when there are none (Android flag). */
   immediate?: boolean;
+  /** WebAuthn L3 client hints (web only), e.g. ["hybrid"] to lead with "use a phone or tablet". */
+  hints?: string[];
 };
 
 export function createDualPrfClient(opts: DualClientOptions = {}): WebAuthnClient {
@@ -140,6 +142,7 @@ export function createDualPrfClient(opts: DualClientOptions = {}): WebAuthnClien
           attestation: request.attestation,
           extensions: prfEval(request.prfSalt) as never,
           ...(request.timeout !== undefined ? { timeout: request.timeout } : {}),
+          ...(opts.hints ? ({ hints: opts.hints } as object) : {}),
         });
         const ext = (created as { clientExtensionResults?: Record<string, unknown> }).clientExtensionResults ?? {};
         const prf = ext.prf as { enabled?: boolean; results?: { first?: PrfValue; second?: PrfValue } } | undefined;
@@ -190,6 +193,7 @@ export function createDualPrfClient(opts: DualClientOptions = {}): WebAuthnClien
             }
           : {}),
         ...(request.timeout !== undefined ? { timeout: request.timeout } : {}),
+        ...(opts.hints ? { hints: opts.hints } : {}),
       };
       try {
         const asserted = opts.immediate ? await Passkey.getImmediate(native) : await Passkey.getPlatformKey(native);

@@ -15,8 +15,11 @@ import { dateRange } from "../../../ui/planBits";
 import { People } from "../../../ui/plan/common";
 import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Txt } from "../../../ui/Text";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function PlanMemory() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const spendsQ = useQuery({ queryKey: ["allSpends", (pot ?? "").toLowerCase()], queryFn: () => fetchExecutedSpends(pot!), enabled: !!pot, staleTime: 60_000 });
@@ -62,13 +65,15 @@ export default function PlanMemory() {
         void q.refetch();
         void spendsQ.refetch();
       }}
-      dock={
-        <>
+      dock={desk ? undefined : <>
           <Btn label="Download summary" kind="sec" icon="download" disabled={!spendsQ.data} loading={spendsQ.isLoading} onPress={download} testID="btn-download-summary" />
           <Btn label="Start a new plan with these people" kind="txt" onPress={() => router.push({ pathname: "/plan/new", params: { from: plan.pot } })} testID="btn-start-a-new-plan-with-these-people" />
-        </>
-      }
+        </>}
     >
+      <DeskColumn dock={<>
+          <Btn label="Download summary" kind="sec" icon="download" disabled={!spendsQ.data} loading={spendsQ.isLoading} onPress={download} testID="btn-download-summary" />
+          <Btn label="Start a new plan with these people" kind="txt" onPress={() => router.push({ pathname: "/plan/new", params: { from: plan.pot } })} testID="btn-start-a-new-plan-with-these-people" />
+        </>} max={680}>
       <AppBar right={<IconBtn name="share" label="Share" onPress={plan.settled ? () => setSharing(true) : shareSummary} testID="btn-share-memory" />} />
       {plan.settled ? <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={BigInt(d.settlements[0]?.paidOut ?? "0")} settleMs={settleMs} /> : null}
       <Bleed style={{ overflow: "hidden", paddingVertical: 12 }}>
@@ -151,6 +156,7 @@ export default function PlanMemory() {
           ))}
         </Card>
       ) : null}
+    </DeskColumn>
     </Screen>
   );
 }

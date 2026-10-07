@@ -1,46 +1,32 @@
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { formatUsd } from "../../lib/domain/currency";
 import { parseLink } from "../../lib/domain/links";
 import { placeLine } from "../../lib/send/draft";
-import { recentRecipients } from "../../lib/send/history";
 import { hrefForLink } from "../../lib/send/route";
-import { personFor, useAccountActivity, useBalance, useMe, useMyPlans, type Person } from "../../lib/state/data";
+import { useBalance } from "../../lib/state/data";
 import { Icon } from "../../ui/Icon";
 import { Avatar, Banner, Btn, Card, Field, Hero, IconBtn, ListItem, Row, SectionHead, Skel } from "../../ui/kit";
 import { Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
 import { Big3 } from "../../ui/send/bits";
+import { DeskSend, useSendPeople } from "../../ui/send/desk";
+import { useLayout } from "../../ui/shell/responsive";
 import { AusdPill } from "../../ui/agora/dollars";
 import { Txt } from "../../ui/Text";
 
-type Pick = Person & { lastAt: number };
-
-/** 43 Send home: balance, three ways to send, then the people you send to. */
+/** 43 Send home: balance, three ways to send, then the people you send to. On a laptop, 114. */
 export default function SendHome() {
-  const { address } = useMe();
+  const { desk } = useLayout();
+  return desk ? <DeskSend /> : <PhoneSendHome />;
+}
+
+function PhoneSendHome() {
   const bal = useBalance();
   const local = useLocal();
-  const act = useAccountActivity();
-  const plans = useMyPlans();
+  const { people, act, plans } = useSendPeople();
   const [q, setQ] = useState("");
-
-  const people = useMemo(() => {
-    const me = address?.toLowerCase();
-    const out = new Map<string, Pick>();
-    for (const r of recentRecipients(act.data, me)) {
-      const p = personFor(r.address, { country: r.country, me });
-      out.set(r.address, { ...p, currency: r.currency || p.currency, lastAt: r.at });
-    }
-    for (const plan of plans.data ?? []) {
-      for (const p of plan.people) {
-        if (p.me || p.address === me || out.has(p.address)) continue;
-        out.set(p.address, { ...p, lastAt: 0 });
-      }
-    }
-    return [...out.values()].sort((a, b) => b.lastAt - a.lastAt);
-  }, [act.data, plans.data, address]);
 
   const link = q.trim() ? parseLink(q.trim()) : null;
   const shown = q.trim() && !link ? people.filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase())) : people;

@@ -15,16 +15,32 @@ import { budgetInfo, eachAmount, fmtClock, inText, joinNames, ruleLine, sharesFo
 import { REJECT_REASONS, rejectReasonFor, saveRejectReason } from "../../../../lib/spend/rejects";
 import { usePlan, type PlanVM } from "../../../../lib/state/data";
 import { putReceipt, useAction } from "../../../../lib/state/useAction";
-import { Banner, Bar, Btn, Btns, Card, Chip, Field, Row } from "../../../../ui/kit";
+import { Banner, Bar, Btn, Btns, Card, Chip, Field, Row, Skel } from "../../../../ui/kit";
+import { SidePanel } from "../../../../ui/shell/panel";
+import { useLayout } from "../../../../ui/shell/responsive";
+import PlanHome from "../index";
 import { AppBar, Screen, Sheet } from "../../../../ui/layout";
 import { PersonAvatar, useMoney } from "../../../../ui/plan/common";
-import { ErrorScreen, KV, LoadingScreen, payeeName, personOf, PlanGate, QuoteCard, ReceiptThumbRow } from "../../../../ui/spend/parts";
+import { ErrorScreen, KV, LoadingScreen, payeeName, personOf, PlanGate, QuoteCard, ReceiptThumbRow, VoteBar } from "../../../../ui/spend/parts";
 import { Txt } from "../../../../ui/Text";
 import { showToast } from "../../../../ui/Toast";
 
 export default function ApproveRequest() {
   const { pot, id } = useLocalSearchParams<{ pot: string; id: string }>();
   const q = usePlan(pot);
+  const { desk } = useLayout();
+  // 111: on a laptop the plan stays in the main column and the request opens in the right panel.
+  if (desk)
+    return (
+      <>
+        <PlanHome />
+        {q.data ? (
+          <Loader plan={q.data} id={id} />
+        ) : (
+          <DeskPanelState pot={pot} loading={q.isLoading} onRetry={() => void q.refetch()} />
+        )}
+      </>
+    );
   return (
     <PlanGate q={q} testID="screen-approve">
       {(plan) => <Loader plan={plan} id={id} />}
@@ -32,8 +48,38 @@ export default function ApproveRequest() {
   );
 }
 
+function closeToPlan(pot: string) {
+  if (router.canGoBack()) router.back();
+  else router.replace({ pathname: "/plan/[pot]", params: { pot } });
+}
+
+/** Loading / problem states of the request panel (111). */
+function DeskPanelState({ pot, loading, onRetry, message }: { pot: string; loading: boolean; onRetry: () => void; message?: string }) {
+  return (
+    <SidePanel kind="detail" onClose={() => closeToPlan(pot)}>
+      <View testID="screen-approve" style={{ paddingRight: 40, gap: 12 }}>
+        {loading ? (
+          <>
+            <Skel w="40%" h={12} />
+            <Skel w="70%" h={20} />
+            <Skel w="90%" h={56} />
+            <Skel w="100%" h={120} r={14} />
+          </>
+        ) : (
+          <Banner kind="mut" icon="wifioff" title="Couldn't load this request" text={message ?? "Check your connection and try again."} testID="banner-load-error">
+            <Btn label="Try again" kind="sec" icon="refresh" sm onPress={onRetry} style={{ marginTop: 8, height: 40 }} testID="btn-try-again" />
+          </Banner>
+        )}
+      </View>
+    </SidePanel>
+  );
+}
+
 function Loader({ plan, id }: { plan: PlanVM; id: string }) {
   const s = useSpendDetail(plan.pot, id);
+  const { desk } = useLayout();
+  if (desk && (s.isLoading || !s.data))
+    return <DeskPanelState pot={plan.pot} loading={s.isLoading} onRetry={() => void s.refetch()} message={s.isError ? undefined : "We couldn't find this request yet. It may still be arriving."} />;
   if (s.isLoading) return <LoadingScreen testID="screen-approve" />;
   if (s.isError && !s.data) return <ErrorScreen onRetry={() => void s.refetch()} testID="screen-approve" />;
   if (!s.data)
@@ -43,6 +89,7 @@ function Loader({ plan, id }: { plan: PlanVM; id: string }) {
 
 function ApproveBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
   const m = useMoney();
+  const { desk } = useLayout();
   const rules = planRules(plan.raw);
   const now = Math.floor(Date.now() / 1000);
   const amount = BigInt(s.amount);
@@ -209,8 +256,136 @@ function ApproveBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
     dock = (
       <Btns>
         <Btn label="Reject" kind="dngo" onPress={() => setSheet(true)} testID="btn-reject" />
-        <Btn label="Approve" kind="pri" icon="fp" onPress={() => void onApprove()} loading={approve.busy} testID="btn-approve" />
+        <Btn label="Approve" kind="pri" icon={desk ? "key" : "fp"} onPress={() => void onApprove()} loading={approve.busy} testID="btn-approve" />
       </Btns>
+    );
+  }
+
+  const rejectContent = (
+    <>
+      <Txt v="d22">Why not?</Txt>
+      <Txt v="t13" color="muted" style={{ marginTop: 6, marginBottom: 14 }}>
+        {whoName} sees that you said no. Your reason stays on your {desk ? "device" : "phone"}, so tell them too if it helps.
+      </Txt>
+      <Row gap={8} wrap>
+        {REJECT_REASONS.map((r) => (
+          <Chip key={r} label={r} on={reason === r} onPress={() => setReason(r)} testID={`chip-reason-${r.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, "")}`} />
+        ))}
+      </Row>
+      <View style={{ marginTop: 16 }}>
+        <Field label="Note (optional)" value={rnote} onChangeText={setRnote} maxLength={140} testID="field-reject-note" />
+      </View>
+      {reject.error ? (
+        <View style={{ marginTop: 12 }}>
+          <Banner kind="neg" icon="alert" title={reject.error.title} text={reject.error.message} />
+        </View>
+      ) : null}
+      <Btns style={{ marginTop: 16 }}>
+        <Btn label="Cancel" kind="sec" onPress={() => setSheet(false)} testID="btn-cancel-reject" />
+        <Btn label="Reject" kind="dng" disabled={!reason} loading={reject.busy} onPress={() => void onReject()} testID="btn-confirm-reject" />
+      </Btns>
+    </>
+  );
+
+  if (desk) {
+    const active = activeMembers(plan);
+    const voters = [s.proposer_id.toLowerCase(), ...active.filter((a) => a !== s.proposer_id.toLowerCase() && a !== plan.me), ...(plan.me && plan.me !== s.proposer_id.toLowerCase() && active.includes(plan.me) ? [plan.me] : [])];
+    const segs = voters.map((a) => {
+      if (a === s.proposer_id.toLowerCase()) return "y" as const;
+      const v = votes.find((x) => x.account_id.toLowerCase() === a);
+      return v ? (v.approve ? ("y" as const) : ("n" as const)) : ("w" as const);
+    });
+    return (
+      <SidePanel kind="detail" onClose={() => closeToPlan(plan.pot)}>
+        <View testID="screen-approve" style={{ flex: 1 }}>
+          <Txt v="ov" color="muted" style={{ marginTop: 10 }}>
+            {pending && !ranOut && !mine && !myVote && plan.isMember ? "Needs your OK" : "Request"}
+          </Txt>
+          <Row style={{ marginTop: 12 }}>
+            <PersonAvatar p={who} size={44} />
+            <View style={{ flex: 1 }}>
+              <Txt v="lt" numberOfLines={1}>
+                {whoName} · {plan.meta.name}
+              </Txt>
+              <Txt v="t13" color="muted">
+                {s.proposedAt ? `Asked at ${fmtClock(s.proposedAt)}` : "Asked"}
+                {pending && !ranOut ? ` · ${inText(Number(s.expiresAt) - now)} left` : ""}
+              </Txt>
+            </View>
+          </Row>
+          <Txt v="d28" style={{ marginTop: 16 }} testID="approve-title">
+            {title}
+          </Txt>
+          {subParts.length ? (
+            <Txt v="t17" color="muted" weight="medium" style={{ marginTop: 4 }}>
+              {subParts.join(" · ")}
+            </Txt>
+          ) : null}
+          {note ? (
+            <View style={{ marginTop: 12 }}>
+              <QuoteCard text={note} testID="approve-note" />
+            </View>
+          ) : null}
+          <ReceiptThumbRow state={photo} title="Receipt photo" />
+          <View style={{ gap: 8, marginTop: 8 }}>
+            <KV k={s.kind === "PERSONAL" ? "Paid by" : "Pay to"} v={s.kind === "PERSONAL" ? whoName : payee} />
+            <KV k="Category" v={`${cat.emoji} ${cat.name}`} />
+            <KV k="Split" v={`${everyone ? "Everyone" : `${members.length} ${members.length === 1 ? "person" : "people"}`} · ${each !== null ? `${formatUsd(each)} each` : "custom shares"}`} />
+            {budget ? (
+              <View>
+                <KV k="Budget after this" v={`${formatUsdShort(budget.spent + (s.status === "Executed" ? 0n : amount))} of ${formatUsdShort(budget.budget)}`} />
+                <View style={{ marginTop: 4 }}>
+                  <Bar pct={Number(((budget.spent + (s.status === "Executed" ? 0n : amount)) * 100n) / budget.budget)} over={budget.spent + amount > budget.budget && s.status !== "Executed"} />
+                </View>
+              </View>
+            ) : null}
+            <KV k="Rule" v={ruleLine(rules, amount, s.approvalsRequired)} />
+          </View>
+          <View style={{ marginTop: 12, gap: 8 }}>
+            {state}
+            {err ? <Banner kind="neg" icon="alert" title={err.title} text={err.message} testID="banner-action-error" /> : null}
+          </View>
+          {pending || s.status === "Approved" ? (
+            <View style={{ marginTop: 16 }} testID="approve-votes">
+              <Row between>
+                <Txt v="ov" color="muted">
+                  {`Votes · needs ${s.approvalsRequired} of ${voters.length}`}
+                </Txt>
+                <VoteBar segs={segs} />
+              </Row>
+              {voters.map((a) => {
+                const p = personOf(plan, a);
+                const v = votes.find((x) => x.account_id.toLowerCase() === a);
+                const isProposer = a === s.proposer_id.toLowerCase();
+                return (
+                  <Row key={a} between style={{ minHeight: 34 }}>
+                    <Row gap={10}>
+                      <PersonAvatar p={p} size={26} flag={false} />
+                      <Txt v="t15">{p.me ? "You" : p.name}</Txt>
+                    </Row>
+                    {isProposer ? (
+                      <Txt v="t13" color="muted">
+                        Asked · counts as yes
+                      </Txt>
+                    ) : v ? (
+                      <Txt v="t13" weight="bold" color={v.approve ? "pos" : "neg"}>
+                        {v.approve ? "OK" : "Said no"}
+                        {v.timestamp ? ` · ${fmtClock(v.timestamp)}` : ""}
+                      </Txt>
+                    ) : (
+                      <Txt v="t13" color="muted">
+                        Not yet
+                      </Txt>
+                    )}
+                  </Row>
+                );
+              })}
+            </View>
+          ) : null}
+          <View style={{ flex: 1, minHeight: 20 }} />
+          {sheet ? <View testID="sheet-reject">{rejectContent}</View> : dock ? <View style={{ gap: 8 }}>{dock}</View> : null}
+        </View>
+      </SidePanel>
     );
   }
 
@@ -268,27 +443,7 @@ function ApproveBody({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
       </View>
 
       <Sheet visible={sheet} onClose={() => setSheet(false)} testID="sheet-reject">
-        <Txt v="d22">Why not?</Txt>
-        <Txt v="t13" color="muted" style={{ marginTop: 6, marginBottom: 14 }}>
-          {whoName} sees that you said no. Your reason stays on your phone, so tell them too if it helps.
-        </Txt>
-        <Row gap={8} wrap>
-          {REJECT_REASONS.map((r) => (
-            <Chip key={r} label={r} on={reason === r} onPress={() => setReason(r)} testID={`chip-reason-${r.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, "")}`} />
-          ))}
-        </Row>
-        <View style={{ marginTop: 16 }}>
-          <Field label="Note (optional)" value={rnote} onChangeText={setRnote} maxLength={140} testID="field-reject-note" />
-        </View>
-        {reject.error ? (
-          <View style={{ marginTop: 12 }}>
-            <Banner kind="neg" icon="alert" title={reject.error.title} text={reject.error.message} />
-          </View>
-        ) : null}
-        <Btns style={{ marginTop: 16 }}>
-          <Btn label="Cancel" kind="sec" onPress={() => setSheet(false)} testID="btn-cancel-reject" />
-          <Btn label="Reject" kind="dng" disabled={!reason} loading={reject.busy} onPress={() => void onReject()} testID="btn-confirm-reject" />
-        </Btns>
+        {rejectContent}
       </Sheet>
     </Screen>
   );

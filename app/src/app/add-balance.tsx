@@ -4,7 +4,8 @@ import { View } from "react-native";
 import { isTestnet } from "../config";
 import { Icon } from "../ui/Icon";
 import { Banner, ListItem, Tile } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { TestRibbon } from "../ui/send/bits";
 import { Txt } from "../ui/Text";
 
@@ -12,7 +13,7 @@ import { Txt } from "../ui/Text";
 export default function AddBalance() {
   const chev = <Icon name="chev" size={20} />;
   return (
-    <Screen testID="screen-add-balance">
+    <DeskScreen testID="screen-add-balance">
       {isTestnet ? <TestRibbon /> : null}
       <AppBar title="Add to your balance" />
       <Txt v="t15" color="muted" style={{ marginBottom: 8 }}>
@@ -43,6 +44,6 @@ export default function AddBalance() {
       <View style={{ marginTop: 20 }}>
         <Banner kind="mut" icon="card" title="No card or bank top-up yet" text="Adding money from a card or bank isn't available yet. We'll add it country by country." />
       </View>
-    </Screen>
+    </DeskScreen>
   );
 }

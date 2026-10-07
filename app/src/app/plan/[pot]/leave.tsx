@@ -17,8 +17,11 @@ import { useMoney } from "../../../ui/plan/common";
 import { Stub } from "../../../ui/Stub";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function LeavePlan() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const me = useMe();
@@ -73,13 +76,15 @@ export default function LeavePlan() {
   return (
     <Screen
       testID="screen-leave"
-      dock={
-        <>
+      dock={desk ? undefined : <>
           <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine} onPress={() => void leave()} testID="btn-leave-plan" />
           <Btn label="Stay in the plan" kind="txt" onPress={back} testID="btn-stay-in-the-plan" />
-        </>
-      }
+        </>}
     >
+      <DeskColumn dock={<>
+          <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine} onPress={() => void leave()} testID="btn-leave-plan" />
+          <Btn label="Stay in the plan" kind="txt" onPress={back} testID="btn-stay-in-the-plan" />
+        </>}>
       <AppBar title={`Leave ${plan.meta.name}?`} icon="x" />
       <Txt v="t15" color="muted" style={{ marginBottom: 16 }}>
         {owes ? "You've used more than you put in, so you settle your part now. Spends you were part of stay split as they are." : "You get your share back now. Spends you were part of stay split as they are."}
@@ -143,6 +148,7 @@ export default function LeavePlan() {
         <Banner kind="acc" icon="alert" title="Leaving is final" text="To come back, someone will need to invite you again." />
         {act.error ? <Banner kind="neg" icon="alert" title={act.error.title} text={act.error.message} testID="leave-error" /> : null}
       </View>
+    </DeskColumn>
     </Screen>
   );
 }

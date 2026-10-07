@@ -30,11 +30,16 @@ export const FINGERPRINT_EMOJI: readonly string[] = [
   "🔦", "📷", "📚", "🧭", "⏰", "⌛", "🧸", "🧶", "👑", "🧢", "👓", "🌂", "🍙", "🚑", "🥨", "🍸",
 ];
 
+/** Three emoji from the first three bytes of a digest: EMOJI[d[0]] + EMOJI[d[1]] + EMOJI[d[2]]. */
+export function emojiFromDigest(d: Uint8Array): string {
+  if (d.length < 3) throw new Error("digest must be at least 3 bytes");
+  return FINGERPRINT_EMOJI[d[0]] + FINGERPRINT_EMOJI[d[1]] + FINGERPRINT_EMOJI[d[2]];
+}
+
 /** Three emoji for an X25519 public key (32 bytes). */
 export function keyFingerprint(publicKey: Uint8Array): string {
   if (publicKey.length !== 32) throw new Error("public key must be 32 bytes");
-  const d = sha256(publicKey);
-  return FINGERPRINT_EMOJI[d[0]] + FINGERPRINT_EMOJI[d[1]] + FINGERPRINT_EMOJI[d[2]];
+  return emojiFromDigest(sha256(publicKey));
 }
 
 /** Same, as an array of three emoji (for spaced layouts). */

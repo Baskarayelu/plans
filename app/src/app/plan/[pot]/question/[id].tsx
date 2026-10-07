@@ -22,6 +22,8 @@ import { AppBar, Screen } from "../../../../ui/layout";
 import { ErrorScreen, LoadingScreen, personOf, PlanGate, SpendSummaryCard } from "../../../../ui/spend/parts";
 import { Txt } from "../../../../ui/Text";
 import { showToast } from "../../../../ui/Toast";
+import { DeskColumn } from "../../../../ui/desk/plan";
+import { useLayout } from "../../../../ui/shell/responsive";
 
 export default function QuestionSpend() {
   const { pot, id } = useLocalSearchParams<{ pot: string; id: string }>();
@@ -43,6 +45,7 @@ function Loader({ plan, id }: { plan: PlanVM; id: string }) {
 type ChoiceKey = (typeof DISPUTE_CHOICES)[number]["key"];
 
 function Body({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
+  const { desk } = useLayout();
   const c = useColors();
   const [choice, setChoice] = useState<ChoiceKey | null>(null);
   const [note, setNote] = useState("");
@@ -80,8 +83,9 @@ function Body({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
   return (
     <Screen
       testID="screen-question"
-      dock={blocked || open ? undefined : <Btn label="Send to the group" icon="send" disabled={!choice} loading={send.busy} onPress={() => void submit()} testID="btn-send-to-the-group" />}
+      dock={desk ? undefined : blocked || open ? undefined : <Btn label="Send to the group" icon="send" disabled={!choice} loading={send.busy} onPress={() => void submit()} testID="btn-send-to-the-group" />}
     >
+      <DeskColumn dock={blocked || open ? undefined : <Btn label="Send to the group" icon="send" disabled={!choice} loading={send.busy} onPress={() => void submit()} testID="btn-send-to-the-group" />}>
       <AppBar icon="x" title="Question a spend" />
       <SpendSummaryCard plan={plan} spend={s} note={spendNote} />
       {open ? (
@@ -136,6 +140,7 @@ function Body({ plan, s }: { plan: PlanVM; s: SpendDetail }) {
           </View>
         </>
       )}
+    </DeskColumn>
     </Screen>
   );
 }

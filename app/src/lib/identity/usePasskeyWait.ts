@@ -7,7 +7,7 @@
  *   adb logcat -s PLANS_TIMING
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, type NativeEventSubscription } from "react-native";
+import { AppState, Platform, type NativeEventSubscription } from "react-native";
 import { logLine } from "../../../modules/plans-native";
 import { SHEET_GIVE_UP_MS, SHEET_SLOW_MS, sheetPhase, timingLine, type PasskeyFlow, type SheetPhase } from "./sheetTiming";
 
@@ -40,7 +40,13 @@ export function usePasskeyWait() {
         r.timers.forEach((t) => clearTimeout(t));
         setPhase("idle");
       };
-      r.subs.push(AppState.addEventListener("blur", onSheet));
+      if (Platform.OS === "web") {
+        // Browsers: the passkey dialog takes focus from the page (window "blur"); there is no AppState "blur".
+        if (typeof window !== "undefined") {
+          window.addEventListener("blur", onSheet);
+          r.subs.push({ remove: () => window.removeEventListener("blur", onSheet) } as NativeEventSubscription);
+        }
+      } else r.subs.push(AppState.addEventListener("blur", onSheet));
       r.subs.push(AppState.addEventListener("change", (s) => (s !== "active" ? onSheet() : undefined)));
       const tick = () => {
         if (run.current !== r) return;

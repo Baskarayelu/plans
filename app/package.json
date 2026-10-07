@@ -10,6 +10,8 @@
     "lint:copy": "node scripts/check-copy.mjs",
     "prebuild:testnet": "APP_NETWORK=testnet expo prebuild --platform android --clean",
     "prebuild:mainnet": "APP_NETWORK=mainnet expo prebuild --platform android --clean",
+    "web": "PLANS_WEB=1 expo start --web",
+    "build:web": "bash scripts/build-web.sh testnet",
     "apk:testnet:debug": "bash scripts/build-apk.sh testnet debug",
     "apk:testnet:release": "bash scripts/build-apk.sh testnet release",
     "apk:mainnet:release": "bash scripts/build-apk.sh mainnet release"
@@ -19,6 +21,7 @@
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/figtree": "^0.4.1",
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo/metro-runtime": "~57.0.16",
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
@@ -52,7 +55,10 @@
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
+    "html2canvas": "^1.4.1",
+    "jsqr": "^1.4.0",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-passkey": "3.6.2",
@@ -61,6 +67,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-view-shot": "5.1.0",
+    "react-native-web": "~0.21.3",
     "viem": "2.57.3"
   },
   "devDependencies": {

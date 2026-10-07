@@ -11,7 +11,8 @@ import { readReceivedSend, relayedLatency } from "../lib/send/received";
 import { personFor, queryClient, qk, useAccountActivity, useBalance, useFx, useMe } from "../lib/state/data";
 import { useStore } from "../lib/state/observable";
 import { Avatar, Banner, Btn, Btns, Card, Proof, Row, SettledIn, Skel } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { useLocal } from "../ui/money";
 import { useFxPair } from "../ui/send/bits";
 import { Stub } from "../ui/Stub";
@@ -60,10 +61,10 @@ export default function Received() {
 
   if (!tx) {
     return (
-      <Screen testID="screen-received">
+      <DeskScreen testID="screen-received">
         <AppBar title="Money in" icon="x" onBack={done} />
         <Banner kind="mut" icon="info" title="Nothing to show" text="This receipt link is incomplete." />
-      </Screen>
+      </DeskScreen>
     );
   }
 
@@ -102,7 +103,7 @@ export default function Received() {
   };
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-received"
       dock={
         <Btns>
@@ -196,6 +197,6 @@ export default function Received() {
         </Row>
       </Card>
       <View style={{ height: 16 }} />
-    </Screen>
+    </DeskScreen>
   );
 }

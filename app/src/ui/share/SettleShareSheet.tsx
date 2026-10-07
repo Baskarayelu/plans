@@ -5,7 +5,7 @@
  */
 import * as Clipboard from "expo-clipboard";
 import React, { useMemo, useRef, useState } from "react";
-import { PixelRatio, View } from "react-native";
+import { PixelRatio, Platform, View } from "react-native";
 import { config } from "../../config";
 import { settleCard, shareMessage } from "../../lib/share/settleCard";
 import { captureCard, CARD_PX, saveCard, shareCard, type CardShape } from "../../lib/share/shareImage";
@@ -61,7 +61,7 @@ export function SettleShareSheet({ visible, onClose, plan, paidOut, settleMs }: 
       if (kind === "share") await shareCard(uri, shareMessage(card), "Share how it went");
       else {
         const r = await saveCard(uri, `plans-${plan.pot.slice(2, 8)}-${shape}`);
-        if (r === "saved") showToast({ title: "Image saved", sub: "In Pictures › Plans" });
+        if (r === "saved") showToast({ title: "Image saved", sub: Platform.OS === "web" ? "In your downloads" : "In Pictures › Plans" });
       }
     } catch {
       setFailed(true);

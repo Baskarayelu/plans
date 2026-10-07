@@ -5,8 +5,9 @@
  * follows if needed, and they come back to tap "Join" with no further prompt.
  */
 import { router, useLocalSearchParams } from "expo-router";
+import { takeInviteSecret } from "../lib/domain/webLinks";
 import React, { useEffect, useMemo, useState } from "react";
-import { Share, useWindowDimensions, View } from "react-native";
+import { Platform, Share, useWindowDimensions, View } from "react-native";
 import type { Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { fromBase64Url, toHex } from "../lib/crypto/bytes";
@@ -24,7 +25,8 @@ import { WRISTBANDS, WRISTBAND_LIST } from "../theme/tokens";
 import { currentRules } from "../ui/core/PlanCore";
 import { Icon } from "../ui/Icon";
 import { Avatar, Band, Banner, BigIcon, Btn, Card, Chip, Confetti, EmojiTile, Field, ListItem, Row, Skel, Tile, Toggle, Wristband } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { People, PersonAvatar, useMoney } from "../ui/plan/common";
 import { dateRange } from "../ui/planBits";
 import { Txt } from "../ui/Text";
@@ -33,18 +35,21 @@ const MAX_MEMBERS = 50;
 type Dead = "off" | "settled" | "ended" | "full" | "left" | "broken";
 
 export default function Join() {
-  const { pot: potParam, s, n } = useLocalSearchParams<{ pot?: string; s?: string; n?: string }>();
+  const { pot: potParam, s: sParam, n } = useLocalSearchParams<{ pot?: string; s?: string; n?: string }>();
+  // Web links keep the invite secret out of the URL: it waits in memory (lib/domain/webLinks.ts).
+  const s = sParam ?? takeInviteSecret(potParam);
   const pot = potParam?.toLowerCase();
   const inviter = n?.trim() || undefined;
-  const secret = useMemo(() => {
+  // A secret that isn't a usable key (wrong length, all zeros, out of range) is an incomplete link, not a crash.
+  const [secret, inviteAddr] = useMemo((): [Uint8Array | null, string | null] => {
     try {
       const b = fromBase64Url(s ?? "");
-      return b.length === 32 ? b : null;
+      if (b.length !== 32) return [null, null];
+      return [b, privateKeyToAccount(toHex(b)).address.toLowerCase()];
     } catch {
-      return null;
+      return [null, null];
     }
   }, [s]);
-  const inviteAddr = useMemo(() => (secret ? privateKeyToAccount(toHex(secret)).address.toLowerCase() : null), [secret]);
   const status = useStore(identity, (x) => x.status);
   const myAddr = useStore(identity, (x) => x.address)?.toLowerCase();
   const preview = usePotPreview(pot, secret);
@@ -74,7 +79,7 @@ export default function Join() {
 
   if (!preview.data) {
     return (
-      <Screen testID="screen-join">
+      <DeskScreen testID="screen-join">
         <AppBar icon="x" onBack={() => router.replace("/")} />
         {preview.isError || preview.data === null ? (
           <Banner kind="mut" icon={preview.data === null ? "search" : "wifioff"} title={preview.data === null ? "We couldn't find this plan yet" : "Couldn't open the invite"} text={preview.data === null ? "If it was just made, give it a moment." : "Check your connection and try again."}>
@@ -90,11 +95,11 @@ export default function Join() {
             ))}
           </View>
         )}
-      </Screen>
+      </DeskScreen>
     );
   }
 
-  return <InviteOpened pot={pot!} secret={secret!} inviter={inviter} data={preview.data} status={status} refetch={() => preview.refetch()} onJoined={setJoined} joinHref={`/join?pot=${pot}&s=${encodeURIComponent(s ?? "")}${inviter ? `&n=${encodeURIComponent(inviter)}` : ""}`} />;
+  return <InviteOpened pot={pot!} secret={secret!} inviter={inviter} data={preview.data} status={status} refetch={() => preview.refetch()} onJoined={setJoined} joinHref={`/join?pot=${pot}${Platform.OS === "web" ? "" : `&s=${encodeURIComponent(s ?? "")}`}${inviter ? `&n=${encodeURIComponent(inviter)}` : ""}`} />;
 }
 
 type PreviewData = NonNullable<ReturnType<typeof usePotPreview>["data"]>;
@@ -224,7 +229,7 @@ function InviteOpened({
   const shownRules = allRules ? words : words.slice(0, 5);
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-join"
       dock={
         <>
@@ -363,7 +368,7 @@ function InviteOpened({
         </View>
       ) : null}
       <View style={{ height: 16 }} />
-    </Screen>
+    </DeskScreen>
   );
 }
 
@@ -383,7 +388,7 @@ function DeadInvite({ cause, inviter, name, emoji, color }: { cause: Dead; invit
     await Share.share({ message: msg }).catch(() => undefined);
   };
   return (
-    <Screen
+    <DeskScreen
       testID="screen-join-dead"
       dock={
         <>
@@ -417,7 +422,7 @@ function DeadInvite({ cause, inviter, name, emoji, color }: { cause: Dead; invit
           </Card>
         ) : null}
       </View>
-    </Screen>
+    </DeskScreen>
   );
 }
 
@@ -454,7 +459,7 @@ function Joined({ pot, data, deposit, safetyNet, inviter }: { pot: string; data:
   const band = `${me.profile?.name ?? "You"} · ${name} · ${dateRange(Number(raw.startTime), Number(raw.endTime))}`.toUpperCase();
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-joined"
       dock={
         <>
@@ -497,6 +502,6 @@ function Joined({ pot, data, deposit, safetyNet, inviter }: { pot: string; data:
           {countries.size > 1 ? ` · ${countries.size} countries` : ""}
         </Txt>
       </Row>
-    </Screen>
+    </DeskScreen>
   );
 }

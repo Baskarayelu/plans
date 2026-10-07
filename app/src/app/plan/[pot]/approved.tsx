@@ -18,6 +18,9 @@ import { useMoney } from "../../../ui/plan/common";
 import { ErrorScreen, LoadingScreen, payeeName, personOf, PlanGate, Timeline, useRateLine, type TimelineItem } from "../../../ui/spend/parts";
 import { Stub } from "../../../ui/Stub";
 import { Txt } from "../../../ui/Text";
+import { SidePanel } from "../../../ui/shell/panel";
+import PlanHome from "./index";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function ApprovedPaid() {
   const { pot, id, tx } = useLocalSearchParams<{ pot: string; id: string; tx?: string }>();
@@ -39,6 +42,7 @@ function Loader({ plan, id, tx }: { plan: PlanVM; id: string; tx?: string }) {
 }
 
 function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptData; tx?: string }) {
+  const { desk } = useLayout();
   const m = useMoney();
   const rate = useRateLine();
   const amount = BigInt(s.amount);
@@ -78,9 +82,8 @@ function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptDat
   const home = () => router.dismissTo({ pathname: "/plan/[pot]", params: { pot: plan.pot } });
   const proof = tx ?? s.txHash;
 
-  return (
-    <Screen testID="screen-approved" dock={<Btn label="Done" onPress={home} testID="btn-done" />}>
-      <AppBar icon="x" onBack={home} />
+  const content = (
+    <>
       <View style={{ alignItems: "center" }}>
         <BigIcon icon="check" kind="p" />
         <Txt v="d28" center style={{ marginTop: 12 }} testID="approved-title">
@@ -126,6 +129,26 @@ function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptDat
           </>
         }
       />
+    </>
+  );
+  if (desk)
+    // 111/28: on a laptop the approved timeline and receipt open in the right panel over the plan.
+    return (
+      <>
+        <PlanHome />
+        <SidePanel kind="detail" onClose={home}>
+          <View testID="screen-approved" style={{ flex: 1, paddingTop: 8 }}>
+            {content}
+            <View style={{ flex: 1, minHeight: 20 }} />
+            <Btn label="Done" onPress={home} testID="btn-done" />
+          </View>
+        </SidePanel>
+      </>
+    );
+  return (
+    <Screen testID="screen-approved" dock={<Btn label="Done" onPress={home} testID="btn-done" />}>
+      <AppBar icon="x" onBack={home} />
+      {content}
     </Screen>
   );
 }

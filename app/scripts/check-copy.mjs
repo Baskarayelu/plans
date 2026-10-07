@@ -8,6 +8,7 @@
  *   src/ui/agora/dollars.tsx) and 147 ("If the digital dollar is frozen", src/ui/risks/content.ts and its screen)
  * Checks JSX text and string literals that look like prose (contain a space or start upper-case),
  * skipping imports, testIDs, route paths and object keys. Hidden Diagnostics is exempt.
+ * Web: every *.web.ts(x) file anywhere in src/, plus the page template and PWA manifest in public/.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -67,9 +68,32 @@ function prose(src) {
   return items;
 }
 
+const webFiles = walk(path.join(ROOT, "src")).filter((f) => /\.web\.tsx?$/.test(f) && !DIRS.some((d) => f.startsWith(path.join(ROOT, d) + path.sep)));
+
 let bad = 0;
-for (const dir of DIRS) {
-  for (const file of walk(path.join(ROOT, dir))) {
+// Web page template and manifest: visible text and the manifest's strings.
+for (const rel of ["public/index.html", "public/manifest.webmanifest"]) {
+  let text;
+  try {
+    text = readFileSync(path.join(ROOT, rel), "utf8");
+  } catch {
+    continue;
+  }
+  const visible = rel.endsWith(".html")
+    ? [...text.replace(/<style[\s\S]*?<\/style>/g, "").matchAll(/>([^<>]+)</g)].map((m) => m[1]).concat([...text.matchAll(/content="([^"]*)"/g)].map((m) => m[1]))
+    : [...text.matchAll(/"(?:name|short_name|description)":\s*"([^"]*)"/g)].map((m) => m[1]);
+  for (let v of visible) {
+    for (const a of ALLOWED) v = v.replace(a, "");
+    const m = BANNED.exec(v);
+    if (m) {
+      console.log(`${rel}: "${v.trim().slice(0, 90)}" → ${m[0]}`);
+      bad++;
+    }
+  }
+}
+for (const dir of [...DIRS, ...webFiles.map((f) => path.relative(ROOT, f))]) {
+  const target = path.join(ROOT, dir);
+  for (const file of statSync(target).isDirectory() ? walk(target) : [target]) {
     const rel = path.relative(ROOT, file);
     if (EXEMPT.has(rel)) continue;
     const src = readFileSync(file, "utf8");

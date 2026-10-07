@@ -26,6 +26,8 @@ import { dateRange } from "../../../ui/planBits";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
 import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Stub } from "../../../ui/Stub";
+import { DeskSettled, DeskSettlePreview } from "../../../ui/desk/settle";
+import { useLayout } from "../../../ui/shell/responsive";
 import { Txt } from "../../../ui/Text";
 
 const ROW_STEP_MS = 140;
@@ -74,6 +76,7 @@ export default function SettleUp() {
   const [tRes, setTRes] = useState<number | null>(null);
   const [done, setDone] = useState<Done | null>(null);
   const preview = useSettlePreview(plan);
+  const { desk } = useLayout();
   const settleQ = useCanSettle(pot, !!plan && !plan.settled && phase === "preview");
   const people = useMemo(() => Object.values(plan?.people ?? {}), [plan]);
   const money = usePeopleMoney(people);
@@ -139,6 +142,24 @@ export default function SettleUp() {
   if (q.isError || !plan) return <PlanProblem title="Settle up" missing={!q.isError} onRetry={() => void q.refetch()} />;
   const sub = `${plan.meta.name}, ${dateRange(Number(plan.raw.startTime), Number(plan.raw.endTime))}`;
 
+  if (desk && phase !== "settled" && !plan.settled)
+    return (
+      <Screen testID={phase === "settling" ? "screen-settle-preview-settling" : "screen-settle-preview"} refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
+        <DeskSettlePreview
+          plan={plan}
+          vm={preview.vm}
+          can={settleQ.data === true}
+          checking={settleQ.isLoading}
+          busy={act.busy}
+          onSettle={() => void start()}
+          failed={preview.failed}
+          onRetry={preview.retry}
+          rates={rates}
+          money={money}
+          settling={phase === "settling" ? <Settling plan={plan} preview={preview.vm} done={done} t0={t0} tRes={tRes} money={money} panel /> : undefined}
+        />
+      </Screen>
+    );
   if (phase === "settling") return <Settling plan={plan} preview={preview.vm} done={done} t0={t0} tRes={tRes} money={money} />;
 
   if (phase === "settled" && !done && !plan.settled) return <PlanSkeleton title="All settled" />;
@@ -318,6 +339,7 @@ function Settling({
   t0,
   tRes,
   money,
+  panel,
 }: {
   plan: PlanVM;
   preview: ReturnType<typeof settleView> | null;
@@ -325,6 +347,8 @@ function Settling({
   t0: number;
   tRes: number | null;
   money: ReturnType<typeof usePeopleMoney>;
+  /** Laptop: the progress list inside the settle-up panel (112 → 39). */
+  panel?: boolean;
 }) {
   const c = useColors();
   const now = useNow(50);
@@ -339,10 +363,11 @@ function Settling({
     return fromPreview;
   })();
   const states: RowState[] = rowStates(payees.length, tRes === null ? null : now - tRes, ROW_STEP_MS);
-  return (
-    <Screen testID="screen-settling" dock={<Txt v="t13" color="muted" center>{slow ? "Taking longer than usual. You can leave; we'll tell you when it's done." : "You can leave this screen. We'll tell you when it's done."}</Txt>}>
-      <View style={{ marginTop: 32, alignItems: "center" }}>
-        <SpinnerRing label={formatSeconds(Math.max(0, elapsed))} />
+  const leave = <Txt v="t13" color="muted" center>{slow ? "Taking longer than usual. You can leave; we'll tell you when it's done." : "You can leave this screen. We'll tell you when it's done."}</Txt>;
+  const body = (
+    <>
+      <View style={{ marginTop: panel ? 8 : 32, alignItems: "center" }}>
+        <SpinnerRing label={formatSeconds(Math.max(0, elapsed))} size={panel ? 96 : undefined} />
         <Txt v="d28" center style={{ marginTop: 20 }}>
           {tRes === null ? "Settling up…" : "Paid"}
         </Txt>
@@ -390,6 +415,19 @@ function Settling({
           })}
         </Card>
       ) : null}
+    </>
+  );
+  if (panel)
+    return (
+      <View testID="screen-settling" style={{ flex: 1 }}>
+        {body}
+        <View style={{ flex: 1, minHeight: 16 }} />
+        {leave}
+      </View>
+    );
+  return (
+    <Screen testID="screen-settling" dock={leave}>
+      {body}
     </Screen>
   );
 }
@@ -426,6 +464,47 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
   const me = plan.me ? personOf(plan, plan.me) : undefined;
 
   const [sharing, setSharing] = useState(false);
+  const { desk } = useLayout();
+  const stubHead = (
+    <View>
+      <Row between>
+        <Overline style={{ flex: 1 }}>{head}</Overline>
+        <Txt>{plan.meta.emoji}</Txt>
+      </Row>
+      <Txt v="d28" style={{ marginTop: 8 }} testID="settled-paid-out">
+        {`${formatUsd(data.paidOut)} paid out`}
+      </Txt>
+    </View>
+  );
+  const owe = debtEntries.some(([a]) => a === plan.me) ? (
+    <Banner kind="neg" icon="receipt" title="You still owe a little" text="Your safety net didn't cover all of it.">
+      <View style={{ marginTop: 8 }}>
+        <Btn label="See what you owe" kind="sec" sm onPress={() => router.push({ pathname: "/plan/[pot]/debt", params: { pot: plan.pot } })} testID="btn-see-what-you-owe" />
+      </View>
+    </Banner>
+  ) : null;
+
+  if (desk)
+    return (
+      <Screen testID="screen-settled">
+        <DeskSettled
+          plan={plan}
+          head={stubHead}
+          lines={lines}
+          paidOut={data.paidOut}
+          ms={data.ms}
+          txHash={data.txHash}
+          myLine={me && myPayout > 0n ? `You got ${money.local(myPayout, me)}, already in your Plans account.` : null}
+          oweBanner={owe}
+          foot={
+            <>
+              <SettledIn ms={data.ms} />
+              <Proof hash={data.txHash} />
+            </>
+          }
+        />
+      </Screen>
+    );
 
   return (
     <Screen

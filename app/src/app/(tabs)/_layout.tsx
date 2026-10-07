@@ -9,6 +9,7 @@ import { useStore } from "../../lib/state/observable";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts } from "../../theme/tokens";
 import { Icon, type IconName } from "../../ui/Icon";
+import { useInShell } from "../../ui/shell/AppShell";
 import { Txt } from "../../ui/Text";
 
 const TABS: { name: string; icon: IconName; label: string }[] = [
@@ -22,7 +23,10 @@ function TabBar({ state, navigation }: { state: { index: number; routes: { key: 
   const c = useColors();
   const ins = useSafeAreaInsets();
   const plans = useMyPlans();
+  const shell = useInShell();
   const needsYou = (plans.data ?? []).some((p) => p.needsMe > 0 || p.myDebt > 0n);
+  // On a laptop the left rail replaces the tab bar.
+  if (shell) return null;
   return (
     <View style={{ flexDirection: "row", backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 10, paddingBottom: 10 + ins.bottom, height: 80 + ins.bottom }}>
       {state.routes.map((r, i) => {

@@ -20,6 +20,8 @@ import { useColors } from "../../theme/ThemeProvider";
 import { personOf, PlanProblem, PlanSkeleton, spendLabel, useNow } from "../../ui/ending/common";
 import { Banner, Bar, Btn, Card, Chip, DemoTag, Hero, ListItem, Overline, Row, SectionHead, Tile } from "../../ui/kit";
 import { Screen } from "../../ui/layout";
+import { DeskColumn } from "../../ui/desk/plan";
+import { useLayout } from "../../ui/shell/responsive";
 import { ago } from "../../ui/planBits";
 import { PersonAvatar, PlanTop, useMoney } from "../../ui/plan/common";
 import { Txt } from "../../ui/Text";
@@ -124,6 +126,7 @@ function feedOf(plan: PlanVM | undefined): FeedItem[] {
 }
 
 export default function DemoRunning() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const c = useColors();
@@ -253,7 +256,8 @@ export default function DemoRunning() {
           : { t: "Next: they check the numbers", s: "Then you end the plan and settle up in one tap." };
 
   return (
-    <Screen dock={dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-demo-running">
+    <Screen dock={desk ? undefined : dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-demo-running">
+      <DeskColumn dock={desk ? dock : undefined}>
       <PlanTop plan={plan} band={band} right={<View />} />
 
       <Card style={{ marginTop: 12 }} testID="demo-step">
@@ -328,6 +332,7 @@ export default function DemoRunning() {
           {next.s}
         </Txt>
       </Card>
+      </DeskColumn>
     </Screen>
   );
 }

@@ -8,6 +8,8 @@ import { Avatar, Btn, Card, Pill, Row, Tile } from "../ui/kit";
 import { AppBar, Screen } from "../ui/layout";
 import { Txt } from "../ui/Text";
 import type { IconName } from "../ui/Icon";
+import { DeskColumn, KeyWhy } from "../ui/desk/money";
+import { useLayout } from "../ui/shell/responsive";
 
 function Why({ icon, children }: { icon: IconName; children: string }) {
   return (
@@ -25,8 +27,10 @@ export default function YourKey() {
   const c = useColors();
   const st = useStore(identity, (s) => s);
   const parts = st.fingerprint ? Array.from(st.fingerprint) : ["·", "·", "·"];
+  const { desk } = useLayout();
   return (
     <Screen testID="screen-key" dock={<Btn label={st.keysPending ? "Unlock my key" : "Got it"} kind="sec" onPress={() => (st.keysPending ? router.push("/unlock-keys") : router.back())} testID="btn-got-it" />}>
+      <DeskColumn>
       <AppBar title="Your key" />
       <View style={{ alignItems: "center", marginTop: 8 }}>
         <Txt v="ov" color="muted">
@@ -43,12 +47,18 @@ export default function YourKey() {
       <Txt v="d22" style={{ marginTop: 24 }}>
         Your receipts are locked to your plans
       </Txt>
+      {desk ? (
+        <View style={{ marginTop: 16 }}>
+          <KeyWhy />
+        </View>
+      ) : (
       <View style={{ gap: 16, marginTop: 16 }}>
         <Why icon="lock">Receipt photos and notes are scrambled before they leave your phone. Only people in that plan can open them.</Why>
         <Why icon="key">Your key comes from your passkey. Use Plans on a new phone and you get the same key, so nothing is lost.</Why>
         <Why icon="eye">Plans can't see your photos or notes. Neither can anyone outside the plan.</Why>
         <Why icon="users">The three pictures are a short name for your key. Friends see the same three next to your name. If they change and you didn't get a new phone, tell us.</Why>
       </View>
+      )}
       <Card tint style={{ marginTop: 20 }}>
         <Txt v="ov" color="muted">
           How friends see you
@@ -63,6 +73,7 @@ export default function YourKey() {
           </Pill>
         </Row>
       </Card>
+      </DeskColumn>
     </Screen>
   );
 }

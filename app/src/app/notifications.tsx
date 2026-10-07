@@ -1,12 +1,14 @@
 import * as Linking from "expo-linking";
-import * as Notifications from "expo-notifications";
 import React, { useCallback, useEffect, useState } from "react";
-import { AppState, View } from "react-native";
+import { AppState, Platform, View } from "react-native";
+import { getNotifyPermission, requestNotifyPermission } from "../lib/state/notify";
 import { Banner, Btn, ListItem, Tile } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { Txt } from "../ui/Text";
 
 type Perm = "loading" | "granted" | "denied" | "undetermined";
+const web = Platform.OS === "web";
 
 /** Notifications: what Plans tells you about, and the phone's permission. */
 export default function NotificationsScreen() {
@@ -16,8 +18,8 @@ export default function NotificationsScreen() {
 
   const read = useCallback(async () => {
     try {
-      const p = await Notifications.getPermissionsAsync();
-      setPerm(p.granted ? "granted" : p.status === "undetermined" ? "undetermined" : "denied");
+      const p = await getNotifyPermission();
+      setPerm(p.status);
       setCanAsk(p.canAskAgain);
     } catch {
       setPerm("undetermined");
@@ -32,13 +34,13 @@ export default function NotificationsScreen() {
 
   const allow = async () => {
     if (!canAsk) {
-      void Linking.openSettings();
+      if (!web) void Linking.openSettings();
       return;
     }
     setBusy(true);
     try {
-      const p = await Notifications.requestPermissionsAsync();
-      setPerm(p.granted ? "granted" : "denied");
+      const p = await requestNotifyPermission();
+      setPerm(p.status === "granted" ? "granted" : "denied");
       setCanAsk(p.canAskAgain);
     } catch {
       /* stays as it was */
@@ -48,10 +50,10 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-notifications"
       dock={
-        perm === "granted" ? undefined : (
+        perm === "granted" || (web && !canAsk) ? undefined : (
           <Btn label={canAsk ? "Allow notifications" : "Open phone settings"} icon="bell" onPress={() => void allow()} loading={busy} disabled={perm === "loading"} testID="btn-allow-notifications" />
         )
       }
@@ -59,9 +61,9 @@ export default function NotificationsScreen() {
       <AppBar title="Notifications" />
       <View testID="notifications-status">
         {perm === "granted" ? (
-          <Banner kind="pos" icon="check" title="Notifications are on" text="Plans can tell you when something needs you, even when it's closed." />
+          <Banner kind="pos" icon="check" title="Notifications are on" text={web ? "Plans tells you when something needs you while it's open in a tab, even if you're in another one." : "Plans can tell you when something needs you, even when it's closed."} />
         ) : perm === "loading" ? null : (
-          <Banner kind="mut" icon="bell" title="Notifications are off" text={canAsk ? "Turn them on so you don't miss an approval or money coming in." : "Turn them on in your phone's settings for Plans."} />
+          <Banner kind="mut" icon="bell" title="Notifications are off" text={canAsk ? "Turn them on so you don't miss an approval or money coming in." : web ? "Turn them on in your browser's site settings for plans.0xo.in." : "Turn them on in your phone's settings for Plans."} />
         )}
       </View>
       <Txt v="d17" style={{ marginTop: 20, marginBottom: 4 }}>
@@ -74,6 +76,6 @@ export default function NotificationsScreen() {
       <Txt v="t13" color="muted" style={{ marginTop: 12 }}>
         Notifications never include your notes or receipt photos: only people in the plan can read those.
       </Txt>
-    </Screen>
+    </DeskScreen>
   );
 }

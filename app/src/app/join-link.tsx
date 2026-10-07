@@ -1,5 +1,5 @@
 /** Join with a link or code: paste an invite, claim link or Plans code, or scan its QR. */
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, ScanFromPhoto, useCameraPermissions } from "../ui/camera";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -8,7 +8,8 @@ import { toBase64Url } from "../lib/crypto/bytes";
 import { parseLink, type ParsedLink } from "../lib/domain/links";
 import { useColors } from "../theme/ThemeProvider";
 import { Banner, Btn, Field, Row, Tile } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { Txt } from "../ui/Text";
 
 function q(o: Record<string, string | undefined>): Record<string, string> {
@@ -85,7 +86,7 @@ export default function JoinLink() {
   const d = parsed ? describe(parsed) : null;
 
   return (
-    <Screen testID="screen-join-link" dock={<Btn label="Open" icon="chev" disabled={!parsed} onPress={open} testID="btn-open-link" />}>
+    <DeskScreen testID="screen-join-link" dock={<Btn label="Open" icon="chev" disabled={!parsed} onPress={open} testID="btn-open-link" />}>
       <AppBar title="Join with a link or code" />
       <Txt v="t15" color="muted" style={{ marginBottom: 16 }}>
         Paste an invite or a Plans link a friend sent you, or scan their code.
@@ -131,7 +132,10 @@ export default function JoinLink() {
           </View>
         ) : null}
         <Btn label={scan ? "Stop scanning" : "Scan a code"} kind={scan ? "sec" : "out"} icon="scan" onPress={() => (scan ? setScan(false) : void startScan())} style={{ marginTop: scan ? 12 : 0 }} testID="btn-scan-code" />
+        <View style={{ marginTop: 8 }}>
+          <ScanFromPhoto onScan={onScanned} onNone={() => setError("We couldn't find a Plans code in that photo.")} />
+        </View>
       </View>
-    </Screen>
+    </DeskScreen>
   );
 }

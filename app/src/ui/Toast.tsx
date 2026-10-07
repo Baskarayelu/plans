@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
-import { Animated, Pressable, View } from "react-native";
+import { Animated, Platform, Pressable, View } from "react-native";
+import { attention } from "../lib/state/notify";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createStore, useStore } from "../lib/state/observable";
 import { useColors } from "../theme/ThemeProvider";
@@ -18,6 +19,7 @@ export function showToast(t: Omit<ToastItem, "id" | "at">): void {
   const item = { ...t, id: nextId++, at: Date.now() };
   toasts.set((prev) => [...prev.slice(-2), item]);
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+  attention(t);
   setTimeout(() => toasts.set((prev) => prev.filter((x) => x.id !== item.id)), 4000);
 }
 
@@ -28,6 +30,8 @@ export function ToastHost() {
   const y = useRef(new Animated.Value(-120)).current;
   const top = items[items.length - 1];
   useEffect(() => {
+    // The web app has no motion: the banner simply appears and goes.
+    if (Platform.OS === "web") return y.setValue(top ? 0 : -160);
     Animated.spring(y, { toValue: top ? 0 : -160, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
   }, [top, y]);
   if (!top) return null;

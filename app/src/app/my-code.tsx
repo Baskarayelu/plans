@@ -12,7 +12,8 @@ import { placeLine } from "../lib/send/draft";
 import { useFx, useMe } from "../lib/state/data";
 import { Keypad } from "../ui/Keypad";
 import { Avatar, Banner, Btn, Btns, Card, Chip, IconBtn, Row } from "../ui/kit";
-import { AppBar, Screen, Sheet } from "../ui/layout";
+import { AppBar, Sheet } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { useLocal } from "../ui/money";
 import { BigAmount } from "../ui/send/bits";
 import { Txt } from "../ui/Text";
@@ -50,12 +51,12 @@ export default function MyCode() {
 
   if (!address || !profile) {
     return (
-      <Screen testID="screen-my-code">
+      <DeskScreen testID="screen-my-code">
         <AppBar title="My Plans code" icon="x" />
         <Banner kind="inf" icon="info" title="Finish setting up first" text="Add your name and country, then your code is ready.">
           <Btn label="Set up" kind="sec" sm onPress={() => router.push({ pathname: "/profile", params: { next: "/my-code" } })} style={{ marginTop: 8 }} testID="btn-set-up" />
         </Banner>
-      </Screen>
+      </DeskScreen>
     );
   }
 
@@ -78,7 +79,7 @@ export default function MyCode() {
   };
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-my-code"
       dock={
         <Btns>
@@ -145,6 +146,6 @@ export default function MyCode() {
           testID="btn-ask-confirm"
         />
       </Sheet>
-    </Screen>
+    </DeskScreen>
   );
 }

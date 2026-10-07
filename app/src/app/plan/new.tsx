@@ -12,11 +12,15 @@ import { Icon } from "../../ui/Icon";
 import { Btn, EmojiTile, Field, Overline, Row, Wristband } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
 import { Txt } from "../../ui/Text";
+import { CreateHead, CreatePanel } from "../../ui/desk/create";
+import { Narrow } from "../../ui/desk/plan";
+import { useLayout } from "../../ui/shell/responsive";
 
 const MAX_DAYS = Math.floor(MAX_PLAN_SEC / 86400);
 
 export default function NewPlan() {
   const c = useColors();
+  const { desk } = useLayout();
   const d = useStore(draft);
   const [pick, setPick] = useState<"start" | "end" | null>(null);
   const [customEmoji, setCustomEmoji] = useState(false);
@@ -41,27 +45,9 @@ export default function NewPlan() {
     router.canGoBack() ? router.back() : router.replace("/(tabs)");
   };
 
-  return (
-    <Screen testID="screen-plan-new" dock={<Btn label="Next: set the rules" disabled={!valid} onPress={() => router.push("/plan/rules")} testID="btn-next-set-the-rules" />}>
-      <AppBar icon="x" title="New plan" onBack={close} right={<Txt v="t13" color="muted" style={{ marginRight: 12 }}>1 of 2</Txt>} />
-
-      <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 14, overflow: "hidden" }} testID="plan-preview">
-        <Wristband color={WRISTBANDS[d.color]} text={band} />
-        <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
-          <Row>
-            <EmojiTile emoji={d.emoji} color={WRISTBANDS[d.color]} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Txt v="d17" numberOfLines={1}>
-                {name || "Name your plan"}
-              </Txt>
-              <Txt v="t13" color="muted">
-                Just you so far
-              </Txt>
-            </View>
-          </Row>
-        </View>
-      </View>
-
+  const nextBtn = <Btn label="Next: set the rules" disabled={!valid} onPress={() => router.push("/plan/rules")} testID="btn-next-set-the-rules" />;
+  const form = (
+    <>
       <View style={{ marginTop: 20 }}>
         <Field label="Plan name" value={d.name} onChangeText={(t) => draft.patch({ name: t })} maxLength={40} placeholder="Lisbon, 12–16 Oct" testID="field-plan-name" autoFocus />
       </View>
@@ -137,8 +123,10 @@ export default function NewPlan() {
           </>
         )}
       </View>
-      <View style={{ height: 16 }} />
-
+    </>
+  );
+  const sheets = (
+    <>
       <DateSheet
         visible={pick === "start"}
         onClose={() => setPick(null)}
@@ -167,6 +155,50 @@ export default function NewPlan() {
           setPick(null);
         }}
       />
+    </>
+  );
+
+  if (desk)
+    return (
+      <Screen testID="screen-plan-new">
+        <Narrow max={560} center>
+          <CreateHead step={1} title="Name your plan" sub="A trip, a festival, a house share. You set the rules next, then invite friends." />
+          {form}
+        </Narrow>
+        <View style={{ height: 24 }} />
+        <CreatePanel step={1}>
+          {nextBtn}
+          <Btn label="Cancel" kind="txt" onPress={close} style={{ marginTop: 4 }} testID="btn-cancel-new-plan" />
+        </CreatePanel>
+        {sheets}
+      </Screen>
+    );
+
+  return (
+    <Screen testID="screen-plan-new" dock={nextBtn}>
+      <AppBar icon="x" title="New plan" onBack={close} right={<Txt v="t13" color="muted" style={{ marginRight: 12 }}>1 of 2</Txt>} />
+
+      <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 14, overflow: "hidden" }} testID="plan-preview">
+        <Wristband color={WRISTBANDS[d.color]} text={band} />
+        <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
+          <Row>
+            <EmojiTile emoji={d.emoji} color={WRISTBANDS[d.color]} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Txt v="d17" numberOfLines={1}>
+                {name || "Name your plan"}
+              </Txt>
+              <Txt v="t13" color="muted">
+                Just you so far
+              </Txt>
+            </View>
+          </Row>
+        </View>
+      </View>
+
+      {form}
+      <View style={{ height: 16 }} />
+
+      {sheets}
     </Screen>
   );
 }

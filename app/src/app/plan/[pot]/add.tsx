@@ -15,11 +15,15 @@ import { AppBar, Screen } from "../../../ui/layout";
 import { useMoney } from "../../../ui/plan/common";
 import { showToast } from "../../../ui/Toast";
 import { Txt } from "../../../ui/Text";
+import { DeskAmountInput } from "../../../ui/desk/pay";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function AddMoney() {
   const { pot: potParam } = useLocalSearchParams<{ pot: string }>();
   const pot = (potParam ?? "").toLowerCase();
   const c = useColors();
+  const { desk } = useLayout();
   const plan = usePlan(pot);
   const me = useMe();
   const bal = useBalance();
@@ -66,14 +70,19 @@ export default function AddMoney() {
 
   return (
     <Screen testID="screen-add-money" scroll>
+      <DeskColumn max={560}>
       <AppBar icon="x" title={plan.data ? `Add to ${plan.data.meta.name} pot` : "Add to the pot"} />
       <View style={{ alignItems: "center", marginTop: 16 }}>
-        <Row gap={2}>
-          <Txt v="d56" tnum testID="add-amount" accessibilityLabel={`${shownFull} typed`}>
-            {shown}
-          </Txt>
-          <View style={{ width: 3, height: 48, backgroundColor: c.accent, marginLeft: 2 }} />
-        </Row>
+        {desk ? (
+          <DeskAmountInput value={text} onChange={setText} symbol={ccy.symbol.trim()} decimals={inDollars ? 2 : ccy.decimals} testID="add-amount" />
+        ) : (
+          <Row gap={2}>
+            <Txt v="d56" tnum testID="add-amount" accessibilityLabel={`${shownFull} typed`}>
+              {shown}
+            </Txt>
+            <View style={{ width: 3, height: 48, backgroundColor: c.accent, marginLeft: 2 }} />
+          </Row>
+        )}
         <Txt v="t17" style={{ marginTop: 8 }} testID="add-pot-gets">
           {inDollars ? (hasLocal && money.local(units) ? `That's about ${money.local(units)}` : "The pot gets this in dollars") : rate ? `The pot gets ${formatUsd(units)}` : "Getting today's rate…"}
         </Txt>
@@ -126,8 +135,9 @@ export default function AddMoney() {
       ) : null}
 
       <View style={{ flex: 1, minHeight: 12 }} />
-      <Keypad value={text} onChange={setText} decimals={inDollars ? 2 : ccy.decimals} max={7} />
-      <Btn label={units > 0n ? `Add ${shownFull}` : "Add"} disabled={!canAdd} loading={add.busy} onPress={() => void confirm()} style={{ marginTop: 8 }} />
+      {desk ? null : <Keypad value={text} onChange={setText} decimals={inDollars ? 2 : ccy.decimals} max={7} />}
+      <Btn label={units > 0n ? `Add ${shownFull}` : "Add"} disabled={!canAdd} loading={add.busy} onPress={() => void confirm()} style={{ marginTop: desk ? 24 : 8 }} />
+      </DeskColumn>
     </Screen>
   );
 }

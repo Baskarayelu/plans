@@ -27,6 +27,8 @@ import { People, PersonAvatar, useMoney } from "../../../../ui/plan/common";
 import { Bubble, ErrorScreen, LoadingScreen, personOf, PlanGate, SpendSummaryCard, usePeopleMoney, VoteBar } from "../../../../ui/spend/parts";
 import { Txt } from "../../../../ui/Text";
 import { showToast } from "../../../../ui/Toast";
+import { DeskColumn } from "../../../../ui/desk/plan";
+import { useLayout } from "../../../../ui/shell/responsive";
 
 const lc = (s: string) => s.toLowerCase();
 
@@ -53,6 +55,7 @@ function Loader({ plan, id, refetchPlan }: { plan: PlanVM; id: string; refetchPl
 }
 
 function Body({ plan, s, d }: { plan: PlanVM; s: SpendDetail; d: DisputeRow }) {
+  const { desk } = useLayout();
   const draft = useDraft();
   const [pick, setPick] = useState<"keep" | "covers" | null>(null);
   const [lastTx, setLastTx] = useState<{ hash: string; ms: number } | null>(null);
@@ -145,7 +148,8 @@ function Body({ plan, s, d }: { plan: PlanVM; s: SpendDetail; d: DisputeRow }) {
     );
 
   return (
-    <Screen testID="screen-dispute" dock={dock}>
+    <Screen testID="screen-dispute" dock={desk ? undefined : dock}>
+      <DeskColumn dock={dock}>
       <AppBar icon="x" title="Vote" sub={plan.meta.name} />
       <Chip sm tone="inf" icon="clock" label={now < deadline ? `${durationText(deadline - now)} left` : "Voting closed"} testID="chip-time-left" />
       <Txt v="d28" style={{ marginTop: 12 }} testID="dispute-title">
@@ -256,6 +260,7 @@ function Body({ plan, s, d }: { plan: PlanVM; s: SpendDetail; d: DisputeRow }) {
         </Txt>
       ) : null}
       <View style={{ height: 8 }} />
+    </DeskColumn>
     </Screen>
   );
 }
@@ -280,6 +285,7 @@ function VoteOption({ on, onPress, title, sub, testID }: { on: boolean; onPress:
 }
 
 function Resolved({ plan, s, d, eligible, lastTx, onDone }: { plan: PlanVM; s: SpendDetail; d: DisputeRow; eligible: string[]; lastTx: { hash: string; ms: number } | null; onDone: () => void }) {
+  const { desk } = useLayout();
   const c = useColors();
   const m = useMoney();
   const theirs = usePeopleMoney(plan);
@@ -319,7 +325,8 @@ function Resolved({ plan, s, d, eligible, lastTx, onDone }: { plan: PlanVM; s: S
     </View>
   );
   return (
-    <Screen testID="screen-dispute-resolved" dock={<Btn label="Done" onPress={onDone} testID="btn-done" />}>
+    <Screen testID="screen-dispute-resolved" dock={desk ? undefined : <Btn label="Done" onPress={onDone} testID="btn-done" />}>
+      <DeskColumn dock={<Btn label="Done" onPress={onDone} testID="btn-done" />}>
       <AppBar icon="x" onBack={onDone} />
       <View style={{ alignItems: "center" }}>
         <BigIcon icon="scale" kind="i" />
@@ -365,6 +372,7 @@ function Resolved({ plan, s, d, eligible, lastTx, onDone }: { plan: PlanVM; s: S
           <Proof hash={lastTx?.hash} />
         </Row>
       </Row>
+    </DeskColumn>
     </Screen>
   );
 }

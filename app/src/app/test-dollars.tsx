@@ -9,7 +9,8 @@ import { storage } from "../lib/state/storage";
 import { useAction } from "../lib/state/useAction";
 import { Icon } from "../ui/Icon";
 import { Banner, BigIcon, Btn, Card, Row, Skel } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { useLocal } from "../ui/money";
 import { KV, TestRibbon } from "../ui/send/bits";
 import { Txt } from "../ui/Text";
@@ -50,10 +51,10 @@ export default function TestDollars() {
 
   if (!isTestnet) {
     return (
-      <Screen testID="screen-test-dollars">
+      <DeskScreen testID="screen-test-dollars">
         <AppBar title="Get test dollars" />
         <Banner kind="mut" icon="info" title="Not available" text="Test dollars are only in the test version of Plans." />
-      </Screen>
+      </DeskScreen>
     );
   }
 
@@ -79,7 +80,7 @@ export default function TestDollars() {
   };
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-test-dollars"
       dock={
         got ? (
@@ -122,6 +123,6 @@ export default function TestDollars() {
           <Banner kind="neg" icon="alert" title={act.error.title} text={act.error.message} />
         </View>
       ) : null}
-    </Screen>
+    </DeskScreen>
   );
 }

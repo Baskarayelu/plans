@@ -20,6 +20,8 @@ import { useColors } from "../../theme/ThemeProvider";
 import { Banner, Btn, Chip, ListItem, Overline, Radio, Row, Seg, Skel, Stepper, Tiers } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
 import { Txt } from "../../ui/Text";
+import { DeskColumn } from "../../ui/desk/plan";
+import { useLayout } from "../../ui/shell/responsive";
 
 const $ = (d: number) => BigInt(Math.round(d * 100)) * (ONE_DOLLAR / 100n);
 /** Dollar ladder the steppers move through. */
@@ -56,6 +58,7 @@ function sameRules(a: Rules, b: Rules): boolean {
 }
 
 export default function Customise() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot?: string }>();
   const proposal = !!pot;
   const plan = usePlan(pot);
@@ -96,6 +99,7 @@ export default function Customise() {
   if (!rules || !initial) {
     return (
       <Screen testID="screen-customise">
+        <DeskColumn max={680}>
         <AppBar title={proposal ? "Propose a change" : "Customise rules"} />
         {plan.isError ? (
           <Banner kind="mut" icon="wifioff" title="Couldn't load the rules" text="Check your connection.">
@@ -110,6 +114,7 @@ export default function Customise() {
             <Skel w="100%" h={56} r={14} />
           </View>
         )}
+      </DeskColumn>
       </Screen>
     );
   }
@@ -136,8 +141,7 @@ export default function Customise() {
   return (
     <Screen
       testID="screen-customise"
-      dock={
-        proposal ? (
+      dock={desk ? undefined : proposal ? (
           <>
             {propose.error ? <Banner kind="neg" icon="alert" title={propose.error.title} text={propose.error.message} /> : null}
             <Btn
@@ -151,9 +155,23 @@ export default function Customise() {
           </>
         ) : (
           <Btn label="Save rules" disabled={!order} onPress={save} testID="btn-save-rules" />
-        )
-      }
+        )}
     >
+      <DeskColumn dock={proposal ? (
+          <>
+            {propose.error ? <Banner kind="neg" icon="alert" title={propose.error.title} text={propose.error.message} /> : null}
+            <Btn
+              label={!isMember ? "Only members can propose" : changed ? "Propose this change" : "Change something first"}
+              icon="vote"
+              disabled={!changed || !order || !isMember}
+              loading={propose.busy}
+              onPress={() => void submit()}
+              testID="btn-propose-this-change"
+            />
+          </>
+        ) : (
+          <Btn label="Save rules" disabled={!order} onPress={save} testID="btn-save-rules" />
+        )} max={680}>
       <AppBar
         title={proposal ? "Propose a change" : "Customise rules"}
         sub={proposal ? plan.data?.meta.name : undefined}
@@ -287,6 +305,7 @@ export default function Customise() {
         ))}
       </View>
       <View style={{ height: 24 }} />
+    </DeskColumn>
     </Screen>
   );
 }

@@ -9,7 +9,7 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import type { Address, Hex } from "viem";
 import { fetchAccountKeys, fetchPlanDetail } from "../api/envio";
 import { registerPush } from "../api/relayer";
@@ -22,6 +22,7 @@ import { groupKeyFor, membersNeedingWrap } from "../domain/groups";
 import { currentAccountOrNull, currentKeys, identity, lock, markKeyRegistered } from "../identity/session";
 import { personFor, queryClient, qk, type PlanCardVM } from "./data";
 import { useStore } from "./observable";
+import { usesPush } from "./notify";
 import { storage } from "./storage";
 import { showToast } from "../../ui/Toast";
 
@@ -142,7 +143,7 @@ async function ensureKeyRegistered() {
 
 async function ensurePush() {
   const acct = currentAccountOrNull();
-  if (!acct) return;
+  if (!acct || !usesPush) return;
   const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
   if (!projectId) return; // Expo push tokens need an EAS project id (see README)
   try {
@@ -169,7 +170,8 @@ export function AppEffects() {
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "background") {
         bgAt.current = Date.now();
-        stopLive();
+        // A hidden browser tab keeps its live feed, so it can still show notifications and the title count.
+        if (Platform.OS !== "web") stopLive();
       } else if (s === "active") {
         const away = bgAt.current ? Date.now() - bgAt.current : 0;
         bgAt.current = null;

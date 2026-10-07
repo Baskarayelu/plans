@@ -3,6 +3,7 @@
  * rates line, loading/error states, the settle-up arrow and the settling ring.
  */
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { NO_MOTION } from "../motion";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, View } from "react-native";
@@ -203,6 +204,7 @@ export function SpinnerRing({ label, size = 120 }: { label: string; size?: numbe
   const c = useColors();
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (NO_MOTION) return;
     const loop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true }));
     loop.start();
     return () => loop.stop();

@@ -46,7 +46,7 @@ export function needsMyOk(plan: PlanVM, s: SpendRow): boolean {
   return !(s.votes ?? []).some((v) => v.account_id.toLowerCase() === me);
 }
 
-export function SpendItem({ plan, s, highlight, last, isNew }: { plan: PlanVM; s: SpendRow; highlight?: boolean; last?: boolean; isNew?: boolean }) {
+export function SpendItem({ plan, s, highlight, last, isNew, onOpen }: { plan: PlanVM; s: SpendRow; highlight?: boolean; last?: boolean; isNew?: boolean; /** Laptop: open the spend in the side panel instead of a new screen. */ onOpen?: (id: string) => void }) {
   const money = useMoney();
   const who = plan.people[s.proposer_id.toLowerCase()] ?? personFor(s.proposer_id, { me: plan.me });
   const amount = BigInt(s.amount);
@@ -89,7 +89,7 @@ export function SpendItem({ plan, s, highlight, last, isNew }: { plan: PlanVM; s
 
   const at = s.executedAt ?? s.proposedAt ?? 0;
   const showReview = needsMyOk(plan, s);
-  const open = () => router.push({ pathname: "/plan/[pot]/spend/[id]", params: { pot: plan.pot, id: s.spendId } });
+  const open = onOpen ? () => onOpen(s.spendId) : () => router.push({ pathname: "/plan/[pot]/spend/[id]", params: { pot: plan.pot, id: s.spendId } });
 
   return (
     <ListItem

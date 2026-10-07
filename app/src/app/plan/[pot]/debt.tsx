@@ -20,6 +20,8 @@ import { Screen } from "../../../ui/layout";
 import { PersonAvatar, PersonName, PlanTop, useMoney } from "../../../ui/plan/common";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 function names(list: string[]): string {
   if (list.length <= 1) return list[0] ?? "the group";
@@ -27,6 +29,7 @@ function names(list: string[]): string {
 }
 
 export default function DebtCarried() {
+  const { desk } = useLayout();
   const { pot } = useLocalSearchParams<{ pot: string }>();
   const q = usePlan(pot);
   const me = useMe();
@@ -64,7 +67,8 @@ export default function DebtCarried() {
   if (paid) {
     const ms = settledMs(paid);
     return (
-      <Screen testID="screen-debt-paid" dock={<Btn label="Done" onPress={toPlan} testID="btn-done" />}>
+      <Screen testID="screen-debt-paid" dock={desk ? undefined : <Btn label="Done" onPress={toPlan} testID="btn-done" />}>
+        <DeskColumn dock={<Btn label="Done" onPress={toPlan} testID="btn-done" />}>
         {top}
         <View style={{ alignItems: "center", marginTop: 24 }}>
           <BigIcon icon="check" kind="p" size={72} />
@@ -81,6 +85,7 @@ export default function DebtCarried() {
             <Proof hash={paid.txHash} />
           </Row>
         </Card>
+      </DeskColumn>
       </Screen>
     );
   }
@@ -116,16 +121,21 @@ export default function DebtCarried() {
           void ledger.refetch();
           void bal.refetch();
         }}
-        dock={
-          bal.isLoading ? (
+        dock={desk ? undefined : bal.isLoading ? (
             <Btn label="Checking your balance" kind="off" disabled loading testID="btn-pay-debt" />
           ) : enough ? (
-            <Btn label={`Pay now · ${formatUsd(owe)}`} icon="fp" loading={act.busy} onPress={() => void pay()} testID="btn-pay-debt" />
+            <Btn label={`Pay now · ${formatUsd(owe)}`} icon={desk ? "key" : "fp"} loading={act.busy} onPress={() => void pay()} testID="btn-pay-debt" />
           ) : (
             <Btn label="Add money first" icon="plus" onPress={() => router.push("/add-balance")} testID="btn-add-money-first" />
-          )
-        }
+          )}
       >
+        <DeskColumn dock={bal.isLoading ? (
+            <Btn label="Checking your balance" kind="off" disabled loading testID="btn-pay-debt" />
+          ) : enough ? (
+            <Btn label={`Pay now · ${formatUsd(owe)}`} icon={desk ? "key" : "fp"} loading={act.busy} onPress={() => void pay()} testID="btn-pay-debt" />
+          ) : (
+            <Btn label="Add money first" icon="plus" onPress={() => router.push("/add-balance")} testID="btn-add-money-first" />
+          )}>
         {top}
         <View style={{ alignItems: "center", marginTop: 24 }}>
           <BigIcon icon="receipt" kind="n" size={72} />
@@ -216,6 +226,7 @@ export default function DebtCarried() {
           ) : null}
           {act.error ? <Banner kind="neg" icon="alert" title={act.error.title} text={act.error.message} testID="debt-error" /> : null}
         </View>
+      </DeskColumn>
       </Screen>
     );
   }
@@ -226,7 +237,8 @@ export default function DebtCarried() {
     const debtors = (debtorIds.length ? debtorIds : nets.filter((n) => n.net < 0n).map((n) => n.address)).map((a) => personOf(plan, a)).filter((p): p is NonNullable<typeof p> => !!p);
     const meP = plan.me ? personOf(plan, plan.me) : undefined;
     return (
-      <Screen testID="screen-debt-owed" dock={<Btn label="Back to the plan" kind="sec" onPress={toPlan} testID="btn-back-to-the-plan" />}>
+      <Screen testID="screen-debt-owed" dock={desk ? undefined : <Btn label="Back to the plan" kind="sec" onPress={toPlan} testID="btn-back-to-the-plan" />}>
+        <DeskColumn dock={<Btn label="Back to the plan" kind="sec" onPress={toPlan} testID="btn-back-to-the-plan" />}>
         {top}
         <View style={{ alignItems: "center", marginTop: 24 }}>
           <BigIcon icon="receipt" kind="i" size={72} />
@@ -250,6 +262,7 @@ export default function DebtCarried() {
         <View style={{ marginTop: 8 }}>
           <Banner kind="mut" icon="info" title="You're paid straight away when they pay" text="It goes to your Plans account in your own money. No fees." />
         </View>
+      </DeskColumn>
       </Screen>
     );
   }

@@ -7,7 +7,8 @@ import { APP_VERSION, config, isTestnet } from "../config";
 import { useColors } from "../theme/ThemeProvider";
 import { Icon } from "../ui/Icon";
 import { Btn, Card, Row } from "../ui/kit";
-import { AppBar, Screen } from "../ui/layout";
+import { AppBar } from "../ui/layout";
+import { DeskScreen } from "../ui/desk/money";
 import { WITHOUT_SERVICE_GUIDE_URL } from "../ui/risks/content";
 import { Txt } from "../ui/Text";
 
@@ -151,12 +152,12 @@ export default function Help() {
   ];
 
   return (
-    <Screen testID="screen-help">
+    <DeskScreen testID="screen-help">
       <AppBar title="Help" />
       {items.map((qa) => (
         <Item key={qa.id} qa={qa} open={open === qa.id} onToggle={() => setOpen(open === qa.id ? null : qa.id)} />
       ))}
       <View style={{ height: 24 }} />
-    </Screen>
+    </DeskScreen>
   );
 }

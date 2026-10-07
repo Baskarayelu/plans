@@ -14,6 +14,9 @@ import { useColors } from "../../../theme/ThemeProvider";
 import { currentRules, presetName, useTheirMoney } from "../../../ui/core/PlanCore";
 import { Icon, type IconName } from "../../../ui/Icon";
 import { Banner, Btn, Btns, Card, Chip, IconBtn, ListItem, Overline, Row, Skel, Tile } from "../../../ui/kit";
+import { DESK_SM, TextLink } from "../../../ui/desk/plan";
+import { Cols, Crumbs, DeskTitle } from "../../../ui/shell/desk";
+import { useLayout } from "../../../ui/shell/responsive";
 import { AppBar, Screen } from "../../../ui/layout";
 import { PersonAvatar, PersonName, useMoney } from "../../../ui/plan/common";
 import { Txt } from "../../../ui/Text";
@@ -35,6 +38,7 @@ export default function Members() {
   const { pot: potParam } = useLocalSearchParams<{ pot: string }>();
   const pot = (potParam ?? "").toLowerCase();
   const c = useColors();
+  const { desk } = useLayout();
   const plan = usePlan(pot);
   const money = useMoney();
   const p = plan.data;
@@ -97,25 +101,14 @@ export default function Members() {
   const safety = p.myMember ? BigInt(p.myMember.safetyNet) : 0n;
   const sorted = [...raw.members].sort((a, b) => (a.status === b.status ? 0 : a.status === "Active" ? -1 : 1));
 
-  return (
-    <Screen
-      testID="screen-members"
-      refreshing={plan.isRefetching}
-      onRefresh={() => void plan.refetch()}
-      dock={
-        canAct ? (
+  const dock = canAct ? (
           <Btns>
             <Btn label={p.frozen ? "Paused" : "Pause spending"} kind={p.frozen ? "off" : "dngo"} icon="pause" onPress={() => router.push({ pathname: "/plan/[pot]/pause", params: { pot } })} testID="btn-pause-spending" />
             <Btn label="Propose a change" kind="sec" icon="edit" onPress={() => router.push({ pathname: "/plan/customise", params: { pot } })} testID="btn-propose-a-change" />
           </Btns>
-        ) : undefined
-      }
-    >
-      <AppBar
-        title="Members & rules"
-        sub={`${p.meta.emoji} ${p.meta.name}`}
-        right={canAct && !p.ended ? <IconBtn name="plus" label="Invite friends" onPress={() => router.push({ pathname: "/plan/[pot]/invite", params: { pot } })} testID="btn-members-invite" /> : undefined}
-      />
+        ) : undefined;
+  const membersBlock = (
+    <>
       <Overline>
         {active.length} {active.length === 1 ? "person" : "people"}
         {countries > 1 ? ` · ${countries} countries` : ""}
@@ -170,6 +163,10 @@ export default function Members() {
         </View>
       ) : null}
 
+    </>
+  );
+  const rulesBlock = (
+    <>
       <Row between style={{ marginTop: 20 }}>
         <Overline>Rules · {presetName(rules)}</Overline>
         <Txt v="t13" color="muted">
@@ -209,6 +206,52 @@ export default function Members() {
       <Txt v="t13" color="muted" style={{ marginTop: 12 }}>
         Anyone can propose a change or pause spending. No one has extra powers, including whoever started the plan.
       </Txt>
+    </>
+  );
+
+  if (desk)
+    return (
+      <Screen testID="screen-members" refreshing={plan.isRefetching} onRefresh={() => void plan.refetch()}>
+        <Crumbs
+          items={[{ label: "Plans", href: "/" }, { label: p.meta.name, href: { pathname: "/plan/[pot]", params: { pot } } }, { label: "Members & rules" }]}
+          right={
+            canAct && !p.ended ? (
+              <TextLink label="Invite friends" icon="plus" onPress={() => router.push({ pathname: "/plan/[pot]/invite", params: { pot } })} testID="btn-members-invite" />
+            ) : undefined
+          }
+        />
+        <DeskTitle
+          title="Members & rules"
+          size={34}
+          sub={`${p.meta.emoji} ${p.meta.name}`}
+          right={
+            canAct ? (
+              <>
+                <Btn label={p.frozen ? "Paused" : "Pause spending"} kind={p.frozen ? "off" : "dngo"} icon="pause" sm style={DESK_SM} onPress={() => router.push({ pathname: "/plan/[pot]/pause", params: { pot } })} testID="btn-pause-spending" />
+                <Btn label="Propose a change" kind="sec" icon="edit" sm style={DESK_SM} onPress={() => router.push({ pathname: "/plan/customise", params: { pot } })} testID="btn-propose-a-change" />
+              </>
+            ) : undefined
+          }
+        />
+        <Cols left={<View>{membersBlock}</View>} right={<View style={{ marginTop: -20 }}>{rulesBlock}</View>} />
+        <View style={{ height: 24 }} />
+      </Screen>
+    );
+
+  return (
+    <Screen
+      testID="screen-members"
+      refreshing={plan.isRefetching}
+      onRefresh={() => void plan.refetch()}
+      dock={dock}
+    >
+      <AppBar
+        title="Members & rules"
+        sub={`${p.meta.emoji} ${p.meta.name}`}
+        right={canAct && !p.ended ? <IconBtn name="plus" label="Invite friends" onPress={() => router.push({ pathname: "/plan/[pot]/invite", params: { pot } })} testID="btn-members-invite" /> : undefined}
+      />
+      {membersBlock}
+      {rulesBlock}
       <View style={{ height: 16 }} />
     </Screen>
   );

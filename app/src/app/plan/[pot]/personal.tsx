@@ -27,6 +27,8 @@ import { draftSplit, PhotoRow, RuleBanner, SplitSection, useDraftUnits, verdictO
 import { PlanGate } from "../../../ui/spend/parts";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function RecordPersonal() {
   const { pot } = useLocalSearchParams<{ pot: string }>();
@@ -39,6 +41,7 @@ export default function RecordPersonal() {
 }
 
 function PersonalBody({ plan }: { plan: PlanVM }) {
+  const { desk } = useLayout();
   const c = useColors();
   const me = useMe();
   const local = useLocal();
@@ -120,7 +123,8 @@ function PersonalBody({ plan }: { plan: PlanVM }) {
   } else dock = <Btn label="Record it" onPress={() => void record()} loading={action.busy} disabled={verdict.kind !== "now" || !d.note.trim()} testID="btn-record-it" />;
 
   return (
-    <Screen testID="screen-personal" dock={dock}>
+    <Screen testID="screen-personal" dock={desk ? undefined : dock}>
+      <DeskColumn dock={dock}>
       <AppBar icon="x" title="I paid for something" sub={plan.meta.name} />
       <Banner kind="inf" icon="info" title="No money moves now" text="This adds to what you're owed. It evens out when you settle up." />
       <View style={{ gap: 12, marginTop: 16 }}>
@@ -156,6 +160,7 @@ function PersonalBody({ plan }: { plan: PlanVM }) {
         <RuleBanner plan={plan} rules={rules} kind={SpendKind.PERSONAL} units={units} category={d.category} verdict={verdict} onRetry={pv.retry} />
         {action.error ? <Banner kind="neg" icon="alert" title={action.error.title} text={action.error.message} testID="banner-action-error" /> : null}
       </View>
+    </DeskColumn>
     </Screen>
   );
 }

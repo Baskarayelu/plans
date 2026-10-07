@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Platform, Pressable, TextInput, View } from "react-native";
 import { SpendKind, type Rules } from "../../lib/chain/eip712";
 import { currencyFor, formatUsd, formatUsdShort, usdToLocalE8 } from "../../lib/domain/currency";
 import { BLOCK_REASONS, categoryOf } from "../../lib/domain/rules";
@@ -70,7 +70,11 @@ export function AmountHero({ d, units, autoFocus }: { d: SpendDraft; units: bigi
           selectionColor={c.accent}
           cursorColor={c.accent}
           maxLength={14}
-          style={{ fontFamily: fonts.display, fontSize: 56, letterSpacing: -2.5, color: c.ink, padding: 0, margin: 0, minWidth: 40, textAlign: "left", includeFontPadding: false }}
+          style={[
+            { fontFamily: fonts.display, fontSize: 56, letterSpacing: -2.5, color: c.ink, padding: 0, margin: 0, minWidth: 40, textAlign: "left", includeFontPadding: false },
+            // Browsers size an <input> to ~20 characters, which pushes the centred amount off screen: size it to the text.
+            Platform.OS === "web" ? { width: Math.max(40, (d.amountText.length || 1) * 34 + 8) } : null,
+          ]}
         />
       </Row>
       {other ? (

@@ -21,6 +21,8 @@ import { People } from "../../../ui/plan/common";
 import { dateRange } from "../../../ui/planBits";
 import { showToast } from "../../../ui/Toast";
 import { Txt } from "../../../ui/Text";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 function signerOf(url: string | null): string | null {
   if (!url) return null;
@@ -30,6 +32,7 @@ function signerOf(url: string | null): string | null {
 }
 
 export default function Invite() {
+  const { desk } = useLayout();
   const { pot: potParam, fresh } = useLocalSearchParams<{ pot: string; fresh?: string }>();
   const pot = (potParam ?? "").toLowerCase();
   const c = useColors();
@@ -91,13 +94,15 @@ export default function Invite() {
   return (
     <Screen
       testID="screen-invite"
-      dock={
-        <Btns>
+      dock={desk ? undefined : <Btns>
           <Btn label="Done" kind="sec" onPress={done} testID="btn-done" />
           {linkOn ? <Btn label="Share invite" icon="share" onPress={() => void share()} testID="btn-share-invite" /> : <Btn label="Make a new link" icon="link" loading={make.busy} onPress={() => void onMake()} testID="btn-make-new-link" />}
-        </Btns>
-      }
+        </Btns>}
     >
+      <DeskColumn dock={<Btns>
+          <Btn label="Done" kind="sec" onPress={done} testID="btn-done" />
+          {linkOn ? <Btn label="Share invite" icon="share" onPress={() => void share()} testID="btn-share-invite" /> : <Btn label="Make a new link" icon="link" loading={make.busy} onPress={() => void onMake()} testID="btn-make-new-link" />}
+        </Btns>} max={560}>
       <AppBar icon="x" onBack={done} />
       {p ? (
         <Txt v="d28">Invite friends to {name}</Txt>
@@ -105,7 +110,7 @@ export default function Invite() {
         <Skel w="80%" h={30} />
       )}
       <Txt v="t15" color="muted" style={{ marginTop: 8, marginBottom: 16 }}>
-        They join with their fingerprint. No app yet? The link helps them install it first.
+        {desk ? "They join with a passkey on their phone or computer. The link opens Plans for them, no install needed." : "They join with their fingerprint. No app yet? The link helps them install it first."}
       </Txt>
 
       <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 14, overflow: "hidden" }}>
@@ -178,6 +183,7 @@ export default function Invite() {
         </Txt>
       </View>
       <View style={{ height: 16 }} />
+    </DeskColumn>
     </Screen>
   );
 }

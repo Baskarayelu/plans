@@ -13,6 +13,8 @@ import { AppBar, Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
 import { BigAmount, Mono, useFxPair } from "../../ui/send/bits";
 import { AusdPill } from "../../ui/agora/dollars";
+import { DeskSend } from "../../ui/send/desk";
+import { useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
 
 /** 45 / 45b Amount: type in your own money, see what they get in theirs. */
@@ -28,6 +30,7 @@ export default function SendAmount() {
   const pair = useFxPair(myCurrency, to?.currency ?? myCurrency);
   const [inDollars, setInDollars] = useState(myCurrency === "USD");
   const [text, setText] = useState("");
+  const { desk } = useLayout();
 
   // An amount asked for in the code (AUSD units): typed in dollars.
   useEffect(() => {
@@ -36,13 +39,19 @@ export default function SendAmount() {
     setText(e8ToText(unitsToE8(BigInt(params.a)), "USD"));
   }, [params.a]);
 
-  if (status === "none") return <Redirect href={{ pathname: "/welcome", params: {} }} />;
-  if (status === "locked") {
+  if (status === "none" || status === "locked") {
+    // A Plans code opened before signing in: come back here (to send to that person) afterwards.
     const q = Object.entries(params)
       .filter(([, v]) => typeof v === "string" && v)
       .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
       .join("&");
-    return <Redirect href={{ pathname: "/unlock", params: { next: `/send/amount?${q}` } }} />;
+    return <Redirect href={{ pathname: status === "none" ? "/welcome" : "/unlock", params: { next: `/send/amount?${q}` } }} />;
+  }
+
+  // 114 on a laptop: one page with the person, the amount and the check.
+  if (desk) {
+    const asked = params.a && /^\d+$/.test(params.a) ? e8ToText(unitsToE8(BigInt(params.a)), "USD") : undefined;
+    return <DeskSend key={`${to?.address ?? ""}:${params.a ?? ""}`} to={to} text={asked} inDollars={asked ? true : undefined} />;
   }
 
   if (!to) {

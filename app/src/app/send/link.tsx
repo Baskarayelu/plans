@@ -13,7 +13,8 @@ import { useStore } from "../../lib/state/observable";
 import { useAction } from "../../lib/state/useAction";
 import { Keypad } from "../../ui/Keypad";
 import { Banner, BigIcon, Btn, Btns, Card, Chip, Field, Overline, Proof, Row, SettledIn } from "../../ui/kit";
-import { AppBar, Screen } from "../../ui/layout";
+import { AppBar } from "../../ui/layout";
+import { DeskScreen } from "../../ui/desk/money";
 import { useLocal } from "../../ui/money";
 import { BigAmount } from "../../ui/send/bits";
 import { Txt } from "../../ui/Text";
@@ -78,7 +79,7 @@ export default function SendByLink() {
 
   if (made) {
     return (
-      <Screen
+      <DeskScreen
         testID="screen-send-link-done"
         dock={
           <Btns>
@@ -118,12 +119,12 @@ export default function SendByLink() {
           If no one claims it by {dayText(made.expiry)}, tap Get it back in Activity and the money returns to you.
         </Txt>
         <Btn label="Done" kind="txt" onPress={() => router.replace("/(tabs)/activity")} style={{ marginTop: 8 }} testID="btn-done" />
-      </Screen>
+      </DeskScreen>
     );
   }
 
   return (
-    <Screen
+    <DeskScreen
       testID="screen-send-link"
       dock={
         <>
@@ -178,6 +179,6 @@ export default function SendByLink() {
           {fmtE8(q.myE8, myCurrency)} is {usdText} today.
         </Txt>
       ) : null}
-    </Screen>
+    </DeskScreen>
   );
 }

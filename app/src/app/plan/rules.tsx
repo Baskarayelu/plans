@@ -17,11 +17,15 @@ import { Banner, Btn, Card, Chip, Field, ListItem, Radio, Row, Skel, Tile, Tiers
 import { AppBar, Screen } from "../../ui/layout";
 import { useMoney } from "../../ui/plan/common";
 import { Txt } from "../../ui/Text";
+import { CreateHead, CreatePanel } from "../../ui/desk/create";
+import { Columns, Narrow } from "../../ui/desk/plan";
+import { useLayout } from "../../ui/shell/responsive";
 
 const VISIBLE: Exclude<PresetId, "demo">[] = ["easygoing", "balanced", "strict", "pilot"];
 
 export default function RulesPreset() {
   const d = useStore(draft);
+  const { desk } = useLayout();
   const money = useMoney();
   const bal = useBalance();
   const balance = bal.data ?? 0n;
@@ -70,32 +74,34 @@ export default function RulesPreset() {
 
   const times = useMemo(() => planTimes(d), [d]);
 
-  return (
-    <Screen
-      testID="screen-plan-rules"
-      dock={
-        <Btn
-          label="Create plan"
-          onPress={() => void onCreate()}
-          loading={create.busy}
-          disabled={!d.name.trim() || tooMuch || (other && depositUnits === 0n && otherText !== "")}
-          testID="btn-create-plan"
-        />
-      }
-    >
-      <AppBar title="New plan" right={<Txt v="t13" color="muted" style={{ marginRight: 12 }}>2 of 2</Txt>} />
+  const createBtn = (
+    <Btn
+      label="Create plan"
+      onPress={() => void onCreate()}
+      loading={create.busy}
+      disabled={!d.name.trim() || tooMuch || (other && depositUnits === 0n && otherText !== "")}
+      testID="btn-create-plan"
+    />
+  );
+  const presetCards = [
+    ...VISIBLE.map((id) => {
+      const p = PRESETS[id];
+      return <PresetCard key={id} id={id} title={p.title} tag={p.tag} blurb={presetBlurb(p.rules)} segs={tierStrip(p.rules)} on={d.preset === id} onPress={() => choose(id)} />;
+    }),
+    ...(d.custom
+      ? [<PresetCard key="custom" id="custom" title="Custom" tag={`From ${PRESETS[d.customBase].title}`} blurb={presetBlurb(d.custom)} segs={tierStrip(d.custom)} on={d.preset === "custom"} onPress={() => choose("custom")} />]
+      : []),
+  ];
+  const intro = (
+    <>
       <Txt v="d28">How careful should the pot be?</Txt>
       <Txt v="t15" color="muted" style={{ marginTop: 8, marginBottom: 4 }}>
         Pick a starting point. The group can change it later with a vote.
       </Txt>
-
-      {VISIBLE.map((id) => {
-        const p = PRESETS[id];
-        return <PresetCard key={id} id={id} title={p.title} tag={p.tag} blurb={presetBlurb(p.rules)} segs={tierStrip(p.rules)} on={d.preset === id} onPress={() => choose(id)} />;
-      })}
-      {d.custom ? (
-        <PresetCard id="custom" title="Custom" tag={`From ${PRESETS[d.customBase].title}`} blurb={presetBlurb(d.custom)} segs={tierStrip(d.custom)} on={d.preset === "custom"} onPress={() => choose("custom")} />
-      ) : null}
+    </>
+  );
+  const body = (
+    <>
       {base === "pilot" ? (
         <Txt v="t13" color="muted" style={{ marginTop: 8 }}>
           Pilot runs for 48 hours from when you create it, and what's left is shared out straight after.
@@ -174,11 +180,38 @@ export default function RulesPreset() {
         </Txt>
       )}
 
-      {create.error ? (
-        <View style={{ marginTop: 12 }}>
-          <Banner kind="neg" icon="alert" title={create.error.title} text={create.error.message} testID="banner-create-error" />
-        </View>
-      ) : null}
+    </>
+  );
+  const error = create.error ? (
+    <View style={{ marginTop: 12 }}>
+      <Banner kind="neg" icon="alert" title={create.error.title} text={create.error.message} testID="banner-create-error" />
+    </View>
+  ) : null;
+
+  if (desk)
+    return (
+      <Screen testID="screen-plan-rules">
+        <Narrow max={760} center>
+          <CreateHead step={2} title="How careful should the pot be?" sub="Pick a starting point. The group can change it later with a vote." />
+          <Columns items={presetCards} gap={12} rowGap={0} style={{ marginTop: 4 }} render={(card) => card} />
+          {body}
+        </Narrow>
+        <View style={{ height: 24 }} />
+        <CreatePanel step={2}>
+          {error ? <View style={{ marginBottom: 12 }}>{error}</View> : null}
+          {createBtn}
+          <Btn label="Back" kind="txt" onPress={() => router.back()} style={{ marginTop: 4 }} testID="btn-back-to-basics" />
+        </CreatePanel>
+      </Screen>
+    );
+
+  return (
+    <Screen testID="screen-plan-rules" dock={createBtn}>
+      <AppBar title="New plan" right={<Txt v="t13" color="muted" style={{ marginRight: 12 }}>2 of 2</Txt>} />
+      {intro}
+      {presetCards}
+      {body}
+      {error}
       <View style={{ height: 16 }} />
     </Screen>
   );

@@ -16,6 +16,8 @@ import { dateRange, ago } from "../../../ui/planBits";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 type RC = PlanVM["raw"]["ruleChanges"][number];
 
@@ -40,6 +42,7 @@ function findChange(plan: PlanVM, id?: string): RC | undefined {
 }
 
 export default function RuleChangeScreen() {
+  const { desk } = useLayout();
   const { pot, id } = useLocalSearchParams<{ pot: string; id?: string }>();
   const q = usePlan(pot);
   const c = useColors();
@@ -114,7 +117,7 @@ export default function RuleChangeScreen() {
     dock = (
       <Btns>
         <Btn label="Disagree" kind="sec" loading={vote.busy} onPress={() => void vote.run(rc.ruleChangeId, false)} testID="btn-disagree" />
-        <Btn label="Agree" icon="fp" loading={vote.busy} onPress={() => void vote.run(rc.ruleChangeId, true)} testID="btn-agree" />
+        <Btn label="Agree" icon={desk ? "key" : "fp"} loading={vote.busy} onPress={() => void vote.run(rc.ruleChangeId, true)} testID="btn-agree" />
       </Btns>
     );
   else if (phase === "ready" && !plan.settled)
@@ -122,7 +125,8 @@ export default function RuleChangeScreen() {
   else dock = <Btn label="Done" kind="sec" onPress={() => (router.canGoBack() ? router.back() : router.replace({ pathname: "/plan/[pot]", params: { pot: plan.pot } }))} testID="btn-done" />;
 
   return (
-    <Screen dock={dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-rules-change">
+    <Screen dock={desk ? undefined : dock} refreshing={q.isRefetching} onRefresh={() => void q.refetch()} testID="screen-rules-change">
+      <DeskColumn dock={dock} max={680}>
       <AppBar title="Rule change" sub={sub} icon="x" />
       {proposer ? (
         <Row>
@@ -243,6 +247,7 @@ export default function RuleChangeScreen() {
           Your vote counts automatically because you suggested it.
         </Txt>
       ) : null}
+    </DeskColumn>
     </Screen>
   );
 }

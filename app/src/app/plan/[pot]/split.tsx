@@ -18,6 +18,8 @@ import { AppBar, Screen } from "../../../ui/layout";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
 import { PlanGate, usePeopleMoney } from "../../../ui/spend/parts";
 import { Txt } from "../../../ui/Text";
+import { DeskColumn } from "../../../ui/desk/plan";
+import { useLayout } from "../../../ui/shell/responsive";
 
 export default function SplitEditor() {
   const { pot } = useLocalSearchParams<{ pot: string }>();
@@ -30,6 +32,7 @@ export default function SplitEditor() {
 }
 
 function SplitBody({ plan }: { plan: PlanVM }) {
+  const { desk } = useLayout();
   const c = useColors();
   const d = useDraft();
   const theirs = usePeopleMoney(plan);
@@ -58,8 +61,7 @@ function SplitBody({ plan }: { plan: PlanVM }) {
   return (
     <Screen
       testID="screen-split"
-      dock={
-        <>
+      dock={desk ? undefined : <>
           <Row between>
             <Txt v="t15" color="muted">
               Total
@@ -82,9 +84,32 @@ function SplitBody({ plan }: { plan: PlanVM }) {
             )}
           </Row>
           <Btn label="Done" onPress={done} disabled={split.members.length === 0 || (units > 0n && !adds)} testID="btn-done" />
-        </>
-      }
+        </>}
     >
+      <DeskColumn dock={<>
+          <Row between>
+            <Txt v="t15" color="muted">
+              Total
+            </Txt>
+            {split.members.length === 0 ? (
+              <Txt v="t15" color="neg" weight="bold" testID="split-total">
+                Pick at least one person
+              </Txt>
+            ) : units <= 0n ? (
+              <Txt v="t15" color="muted" testID="split-total">
+                {split.members.length} {split.members.length === 1 ? "person" : "people"}
+              </Txt>
+            ) : (
+              <Row gap={6}>
+                <Icon name="check" size={18} strokeWidth={2.4} color={adds ? c.pos : c.neg} />
+                <Txt v="t15" weight="bold" color={adds ? "pos" : "neg"} testID="split-total">
+                  {formatUsd(total)} {adds ? "adds up" : "doesn't add up"}
+                </Txt>
+              </Row>
+            )}
+          </Row>
+          <Btn label="Done" onPress={done} disabled={split.members.length === 0 || (units > 0n && !adds)} testID="btn-done" />
+        </>}>
       <AppBar icon="x" title={units > 0n ? `Split ${formatUsd(units)}` : "Who shares this"} sub={d.label || d.note || undefined} />
       <Seg
         testID="seg-split"
@@ -175,6 +200,7 @@ function SplitBody({ plan }: { plan: PlanVM }) {
           Shares are worked out exactly: a ×2 person pays twice what a ×1 person pays. Any leftover cent goes to the first person.
         </Txt>
       ) : null}
+    </DeskColumn>
     </Screen>
   );
 }

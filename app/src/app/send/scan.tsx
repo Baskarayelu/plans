@@ -1,4 +1,4 @@
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { CameraView, ScanFromPhoto, useCameraPermissions, type BarcodeScanningResult } from "../../ui/camera";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
@@ -14,6 +14,7 @@ import { personFor, useMe } from "../../lib/state/data";
 import { dark, fonts } from "../../theme/tokens";
 import { Icon, type IconName } from "../../ui/Icon";
 import { Avatar } from "../../ui/kit";
+import { useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
 
 const C = dark;
@@ -54,6 +55,7 @@ const corner = (pos: object) => <View style={[{ position: "absolute", width: 44,
 /** 44 Scan a Plans code. Always dark (it is a camera). */
 export default function Scan() {
   const ins = useSafeAreaInsets();
+  const { desk } = useLayout();
   const { address } = useMe();
   const [perm, requestPerm] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
@@ -194,7 +196,7 @@ export default function Scan() {
         </View>
       )}
 
-      <View style={{ position: "absolute", left: 16, right: 16, bottom: 24 + ins.bottom, gap: 8 }}>
+      <View style={[{ position: "absolute", left: 16, right: 16, bottom: 24 + ins.bottom, gap: 8 }, desk ? { left: "50%", right: undefined, width: 400, marginLeft: -200 } : null]}>
         {!granted && perm ? (
           <DarkButton
             primary
@@ -207,6 +209,7 @@ export default function Scan() {
             }}
           />
         ) : null}
+        <ScanFromPhoto dark onScan={(data) => onScan({ data, type: "qr" } as BarcodeScanningResult)} onNone={() => setNotPlans(true)} />
         <DarkButton label="Show my code" icon="qr" testID="btn-show-my-code" onPress={() => router.push("/my-code")} />
       </View>
     </View>
