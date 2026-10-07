@@ -62,7 +62,8 @@ const plans = {
   ),
   graphqlUrl: env(
     isMainnet ? "PLANS_GRAPHQL_URL_MAINNET" : "PLANS_GRAPHQL_URL_TESTNET",
-    env("PLANS_GRAPHQL_URL", "https://indexer.plans.0xo.in/v1/graphql"),
+    // Empty: the app takes the indexer URL the relayer publishes at GET /v1/config.
+    env("PLANS_GRAPHQL_URL", ""),
   ),
   rpcUrl: env("PLANS_RPC_URL", isMainnet ? "https://rpc.monad.xyz" : "https://testnet-rpc.monad.xyz"),
   wsUrl: env("PLANS_WS_URL", isMainnet ? "wss://rpc.monad.xyz" : "wss://testnet-rpc.monad.xyz"),

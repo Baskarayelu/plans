@@ -3,13 +3,35 @@
  * few lookups the app needs (invite preview, claim by signer, sends, key wraps). Entities are per
  * chain, so every query filters by chainId; addresses are lowercase.
  */
-import { config } from "../../config";
+import { applyEndpointOverrides, config } from "../../config";
 import { fetchJson, NetworkError } from "./http";
+import { getRuntimeConfig } from "./relayer";
 
 export class IndexerError extends Error {}
 
+let asking: Promise<void> | null = null;
+
+/**
+ * The indexer URL: built in, set in Diagnostics, or published by the relayer (GET /v1/config). Queries
+ * made before the relayer has answered wait for that one request; with no URL anywhere they fail
+ * without calling any host.
+ */
+async function graphqlUrl(): Promise<string> {
+  if (config.graphqlUrl) return config.graphqlUrl;
+  asking ??= getRuntimeConfig()
+    .then((rc) => {
+      if (rc?.graphqlUrl) applyEndpointOverrides({ graphqlUrl: rc.graphqlUrl });
+    })
+    .finally(() => {
+      asking = null;
+    });
+  await asking;
+  if (!config.graphqlUrl) throw new IndexerError("indexer not available");
+  return config.graphqlUrl;
+}
+
 export async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-  const r = await fetchJson<{ data?: T; errors?: { message: string }[] }>(config.graphqlUrl, {
+  const r = await fetchJson<{ data?: T; errors?: { message: string }[] }>(await graphqlUrl(), {
     method: "POST",
     body: JSON.stringify({ query, variables: { chainId: config.chainId, ...variables } }),
     timeoutMs: 15_000,

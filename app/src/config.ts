@@ -27,7 +27,8 @@ const fallback: PlansConfig = {
   rpId: "plans.0xo.in",
   linkHost: "plans.0xo.in",
   relayerUrl: "https://relayer-testnet.plans.0xo.in",
-  graphqlUrl: "https://indexer.plans.0xo.in/v1/graphql",
+  // Empty until known: the relayer publishes the indexer URL at GET /v1/config (see lib/api/envio.ts).
+  graphqlUrl: "",
   rpcUrl: "https://testnet-rpc.monad.xyz",
   wsUrl: "wss://testnet-rpc.monad.xyz",
   explorerTx: "https://testnet.monadvision.com/tx/",
