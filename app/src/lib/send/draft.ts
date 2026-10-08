@@ -53,6 +53,8 @@ export type SendReceipt = ReceiptData & {
   fxTimestamp: number;
   source?: string;
   note?: string;
+  /** the reference round the send named (absent: none, the receipt shows the quoted rate) */
+  round?: { fxRoundId: string; refRateE8: string; fxDiffBps: string; roundTime: number };
 };
 
 export function putSendReceipt(r: Omit<SendReceipt, "kind">): void {

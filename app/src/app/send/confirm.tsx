@@ -114,8 +114,9 @@ export default function SendConfirm() {
       rateE8: r.rateE8.toString(),
       fromCurrency: r.fromCurrency,
       fxTimestamp: r.fxTimestamp,
-      source: pair.data?.source,
+      source: r.source ?? pair.data?.source,
       note: trimmed ? (noKey ? trimmed : fits) : undefined,
+      round: r.round,
     });
     sendDraft.set(null);
     router.replace({ pathname: "/send/sent", params: { tx: r.result.txHash } });

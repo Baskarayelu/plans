@@ -7,7 +7,7 @@ import { keccak256, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../../config";
 import { fetchClaimBySigner, type ClaimRow } from "../api/envio";
-import { getFx, putBlob, type RelayResult } from "../api/relayer";
+import { findEvent, getFx, getFxRound, putBlob, type RelayResult } from "../api/relayer";
 import * as A from "../chain/actions";
 import { codeToBytes, SpendKind, ZERO_BYTES32, type Rules, type Split } from "../chain/eip712";
 import { ausdBalance, registeredKey } from "../chain/rpc";
@@ -20,6 +20,7 @@ import { queryClient, qk } from "../state/data";
 import { claimUrl, inviteUrl } from "./links";
 import { groupKeyFor, inviteSecretFor, rememberContact, rememberGroupKey, rememberInviteSecret } from "./groups";
 import { ONE_DOLLAR } from "./currency";
+import { diffBpsOf, roundFromMap, roundQuotable, roundRateE8 } from "../fx/receiptRate";
 
 const lc = (s: string) => s.toLowerCase();
 
@@ -220,11 +221,21 @@ export type SendInput = {
   note?: string;
 };
 
-export async function sendMoney(s: SendInput): Promise<{ result: RelayResult; rateE8: bigint; fxTimestamp: number; fromCurrency: string }> {
+/** The reference round a send named, as its receipt shows it (strings, so it can be stored). */
+export type SendRound = { fxRoundId: string; refRateE8: string; fxDiffBps: string; roundTime: number };
+
+export async function sendMoney(s: SendInput): Promise<{ result: RelayResult; rateE8: bigint; fxTimestamp: number; fromCurrency: string; source?: string; round?: SendRound }> {
   const me = currentAccount().address;
   const p = profile();
   const fromCurrency = p.currency;
-  const fx = fromCurrency === s.toCurrency ? { rateE8: "100000000", timestamp: Math.floor(Date.now() / 1000) } : await getFx(fromCurrency, s.toCurrency);
+  const fx: { rateE8: string; timestamp: number; source?: string } =
+    fromCurrency === s.toCurrency ? { rateE8: "100000000", timestamp: Math.floor(Date.now() / 1000) } : await getFx(fromCurrency, s.toCurrency);
+  // Name the latest reference round when it is fresh enough and carries both currencies, so the
+  // receipt records that round's rate and the difference from the rate applied. Best effort: a send
+  // without a round still goes through, with the quoted rate on its receipt.
+  const latest = fromCurrency === s.toCurrency ? null : await getFxRound().catch(() => null);
+  const round = latest ? roundFromMap(latest) : null;
+  const useRound = roundQuotable(round, fromCurrency, s.toCurrency, Math.floor(Date.now() / 1000));
   const keys = currentKeys();
   let salt: Hex = toHex(randomBytes(32)) as Hex;
   const theirKey = await registeredKey(s.to).catch(() => null);
@@ -239,13 +250,22 @@ export async function sendMoney(s: SendInput): Promise<{ result: RelayResult; ra
       toCurrency: codeToBytes(s.toCurrency, 3),
       fxRateE8: BigInt(fx.rateE8),
       fxTimestamp: BigInt(fx.timestamp),
+      fxRoundId: useRound && round ? BigInt(round.roundId) : 0n,
       memoHash: s.note ? keccak256(toHex(utf8(s.note)) as Hex) : ZERO_BYTES32,
       salt,
     },
   });
   void queryClient.invalidateQueries({ queryKey: qk.balance(me) });
   void queryClient.invalidateQueries({ queryKey: qk.activity(me) });
-  return { result, rateE8: BigInt(fx.rateE8), fxTimestamp: fx.timestamp, fromCurrency };
+  let sent: SendRound | undefined;
+  if (useRound && round) {
+    // What PlansSend recorded (the Sent event), else the same numbers worked out from the round.
+    const ev = findEvent(result, "Sent")?.args;
+    const ref = ev?.refRateE8 !== undefined && ev?.refRateE8 !== null ? BigInt(String(ev.refRateE8)) : (roundRateE8(round, fromCurrency, s.toCurrency) ?? 0n);
+    const diff = ev?.fxDiffBps !== undefined && ev?.fxDiffBps !== null ? BigInt(String(ev.fxDiffBps)) : diffBpsOf(BigInt(fx.rateE8), ref);
+    sent = { fxRoundId: String(round.roundId), refRateE8: ref.toString(), fxDiffBps: diff.toString(), roundTime: round.scheduledTime };
+  }
+  return { result, rateE8: BigInt(fx.rateE8), fxTimestamp: fx.timestamp, fromCurrency, source: fx.source, round: sent };
 }
 
 export async function createSendLink(amount: bigint, expirySec: number, note?: string): Promise<{ url: string; result: RelayResult; expiry: bigint; claimId?: bigint }> {
