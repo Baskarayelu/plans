@@ -12,7 +12,10 @@ import { decodeMemo } from "../../lib/crypto/seal";
 import { formatUsd, formatUsdShort } from "../../lib/domain/currency";
 import { groupKeyFor } from "../../lib/domain/groups";
 import { CATEGORIES, categoryOf } from "../../lib/domain/rules";
-import { fmtE8, rateLine, sendSides, shortRef, whenText } from "../../lib/send/convert";
+import { pickReceiptRate, rateLines } from "../../lib/fx/receiptRate";
+import { fmtE8, sendSides, shortRef, whenText } from "../../lib/send/convert";
+import { useFxRoundById } from "../fx/rates";
+import { useFxPair } from "./bits";
 import type { MoneyRow, PlanRow } from "../../lib/send/history";
 import { planRules } from "../../lib/spend/hooks";
 import { budgetInfo, fmtClock, ruleLine, sharesFor } from "../../lib/spend/logic";
@@ -298,6 +301,8 @@ export function MoneyPanel({ r, me, plans }: { r: MoneyRow; me?: string; plans: 
   const v = useMoneyRowView(r, me, plans);
   const fxFrom = useLocal(r.send?.fromCurrency || "USD");
   const fxTo = useLocal(r.send?.toCurrency || "USD");
+  const roundQ = useFxRoundById(r.send?.fxRoundId);
+  const pairInfo = useFxPair(r.send?.fromCurrency || "USD", r.send?.toCurrency || "USD");
   const abs = r.usd < 0n ? -r.usd : r.usd;
   const lines: [string, React.ReactNode][] = [];
   let big = formatUsd(r.usd, { sign: true });
@@ -315,7 +320,16 @@ export function MoneyPanel({ r, me, plans }: { r: MoneyRow; me?: string; plans: 
     const toP = personFor(r.send.to_id, { me });
     lines.push(["From", `${fromP.me ? "You" : fromP.name}${fromP.city ? ` · ${fromP.city}` : ""} ${fromP.flag ?? ""}`.trim()]);
     lines.push(["To", `${toP.me ? "You" : toP.name}${toP.city ? ` · ${toP.city}` : ""} ${toP.flag ?? ""}`.trim()]);
-    if (from !== to && rate > 0n) lines.push(["", rateLine(from, to, rate, Number(r.send.fxTimestamp) || undefined)]);
+    lines.push(
+      ...rateLines(
+        pickReceiptRate({
+          from,
+          to,
+          recorded: { roundId: r.send.fxRoundId, refRateE8: r.send.refRateE8, diffBps: r.send.fxDiffBps, appliedE8: rate, appliedAt: Number(r.send.fxTimestamp) || undefined, appliedSource: pairInfo.data?.source },
+          round: roundQ.data,
+        }),
+      ),
+    );
     lines.push(["Fee", "$0.00"]);
   } else if (v.loc) {
     lines.push(["In your money", v.loc]);

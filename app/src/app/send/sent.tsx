@@ -2,7 +2,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useRef } from "react";
 import { Platform, Share, View } from "react-native";
 import { countryByCode, formatUsd } from "../../lib/domain/currency";
-import { fmtE8, rateLine, sendSides, shortRef, whenText } from "../../lib/send/convert";
+import { pickReceiptRate, rateLines, shareRateLine } from "../../lib/fx/receiptRate";
+import { fmtE8, sendSides, shortRef, whenText } from "../../lib/send/convert";
 import { getSendReceipt } from "../../lib/send/draft";
 import { moneyRows } from "../../lib/send/history";
 import { captureCard, shareCard } from "../../lib/share/shareImage";
@@ -11,6 +12,7 @@ import { useColors } from "../../theme/ThemeProvider";
 import { Icon } from "../../ui/Icon";
 import { Avatar, Banner, BigIcon, Btn, Btns, Card, ListItem, Proof, Row, SettledIn, Skel } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
+import { CheckRate, useFxRoundById } from "../../ui/fx/rates";
 import { useFxPair } from "../../ui/send/bits";
 import { SendFrame, SendLeft, sendTo } from "../../ui/send/desk";
 import { MoneyRowItem, usePlanIndex } from "../../ui/send/rows";
@@ -34,6 +36,8 @@ export default function Sent() {
   const fxFrom = useFx(fromCur);
   const fxTo = useFx(rec?.to.currency ?? row?.toCurrency ?? "USD");
   const pairInfo = useFxPair(fromCur, rec?.to.currency ?? row?.toCurrency ?? "USD");
+  const roundId = rec ? (rec.round?.fxRoundId ?? "0") : (row?.fxRoundId ?? "0");
+  const roundQ = useFxRoundById(roundId);
   const { desk, mode } = useLayout();
   const c = useColors();
   const stubRef = useRef<View>(null);
@@ -100,21 +104,35 @@ export default function Sent() {
   const fromCity = rec?.from.city ?? profile?.city ?? countryByCode(profile?.country)?.name;
   const fromCountry = rec?.from.country ?? row?.fromCountry ?? profile?.country;
   const fxTs = rec?.fxTimestamp ?? (row ? Number(row.fxTimestamp) : undefined);
-  const rate = fromCur !== toCur && rateE8 > 0n ? rateLine(fromCur, toCur, rateE8, fxTs, rec?.source ?? pairInfo.data?.source) : null;
+  // 150: the applied rate, the reference round it was checked against (or the quote it came from), and the difference.
+  const fx = pickReceiptRate({
+    from: fromCur,
+    to: toCur,
+    recorded: {
+      roundId,
+      refRateE8: rec ? rec.round?.refRateE8 : row?.refRateE8,
+      diffBps: rec ? rec.round?.fxDiffBps : row?.fxDiffBps,
+      appliedE8: rateE8,
+      appliedAt: fxTs,
+      appliedSource: rec?.source ?? pairInfo.data?.source,
+    },
+    round: roundQ.data ?? (rec?.round ? { roundId: rec.round.fxRoundId, scheduledTime: rec.round.roundTime, usdPerUnitE8: {} } : null),
+  });
+  const rate = shareRateLine(fx);
   const atMs = rec?.at ?? (row ? row.timestamp * 1000 : Date.now());
   const hash = tx ?? row?.txHash;
   const lines: [string, React.ReactNode][] = [
     ["From", `${fromName}${fromCity ? ` · ${fromCity}` : ""} ${flag(fromCountry)}`.trim()],
     ["To", `${toName}${toCity ? ` · ${toCity}` : ""} ${flag(toCountry)}`.trim()],
   ];
-  if (rate) lines.push(["", rate]);
+  lines.push(...rateLines(fx));
   lines.push(["Fee", "$0.00"]);
   if (rec?.note) lines.push(["Note", rec.note]);
   lines.push(["When", whenText(atMs)]);
 
   const share = () => {
     void Share.share({
-      message: `Plans · sent ${shortRef(hash)}\n${myText} → ${theirText}\nFrom ${fromName}${fromCity ? `, ${fromCity}` : ""} to ${toName}${toCity ? `, ${toCity}` : ""}\n${rate ? `${rate}\n` : ""}Fee $0.00\n${whenText(atMs)}`,
+      message: `Plans · sent ${shortRef(hash)}\n${myText} → ${theirText}\nFrom ${fromName}${fromCity ? `, ${fromCity}` : ""} to ${toName}${toCity ? `, ${toCity}` : ""}\n${rate}\nFee $0.00\n${whenText(atMs)}`,
     }).catch(() => undefined);
   };
 
@@ -122,7 +140,7 @@ export default function Sent() {
     // 115: the stub in the middle, recent sends in the panel with this one outlined.
     const meP = personFor(address ?? "0x0000000000000000000000000000000000000000", { me: address });
     const shareDesk = async () => {
-      const text = `Plans · sent ${shortRef(hash)}\n${myText} → ${theirText}\nFrom ${fromName} to ${toName}\n${rate ? `${rate}\n` : ""}Fee $0.00\n${whenText(atMs)}`;
+      const text = `Plans · sent ${shortRef(hash)}\n${myText} → ${theirText}\nFrom ${fromName} to ${toName}\n${rate}\nFee $0.00\n${whenText(atMs)}`;
       try {
         const uri = await captureCard(stubRef, "wide");
         const canShare = Platform.OS === "web" && typeof (globalThis.navigator as Navigator | undefined)?.share === "function";
@@ -177,6 +195,7 @@ export default function Sent() {
             }
           />
         </View>
+        <CheckRate rates={[fx]} usedAt={Math.floor(atMs / 1000)} subtitle={`For your payment to ${toName}.`} style={{ marginTop: 12 }} />
         <Card tint style={{ marginTop: 12 }} testID="sent-told">
           <Row>
             <Avatar initial={them.initial} color={them.color} size={36} flag={them.flag} />
@@ -267,6 +286,7 @@ export default function Sent() {
           </>
         }
       />
+      <CheckRate rates={[fx]} usedAt={Math.floor(atMs / 1000)} subtitle={`For your payment to ${toName}.`} style={{ marginTop: 12 }} />
       <View style={{ height: 16 }} />
     </Screen>
   );

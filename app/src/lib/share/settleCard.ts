@@ -30,6 +30,8 @@ export type SettleCardInput = {
   planName?: string;
   showName: boolean;
   host?: string;
+  /** Both currencies and the reference rate, in one line (lib/fx/receiptRate shareRateLine). */
+  rateLine?: string;
 };
 
 export type SettleCard = {
@@ -53,6 +55,8 @@ export type SettleCard = {
   url: string;
   /** "plans.0xo.in/s/0x7kq2…92b5" */
   displayUrl: string;
+  /** "Paid out $112.40 = £83.43 · 1 GBP = 1.3472 USD · Chainlink-fed reference rate, round 41, …" when known */
+  rateLine?: string;
 };
 
 const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -125,6 +129,7 @@ export function settleCard(i: SettleCardInput): SettleCard {
     placesBand: flags.length ? flags.map((f) => f.name.toUpperCase()).join(" · ") : line.toUpperCase(),
     url: proofUrl(i.pot, { name, host: i.host }),
     displayUrl: displayProofUrl(i.pot, i.host),
+    ...(i.rateLine ? { rateLine: i.rateLine } : {}),
   };
 }
 

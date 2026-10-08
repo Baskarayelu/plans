@@ -17,7 +17,7 @@ import { Txt } from "../Text";
 import { showToast } from "../Toast";
 import { SettleCardView } from "./SettleCardView";
 
-export function SettleShareSheet({ visible, onClose, plan, paidOut, settleMs }: { visible: boolean; onClose: () => void; plan: PlanVM; paidOut: bigint; settleMs?: number }) {
+export function SettleShareSheet({ visible, onClose, plan, paidOut, settleMs, rateLine }: { visible: boolean; onClose: () => void; plan: PlanVM; paidOut: bigint; settleMs?: number; rateLine?: string }) {
   const c = useColors();
   const [shape, setShape] = useState<CardShape>("story");
   const [showName, setShowName] = useState(false);
@@ -41,8 +41,9 @@ export function SettleShareSheet({ visible, onClose, plan, paidOut, settleMs }: 
       planName: plan.meta.name,
       showName,
       host: config.linkHost,
+      rateLine,
     });
-  }, [raw, plan.pot, plan.meta.name, paidOut, settleMs, showName]);
+  }, [raw, plan.pot, plan.meta.name, paidOut, settleMs, showName, rateLine]);
 
   const px = CARD_PX[shape];
   const captureWidth = px.width / PixelRatio.get();

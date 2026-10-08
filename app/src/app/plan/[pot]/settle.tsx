@@ -26,6 +26,7 @@ import { dateRange } from "../../../ui/planBits";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
 import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Stub } from "../../../ui/Stub";
+import { CheckRate, useSettleRates } from "../../../ui/fx/rates";
 import { DeskSettled, DeskSettlePreview } from "../../../ui/desk/settle";
 import { useLayout } from "../../../ui/shell/responsive";
 import { Txt } from "../../../ui/Text";
@@ -34,7 +35,7 @@ const ROW_STEP_MS = 140;
 const SLOW_MS = 5_000;
 const lc = (s: string) => s.toLowerCase();
 
-type Done = { payouts: Record<string, bigint>; debts: Record<string, bigint>; paidOut: bigint; txHash?: string; ms?: number };
+type Done = { payouts: Record<string, bigint>; debts: Record<string, bigint>; paidOut: bigint; txHash?: string; ms?: number; fxRoundId?: string };
 
 function useSettlePreview(plan: PlanVM | undefined) {
   const members = plan?.raw.members ?? [];
@@ -130,8 +131,11 @@ export default function SettleUp() {
       if (e.name === "DebtRecorded" && typeof e.args.member === "string") debts[lc(e.args.member)] = (debts[lc(e.args.member)] ?? 0n) + BigInt(String(e.args.amount ?? 0));
     }
     const ms = settledMs(r);
-    putReceipt({ kind: "settle", txHash: r.txHash, settledMs: ms, at: Math.floor(Date.now() / 1000), pot, paidOut: ev.paidOut.toString(), plan: plan?.meta.name ?? "" });
-    setDone({ payouts: ev.payouts, debts, paidOut: ev.paidOut, txHash: r.txHash, ms });
+    // The reference round the pot recorded with this settle-up ("0" = none fresh enough).
+    const settledEv = r.events?.find((e) => e.name === "Settled" && (!e.address || lc(e.address) === lc(pot)));
+    const fxRoundId = settledEv?.args.fxRoundId !== undefined && settledEv?.args.fxRoundId !== null ? String(settledEv.args.fxRoundId) : undefined;
+    putReceipt({ kind: "settle", txHash: r.txHash, settledMs: ms, at: Math.floor(Date.now() / 1000), pot, paidOut: ev.paidOut.toString(), plan: plan?.meta.name ?? "", fxRoundId });
+    setDone({ payouts: ev.payouts, debts, paidOut: ev.paidOut, txHash: r.txHash, ms, fxRoundId });
     setTRes(Date.now());
     invalidate();
     const n = Math.max(1, Object.keys(ev.payouts).length);
@@ -176,9 +180,9 @@ export default function SettleUp() {
       for (const m of plan.raw.members) if (BigInt(m.debt) > 0n) debts[lc(m.address)] = BigInt(m.debt);
       const s = plan.raw.settlements[0];
       const txHash = s?.txHash;
-      return { payouts, debts, paidOut: s ? BigInt(s.paidOut) : paidOut, txHash, ms: getReceipt(txHash)?.settledMs };
+      return { payouts, debts, paidOut: s ? BigInt(s.paidOut) : paidOut, txHash, ms: getReceipt(txHash)?.settledMs, fxRoundId: s?.fxRoundId };
     })();
-    return <Settled plan={plan} data={done ?? fromIndexer} money={money} rates={rates} />;
+    return <Settled plan={plan} data={done ?? fromIndexer} />;
   }
 
   // ─────────────── 38 preview ───────────────
@@ -443,7 +447,14 @@ const CONFETTI: [number, number, string, number][] = [
   [150, 130, WRISTBANDS.iris, 60],
 ];
 
-function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money: ReturnType<typeof usePeopleMoney>; rates: string | null }) {
+function Settled({ plan, data }: { plan: PlanVM; data: Done }) {
+  // 151: payouts in each person's money at the round the settle-up recorded (else Plans' quote), with the rates used.
+  const fx = useSettleRates(plan, { fxRoundId: data.fxRoundId });
+  const local = (units: bigint, p: Person | undefined) => (p ? fx.local(units, p.currency) : undefined) ?? formatUsd(units);
+  const both = (units: bigint, p: Person | undefined) => {
+    const l = p && p.currency !== "USD" ? fx.local(units, p.currency) : undefined;
+    return l ? `${l} · ${formatUsd(units)}` : formatUsd(units);
+  };
   const head = `${plan.meta.name}, ${dateRange(Number(plan.raw.startTime), Number(plan.raw.endTime))} · settle-up`;
   const entries = Object.entries(data.payouts).filter(([, v]) => v > 0n);
   const debtEntries = Object.entries(data.debts).filter(([, v]) => v > 0n);
@@ -451,15 +462,19 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
   const lines: [string, React.ReactNode][] = [
     ...entries.map(([a, v]): [string, React.ReactNode] => {
       const p = personOf(plan, a);
-      return [label(p), <Txt key={a} style={{ fontFamily: fonts.monoSemi, fontSize: 12, lineHeight: 22 }}>{money.local(v, p)}</Txt>];
+      return [label(p), <Txt key={a} style={{ fontFamily: fonts.monoSemi, fontSize: 12, lineHeight: 22, flexShrink: 1, textAlign: "right" }}>{both(v, p)}</Txt>];
     }),
     ...debtEntries.map(([a, v]): [string, React.ReactNode] => {
       const p = personOf(plan, a);
       return [`${p?.name ?? "Friend"} still owes`, formatUsd(v)];
     }),
-    ...(rates ? ([["", rates]] as [string, React.ReactNode][]) : []),
+    ...(fx.lines(entries.map(([a]) => personOf(plan, a)?.currency ?? "USD")) as [string, React.ReactNode][]),
     ["Network cost", "covered by Plans"],
   ];
+  const paidCurrencies = Array.from(new Set(entries.map(([a]) => personOf(plan, a)?.currency ?? "USD")));
+  const checkRates = paidCurrencies.map((cur) => fx.rates[cur]).filter(Boolean);
+  const cardLine = fx.cardLine(data.paidOut);
+  const settledAtSec = plan.raw.settlements[0]?.timestamp ?? getReceipt(data.txHash)?.at;
   const myPayout = plan.me ? (data.payouts[plan.me] ?? 0n) : 0n;
   const me = plan.me ? personOf(plan, plan.me) : undefined;
 
@@ -494,7 +509,7 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
           paidOut={data.paidOut}
           ms={data.ms}
           txHash={data.txHash}
-          myLine={me && myPayout > 0n ? `You got ${money.local(myPayout, me)}, already in your Plans account.` : null}
+          myLine={me && myPayout > 0n ? `You got ${local(myPayout, me)}, already in your Plans account.` : null}
           oweBanner={owe}
           foot={
             <>
@@ -502,6 +517,8 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
               <Proof hash={data.txHash} />
             </>
           }
+          afterStub={fx.loading ? null : <CheckRate rates={checkRates} usedAt={settledAtSec} subtitle="For the settle-up payouts." style={{ marginTop: 12 }} />}
+          rateLine={cardLine}
         />
       </Screen>
     );
@@ -529,7 +546,7 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
         ) : null}
         {me && myPayout > 0n ? (
           <Txt v="t15" color="muted" center style={{ marginTop: 8 }}>
-            {`You got ${money.local(myPayout, me)}, already in your Plans account.`}
+            {`You got ${local(myPayout, me)}, already in your Plans account.`}
           </Txt>
         ) : null}
       </View>
@@ -555,6 +572,7 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
             </>
           }
         />
+        {fx.loading ? null : <CheckRate rates={checkRates} usedAt={settledAtSec} subtitle="For the settle-up payouts." style={{ marginTop: 12 }} />}
       </View>
       {debtEntries.some(([a]) => a === plan.me) ? (
         <View style={{ marginTop: 12 }}>
@@ -565,7 +583,7 @@ function Settled({ plan, data, money, rates }: { plan: PlanVM; data: Done; money
           </Banner>
         </View>
       ) : null}
-      <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={data.paidOut} settleMs={data.ms} />
+      <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={data.paidOut} settleMs={data.ms} rateLine={cardLine} />
     </Screen>
   );
 }

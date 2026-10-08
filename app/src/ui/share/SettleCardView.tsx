@@ -100,6 +100,7 @@ export function SettleCardView({ card, shape, width }: Props) {
           {T({ fontFamily: fonts.display, fontSize: 76 * s, lineHeight: 78 * s, letterSpacing: -0.04 * 76 * s, color: c.ink, marginTop: 40 * s }, card.headline, 4)}
           {card.subline ? T({ fontFamily: fonts.bodySemi, fontSize: 26 * s, color: c.muted, marginTop: 12 * s }, card.subline, 2) : null}
           <View style={{ flex: 1 }} />
+          {card.rateLine ? T({ fontFamily: fonts.mono, fontSize: 16 * s, lineHeight: 22 * s, color: c.muted, marginBottom: 10 * s }, card.rateLine, 3) : null}
           {T({ fontFamily: fonts.mono, fontSize: 20 * s, color: c.muted }, `${card.displayUrl} · Proof on Monad`, 1)}
         </View>
         <View style={{ width: 330 * s, gap: 16 * s, paddingTop: 8 * s }}>
@@ -139,7 +140,8 @@ export function SettleCardView({ card, shape, width }: Props) {
           <StatTile key={st.label} s={s} value={st.value} label={st.label} />
         ))}
       </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 36 * s }}>
+      {card.rateLine ? T({ fontFamily: fonts.mono, fontSize: 22 * s, lineHeight: 32 * s, color: c.muted, marginTop: 28 * s }, card.rateLine, 3) : null}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: card.rateLine ? 20 * s : 36 * s }}>
         {T({ fontFamily: fonts.mono, fontSize: 26 * s, color: c.muted }, card.displayUrl, 1)}
         {T({ fontFamily: fonts.mono, fontSize: 26 * s, color: c.muted }, "Proof on Monad", 1)}
       </View>

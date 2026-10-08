@@ -17,6 +17,8 @@ import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Txt } from "../../../ui/Text";
 import { DeskColumn } from "../../../ui/desk/plan";
 import { useLayout } from "../../../ui/shell/responsive";
+import { CheckRate, useSettleRates } from "../../../ui/fx/rates";
+import { fonts } from "../../../theme/tokens";
 
 export default function PlanMemory() {
   const { desk } = useLayout();
@@ -24,6 +26,7 @@ export default function PlanMemory() {
   const q = usePlan(pot);
   const spendsQ = useQuery({ queryKey: ["allSpends", (pot ?? "").toLowerCase()], queryFn: () => fetchExecutedSpends(pot!), enabled: !!pot, staleTime: 60_000 });
   const [sharing, setSharing] = useState(false);
+  const fx = useSettleRates(q.data ?? undefined);
 
   if (q.isLoading) return <PlanSkeleton />;
   if (q.isError || !q.data) return <PlanProblem missing={!q.isError} onRetry={() => void q.refetch()} />;
@@ -38,6 +41,12 @@ export default function PlanMemory() {
   const big = biggestSpend(spends);
   const bars = categoryBars(d.categorySpends);
   const total = BigInt(d.totalSpent ?? "0");
+  // The money in my currency too, at the rate the settle-up recorded (else Plans' quote), and those rates.
+  const meCur = plan.me ? plan.people[plan.me]?.currency : undefined;
+  const totalLocal = meCur && meCur !== "USD" ? fx.local(total, meCur) : undefined;
+  const memberCurrencies = members.map((p) => p.currency);
+  const rateRows = fx.lines(memberCurrencies);
+  const memoryRates = Array.from(new Set(memberCurrencies)).map((c) => fx.rates[c]).filter(Boolean);
 
   const csv = () =>
     spendsCsv(
@@ -75,7 +84,7 @@ export default function PlanMemory() {
           <Btn label="Start a new plan with these people" kind="txt" onPress={() => router.push({ pathname: "/plan/new", params: { from: plan.pot } })} testID="btn-start-a-new-plan-with-these-people" />
         </>} max={680}>
       <AppBar right={<IconBtn name="share" label="Share" onPress={plan.settled ? () => setSharing(true) : shareSummary} testID="btn-share-memory" />} />
-      {plan.settled ? <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={BigInt(d.settlements[0]?.paidOut ?? "0")} settleMs={settleMs} /> : null}
+      {plan.settled ? <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={BigInt(d.settlements[0]?.paidOut ?? "0")} settleMs={settleMs} rateLine={fx.cardLine(BigInt(d.settlements[0]?.paidOut ?? "0"))} /> : null}
       <Bleed style={{ overflow: "hidden", paddingVertical: 12 }}>
         <Band color={plan.meta.color} text={`${plan.meta.name} · ${dates} · ${plan.settled ? "settled" : "ended"}`.toUpperCase()} style={{ marginHorizontal: -40, transform: [{ rotate: "-3deg" }], justifyContent: "center" }} />
       </Bleed>
@@ -109,7 +118,7 @@ export default function PlanMemory() {
 
       <View style={{ marginTop: 20, gap: 8 }} testID="memory-stats">
         <Row gap={8}>
-          <Stat value={formatUsd(total)} label="spent together" />
+          <Stat value={formatUsd(total)} label={totalLocal ? `spent together · ${totalLocal}` : "spent together"} testID="memory-spent" />
           <Stat value={String(d.spendCount ?? spends.length)} label={(d.spendCount ?? spends.length) === 1 ? "spend" : "spends"} />
         </Row>
         <Row gap={8}>
@@ -154,6 +163,22 @@ export default function PlanMemory() {
               </View>
             </View>
           ))}
+        </Card>
+      ) : null}
+      {plan.settled && rateRows.length > 0 ? (
+        <Card style={{ marginTop: 12 }} testID="memory-rates">
+          <Overline>Exchange rates at settle-up</Overline>
+          <View style={{ marginTop: 8 }}>
+            {rateRows.map(([k, v], i) => (
+              <View key={`${k}-${i}`} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <Txt style={{ fontFamily: fonts.mono, fontSize: 12, lineHeight: 22 }} color="muted">
+                  {k}
+                </Txt>
+                <Txt style={{ fontFamily: fonts.mono, fontSize: 12, lineHeight: 22, flexShrink: 1, textAlign: "right" }}>{v}</Txt>
+              </View>
+            ))}
+          </View>
+          {fx.loading ? null : <CheckRate rates={memoryRates} usedAt={settledAt ?? undefined} subtitle="For the settle-up payouts." style={{ marginTop: 10 }} />}
         </Card>
       ) : null}
     </DeskColumn>

@@ -25,6 +25,8 @@ export type ReceivedSend = {
   toCurrency: string;
   rateE8: bigint;
   fxTimestamp: number;
+  /** the reference round the sender named; 0n = none */
+  fxRoundId: bigint;
   /** block time, unix seconds */
   at?: number;
   note: SendNote | null;
@@ -34,7 +36,7 @@ export async function readReceivedSend(tx: Hex, me?: string): Promise<ReceivedSe
   const t = await rpc().getTransaction({ hash: tx });
   const d = decodeFunctionData({ abi: plansSendAbi, data: t.input });
   if (d.functionName !== "send") throw new Error("not a send");
-  const [from, meta, auth] = d.args as unknown as [Address, { to: Address; fromCountry: Hex; toCountry: Hex; fromCurrency: Hex; toCurrency: Hex; fxRateE8: bigint; fxTimestamp: bigint; salt: Hex }, { value: bigint }];
+  const [from, meta, auth] = d.args as unknown as [Address, { to: Address; fromCountry: Hex; toCountry: Hex; fromCurrency: Hex; toCurrency: Hex; fxRateE8: bigint; fxTimestamp: bigint; fxRoundId?: bigint; salt: Hex }, { value: bigint }];
   let at: number | undefined;
   if (t.blockNumber !== null && t.blockNumber !== undefined) {
     try {
@@ -68,6 +70,7 @@ export async function readReceivedSend(tx: Hex, me?: string): Promise<ReceivedSe
     toCurrency: bytesToCode(meta.toCurrency) ?? "USD",
     rateE8: meta.fxRateE8,
     fxTimestamp: Number(meta.fxTimestamp),
+    fxRoundId: meta.fxRoundId ?? 0n,
     at,
     note,
   };

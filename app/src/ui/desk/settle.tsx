@@ -347,6 +347,8 @@ export function DeskSettled({
   myLine,
   oweBanner,
   foot,
+  afterStub,
+  rateLine,
 }: {
   plan: PlanVM;
   head: React.ReactNode;
@@ -357,6 +359,10 @@ export function DeskSettled({
   myLine?: string | null;
   oweBanner?: React.ReactNode;
   foot: React.ReactNode;
+  /** under the receipt (the "Check this rate" link) */
+  afterStub?: React.ReactNode;
+  /** the share card's rate line */
+  rateLine?: string;
 }) {
   const c = useColors();
   const [sharing, setSharing] = useState(false);
@@ -375,8 +381,9 @@ export function DeskSettled({
       planName: plan.meta.name,
       showName: false,
       host: config.linkHost,
+      rateLine,
     });
-  }, [raw, plan.pot, plan.meta.name, paidOut, ms]);
+  }, [raw, plan.pot, plan.meta.name, paidOut, ms, rateLine]);
   const executed = raw.spends.filter((s) => s.status === "Executed" && s.kind !== "PERSONAL");
   const biggest = executed.reduce<(typeof executed)[number] | undefined>((m, s) => (!m || BigInt(s.amount) > BigInt(m.amount) ? s : m), undefined);
   const biggestCat = biggest ? CATEGORIES.find((x) => x.id === biggest.category) : undefined;
@@ -411,6 +418,7 @@ export function DeskSettled({
       </View>
       <View style={{ width: 480, maxWidth: "100%", alignSelf: "center", marginTop: 20 }}>
         <Stub testID="settled-stub" head={head} lines={lines} foot={foot} />
+        {afterStub}
       </View>
       <View style={{ width: 640, maxWidth: "100%", alignSelf: "center", marginTop: 20 }}>
         <Grid cols={stats.length} gap={12}>
@@ -456,7 +464,7 @@ export function DeskSettled({
           <Btn label="Done" onPress={() => router.replace({ pathname: "/plan/[pot]/memory", params: { pot: plan.pot } })} testID="btn-done" />
         </View>
       </SidePanel>
-      <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={paidOut} settleMs={ms} />
+      <SettleShareSheet visible={sharing} onClose={() => setSharing(false)} plan={plan} paidOut={paidOut} settleMs={ms} rateLine={rateLine} />
     </>
   );
 }

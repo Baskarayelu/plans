@@ -19,6 +19,7 @@ import { ClaimFeatures, WebPageFrame } from "../ui/desk/entry";
 import { Screen } from "../ui/layout";
 import { useLayout } from "../ui/shell/responsive";
 import { Stub } from "../ui/Stub";
+import { useReceiptRates } from "../ui/fx/rates";
 import { Txt } from "../ui/Text";
 
 function viewerCurrency(profileCurrency?: string): string {
@@ -50,6 +51,7 @@ export default function Claim() {
   }, [p.k]);
   const cur = viewerCurrency(st.profile?.currency);
   const fx = useFx(cur);
+  const claimFx = useReceiptRates({ currencies: [cur] });
   const [busy, setBusy] = useState<"create" | "restore" | "unlock" | null>(null);
   const [msg, setMsg] = useState<string | undefined>();
   const [done, setDone] = useState<RelayResult | null>(null);
@@ -298,6 +300,7 @@ export default function Claim() {
       lines={[
         ["Expires", expiry ? `${dayText(expiry)} · ${left === 1 ? "1 day left" : `${left} days left`}` : "…"],
         ["Fee", "None"],
+        ...(cur !== "USD" ? claimFx.lines([cur]) : []),
       ]}
     />
   );

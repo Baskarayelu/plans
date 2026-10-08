@@ -14,9 +14,9 @@ import { usePlan, type PlanVM } from "../../../lib/state/data";
 import { receipts, type ReceiptData } from "../../../lib/state/useAction";
 import { BigIcon, Btn, formatSeconds, Proof, Row, SettledIn } from "../../../ui/kit";
 import { AppBar, Screen } from "../../../ui/layout";
-import { useMoney } from "../../../ui/plan/common";
-import { ErrorScreen, LoadingScreen, payeeName, personOf, PlanGate, Timeline, useRateLine, type TimelineItem } from "../../../ui/spend/parts";
+import { ErrorScreen, LoadingScreen, payeeName, personOf, PlanGate, Timeline, useSpendRate, type TimelineItem } from "../../../ui/spend/parts";
 import { Stub } from "../../../ui/Stub";
+import { CheckRate } from "../../../ui/fx/rates";
 import { Txt } from "../../../ui/Text";
 import { SidePanel } from "../../../ui/shell/panel";
 import PlanHome from "./index";
@@ -43,8 +43,7 @@ function Loader({ plan, id, tx }: { plan: PlanVM; id: string; tx?: string }) {
 
 function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptData; tx?: string }) {
   const { desk } = useLayout();
-  const m = useMoney();
-  const rate = useRateLine();
+  const fx = useSpendRate(s.executedAt ?? r?.at);
   const amount = BigInt(s.amount);
   const who = personOf(plan, s.proposer_id);
   const whoName = who.me ? "You" : who.name;
@@ -78,7 +77,7 @@ function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptDat
     ["Approved", `${approvers.join(", ")} · ${approvers.length} of ${needed}`],
     ["Split", `${members.length} ${members.length === 1 ? "person" : "people"} · ${each !== null ? `${formatUsd(each)} each` : `from ${formatUsd(parts.reduce((a, b) => (b < a ? b : a), amount))}`}`],
   ];
-  if (rate) lines.push(["", rate]);
+  lines.push(...fx.lines);
   const home = () => router.dismissTo({ pathname: "/plan/[pot]", params: { pot: plan.pot } });
   const proof = tx ?? s.txHash;
 
@@ -108,9 +107,9 @@ function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptDat
               <Txt v="d34" tnum>
                 {formatUsd(amount)}
               </Txt>
-              {m.local(amount) ? (
+              {fx.local(amount) ? (
                 <Txt v="t17" color="muted" weight="medium">
-                  {m.local(amount)}
+                  {fx.local(amount)}
                 </Txt>
               ) : null}
             </Row>
@@ -129,6 +128,7 @@ function Body({ plan, s, r, tx }: { plan: PlanVM; s: SpendDetail; r?: ReceiptDat
           </>
         }
       />
+      <CheckRate rates={fx.rates} usedAt={s.executedAt ?? r?.at} style={{ marginTop: 12 }} />
     </>
   );
   if (desk)

@@ -39,6 +39,13 @@ describe("share card", () => {
     expect(settleCard({ ...base, settleMs: undefined, spendCount: 1 }).stats[2]).toEqual({ value: "1", label: "spend" });
   });
 
+  it("carries the rate line only when one is given (Group 2: rates on every receipt)", () => {
+    expect(settleCard(base).rateLine).toBeUndefined();
+    expect("rateLine" in settleCard(base)).toBe(false);
+    const line = "Paid out $112.40 = £88.43 · 1 GBP = 1.2711 USD · Chainlink-fed reference rate, round 41, 28 Jun 16:39 UTC";
+    expect(settleCard({ ...base, rateLine: line }).rateLine).toBe(line);
+  });
+
   it("dates in UTC for the tag and band; country names for the places band", () => {
     const c = settleCard(base);
     expect(c.dateTag).toBe("SETTLED · 17 OCT");

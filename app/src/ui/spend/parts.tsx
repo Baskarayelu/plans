@@ -4,11 +4,11 @@ import { NO_MOTION } from "../motion";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { formatLocal, formatRate, formatUsd, invertRateE8 } from "../../lib/domain/currency";
+import { formatLocal, formatUsd } from "../../lib/domain/currency";
 import { contactFor } from "../../lib/domain/groups";
 import { categoryOf } from "../../lib/domain/rules";
 import type { PhotoState } from "../../lib/spend/hooks";
-import { fmtUtcClock, fmtWhen } from "../../lib/spend/logic";
+import { fmtWhen } from "../../lib/spend/logic";
 import { personFor, useFxMap, type Person, type PlanVM } from "../../lib/state/data";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts, mix, withAlpha } from "../../theme/tokens";
@@ -16,6 +16,8 @@ import { Icon } from "../Icon";
 import { Avatar, Banner, Btn, Card, Col, IconBtn, Row, Skel } from "../kit";
 import { AppBar, Screen } from "../layout";
 import { PersonAvatar, useMoney } from "../plan/common";
+import { useReceiptRates } from "../fx/rates";
+import { normCurrency } from "../../lib/fx/receiptRate";
 import { Txt } from "../Text";
 
 const lc = (s: string) => s.toLowerCase();
@@ -73,13 +75,20 @@ export function usePeopleMoney(plan?: PlanVM | null) {
   return (units: bigint, p?: Person) => (p && p.currency !== "USD" ? formatLocal(units, p.currency, fx[p.currency]) : undefined);
 }
 
-/** "Rate 1 GBP = 1.3472 USD · ECB 14:05 UTC" for the viewer's currency (undefined for dollars). */
-export function useRateLine(): string | undefined {
+/**
+ * The viewer's money on a plan receipt: dollars ↔ their currency at the reference round in effect
+ * when the money moved (`atSec`), else Plans' quote, else none. `lines` go on the receipt; `local`
+ * gives amounts at that same rate (undefined for dollar viewers or when there's no rate).
+ */
+export function useSpendRate(atSec?: number) {
   const m = useMoney();
-  if (m.currency === "USD" || !m.fx?.rateE8) return undefined;
-  const rate = formatRate(m.currency, "USD", invertRateE8(m.fx.rateE8));
-  const src = m.fx.source ? `${m.fx.source.toUpperCase()} ` : "";
-  return `Rate ${rate} · ${src}${fmtUtcClock(m.fx.timestamp)}`;
+  const rr = useReceiptRates({ currencies: [m.currency], atSec });
+  return {
+    lines: rr.lines([m.currency]),
+    rates: [rr.rates[normCurrency(m.currency)]].filter(Boolean),
+    local: (u: bigint, o: { sign?: boolean } = {}) => (m.currency === "USD" ? undefined : rr.local(u, m.currency, o)),
+    loading: rr.loading,
+  };
 }
 
 // ─────────────── people / payees ───────────────

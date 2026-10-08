@@ -6,7 +6,8 @@ import { View } from "react-native";
 import type { Hex } from "viem";
 import { countryByCode, formatUsd } from "../lib/domain/currency";
 import { identity } from "../lib/identity/session";
-import { fmtE8, hms, rateLine, sendSides, shortRef, whenText, zoneLabel } from "../lib/send/convert";
+import { pickReceiptRate, rateLines } from "../lib/fx/receiptRate";
+import { fmtE8, hms, sendSides, shortRef, whenText, zoneLabel } from "../lib/send/convert";
 import { readReceivedSend, relayedLatency } from "../lib/send/received";
 import { personFor, queryClient, qk, useAccountActivity, useBalance, useFx, useMe } from "../lib/state/data";
 import { useStore } from "../lib/state/observable";
@@ -14,6 +15,7 @@ import { Avatar, Banner, Btn, Btns, Card, Proof, Row, SettledIn, Skel } from "..
 import { AppBar } from "../ui/layout";
 import { DeskScreen } from "../ui/desk/money";
 import { useLocal } from "../ui/money";
+import { CheckRate, useFxRoundById } from "../ui/fx/rates";
 import { useFxPair } from "../ui/send/bits";
 import { Stub } from "../ui/Stub";
 import { Txt } from "../ui/Text";
@@ -48,6 +50,9 @@ export default function Received() {
   const fxFrom = useFx(fromCur);
   // Only for the rate source name (the recorded rate itself comes from the receipt).
   const pairInfo = useFxPair(fromCur, toCur);
+  const roundId = d ? d.fxRoundId.toString() : (row?.fxRoundId ?? "0");
+  const roundQ = useFxRoundById(roundId);
+  const fxTo = useFx(toCur);
 
   useEffect(() => {
     if (p.live && !buzzed.current) {
@@ -78,20 +83,27 @@ export default function Received() {
   const place = city ?? countryByCode(fromCountry)?.name;
   const rateE8 = d?.rateE8 ?? (row ? BigInt(row.fxRateE8) : 0n);
   const fxTs = d?.fxTimestamp ?? (row ? Number(row.fxTimestamp) : undefined);
-  const sides = usd !== undefined ? sendSides({ usdUnits: usd, from: fromCur, to: toCur, rateE8, usdToFrom: fxFrom.data?.rateE8 }) : null;
+  const sides = usd !== undefined ? sendSides({ usdUnits: usd, from: fromCur, to: toCur, rateE8, usdToFrom: fxFrom.data?.rateE8, usdToTo: fxTo.data?.rateE8 }) : null;
   const theirText = sides?.fromE8 !== null && sides?.fromE8 !== undefined ? fmtE8(sides.fromE8, fromCur) : undefined;
+  const myText = toCur !== "USD" && sides?.toE8 !== null && sides?.toE8 !== undefined ? fmtE8(sides.toE8, toCur) : undefined;
   const atMs = d?.at ? d.at * 1000 : row ? row.timestamp * 1000 : p.live ? Number(p.live) : undefined;
   const arrivedMs = p.live && /^\d+$/.test(p.live) ? Number(p.live) : atMs;
-  const rate = fromCur !== toCur && rateE8 > 0n ? rateLine(fromCur, toCur, rateE8, fxTs, pairInfo.data?.source) : null;
+  // 150 on the receiving side: the rate the sender's money was shown at, and its reference.
+  const fx = pickReceiptRate({
+    from: fromCur,
+    to: toCur,
+    recorded: { roundId, refRateE8: row?.refRateE8, diffBps: row?.fxDiffBps, appliedE8: rateE8, appliedAt: fxTs, appliedSource: pairInfo.data?.source },
+    round: roundQ.data,
+  });
   const who = name ?? "Someone";
   const myPlace = profile?.city ?? countryByCode(profile?.country)?.name;
   const loading = send.isLoading && !row && usd === undefined;
 
   const lines: [string, React.ReactNode][] = [
     ["From", [`${who}${place ? ` · ${place}` : ""} ${flag(fromCountry)}`.trim(), theirText].filter(Boolean).join(" · ")],
-    ["To", ["You", myPlace, usd !== undefined ? formatUsd(usd) : undefined].filter(Boolean).join(" · ")],
+    ["To", ["You", myPlace, myText, usd !== undefined ? formatUsd(usd) : undefined].filter(Boolean).join(" · ")],
   ];
-  if (rate) lines.push(["", rate]);
+  lines.push(...rateLines(fx));
   if (atMs) lines.push(["When", `${whenText(atMs)} ${zoneLabel(atMs)}`]);
 
   const sendBack = () => {
@@ -182,6 +194,7 @@ export default function Received() {
           }
         />
       </View>
+      <CheckRate rates={[fx]} usedAt={atMs ? Math.floor(atMs / 1000) : undefined} subtitle={`For the money ${who} sent you.`} style={{ marginTop: 12 }} />
       <Card tint style={{ marginTop: 12 }} p={14}>
         <Row between>
           <Txt v="t13" color="muted">

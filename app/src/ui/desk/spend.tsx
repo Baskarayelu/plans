@@ -20,15 +20,20 @@ import { Icon } from "../Icon";
 import { Avatar, Banner, Btn, Card, Chip, IconBtn, ListItem, Overline, Proof, Row, SettledIn } from "../kit";
 import { AppBar, Screen } from "../layout";
 import { PersonAvatar, PersonName, useMoney } from "../plan/common";
-import { MonoLine, payeeName, personOf, QuoteCard, ReceiptPhotoView, spendTitle, usePeopleMoney, useRateLine } from "../spend/parts";
+import { MonoLine, payeeName, personOf, QuoteCard, ReceiptPhotoView, spendTitle, } from "../spend/parts";
 import { Txt } from "../Text";
+import { CheckRate, useReceiptRates } from "../fx/rates";
+import { normCurrency } from "../../lib/fx/receiptRate";
 
 /** 29 spend detail. On phones a full screen; on a laptop (`panel`) the content of the right-hand detail panel. */
 export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDetail; panel?: boolean }) {
   const c = useColors();
   const m = useMoney();
-  const theirs = usePeopleMoney(plan);
-  const rate = useRateLine();
+  // Everyone's money on this receipt at one rate per currency: the round in effect when it was paid, else Plans' quote.
+  const shareCurrencies = Object.values(plan.people).map((p) => p.currency);
+  const fx = useReceiptRates({ currencies: [m.currency, ...shareCurrencies], atSec: s.executedAt ?? s.proposedAt ?? undefined });
+  const myLocal = (u: bigint) => (m.currency === "USD" ? undefined : fx.local(u, m.currency));
+  const theirs = (u: bigint, p: { currency: string }) => (p.currency === "USD" ? undefined : fx.local(u, p.currency));
   const rules = planRules(plan.raw);
   const amount = BigInt(s.amount);
   const who = personOf(plan, s.proposer_id);
@@ -49,6 +54,10 @@ export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDeta
           const parts = sharesFor(amount, (s.splitWeights ?? []).map(Number));
           return members.map((a, i) => ({ address: a, amount: parts[i] ?? 0n }));
         })();
+  // Rate lines for the currencies on this receipt: mine and everyone in the split.
+  const shownCurrencies = [m.currency, ...rows.map((r) => personOf(plan, r.address).currency)].map(normCurrency);
+  const rateLinesShown = fx.lines(shownCurrencies);
+  const shownRates = Array.from(new Set(shownCurrencies)).map((c) => fx.rates[c]).filter(Boolean);
   const allSame = rows.length > 0 && rows.every((r) => r.amount === rows[rows.length - 1].amount);
   const inSplit = !!plan.me && (rows.some((r) => r.address === plan.me) || (s.splitMembers ?? []).some((a) => a.toLowerCase() === plan.me));
   const open = s.disputes?.find((d) => d.status === "Open");
@@ -61,7 +70,7 @@ export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDeta
   const ruleText = s.approvalsRequired <= 1 ? `${ruleLine(rules, amount, 1)} · went through` : `Needed ${oks(s.approvalsRequired - 1)} · ${executed ? "approved" : s.status === "Cancelled" ? "didn't go through" : "waiting"}`;
 
   const share = () => {
-    const local = m.local(amount);
+    const local = myLocal(amount);
     void Share.share({
       message: `${title} · ${formatUsd(amount)}${local ? ` (${local})` : ""} · ${plan.meta.name}${s.txHash ? `\nProof: ${explorerTxUrl(s.txHash)}` : ""}`,
     }).catch(() => undefined);
@@ -83,9 +92,9 @@ export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDeta
           <Txt v="d34" tnum testID="spend-amount">
             {formatUsd(amount)}
           </Txt>
-          {m.local(amount) ? (
-            <Txt v="t17" color="muted" weight="medium">
-              {m.local(amount)}
+          {myLocal(amount) ? (
+            <Txt v="t17" color="muted" weight="medium" testID="spend-local-amount">
+              {myLocal(amount)}
             </Txt>
           ) : null}
         </Row>
@@ -128,7 +137,7 @@ export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDeta
       </Overline>
       {rows.map((r, i) => {
         const p = personOf(plan, r.address);
-        const local = p.me ? m.local(r.amount) : theirs(r.amount, p);
+        const local = p.me ? myLocal(r.amount) : theirs(r.amount, p);
         return (
           <ListItem
             key={r.address}
@@ -148,13 +157,20 @@ export function SpendDetailBody({ plan, s, panel }: { plan: PlanVM; s: SpendDeta
           <MonoLine>Rule</MonoLine>
           <Txt style={{ fontFamily: fonts.mono, fontSize: 13, color: c.ink, flexShrink: 1, textAlign: "right" }}>{ruleText}</Txt>
         </Row>
-        {rate ? <MonoLine>{rate}</MonoLine> : null}
+        {rateLinesShown.map(([k, v], i) => (
+          <View key={`${k}-${i}`} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }} testID={i === 0 ? "spend-rate" : undefined}>
+            <MonoLine>{k}</MonoLine>
+            <Txt style={{ fontFamily: fonts.mono, fontSize: 13, color: c.ink, flexShrink: 1, textAlign: "right" }}>{v}</Txt>
+          </View>
+        ))}
         {refunded ? <MonoLine>{`Back in the pot · ${formatUsd(BigInt(s.refunded))}`}</MonoLine> : null}
         <Row between style={{ marginTop: 4 }}>
           {settledMsVal !== undefined ? <SettledIn ms={settledMsVal} /> : <View />}
           <Proof hash={s.txHash} />
         </Row>
       </Card>
+
+      {executed && !fx.loading ? <CheckRate rates={shownRates} usedAt={s.executedAt ?? undefined} style={{ marginTop: 12 }} /> : null}
 
       {resolved.map((d) => (
         <View key={d.id} style={{ marginTop: 12 }}>

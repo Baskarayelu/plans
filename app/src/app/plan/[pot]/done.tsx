@@ -15,8 +15,8 @@ import { receipts, type ReceiptData } from "../../../lib/state/useAction";
 import { useColors } from "../../../theme/ThemeProvider";
 import { BigIcon, Banner, Btn, Btns, Proof, Row, SettledIn } from "../../../ui/kit";
 import { Screen } from "../../../ui/layout";
-import { useMoney } from "../../../ui/plan/common";
-import { PlanGate, useRateLine } from "../../../ui/spend/parts";
+import { PlanGate, useSpendRate } from "../../../ui/spend/parts";
+import { CheckRate } from "../../../ui/fx/rates";
 import { Stub } from "../../../ui/Stub";
 import { Txt } from "../../../ui/Text";
 import { ActivityIndicator } from "react-native";
@@ -70,8 +70,7 @@ function DoneBody({ plan, tx }: { plan: PlanVM; tx?: string }) {
 
 function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: () => void }) {
   const { desk } = useLayout();
-  const m = useMoney();
-  const rate = useRateLine();
+  const fx = useSpendRate(r.at);
   const personal = r.kind === "personal";
   const amount = BigInt(str(r.amount) || "0");
   const cat = categoryOf(Number(r.category ?? 7));
@@ -95,11 +94,11 @@ function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: ()
         ["Split", members.length ? `${members.length} ${members.length === 1 ? "person" : "people"}${each !== null ? ` · ${formatUsd(each)} each` : " · custom shares"}` : "—"],
         ["Rule", `${str(r.rule) || "Rules checked"} · went through now`],
       ];
-  if (rate) lines.push(["", rate]);
+  lines.push(...fx.lines);
   lines.push(["When", fmtWhen(r.at)]);
 
   const share = () => {
-    const local = m.local(amount);
+    const local = fx.local(amount);
     const head = personal ? `I paid ${formatUsd(amount)}${local ? ` (${local})` : ""} for ${plan.meta.name}` : `${payee} got ${formatUsd(amount)}${local ? ` (${local})` : ""} from the ${plan.meta.name} pot`;
     void Share.share({ message: `${head}${note ? ` · ${note}` : ""}\nProof: ${explorerTxUrl(r.txHash)}` }).catch(() => undefined);
   };
@@ -134,9 +133,9 @@ function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: ()
               <Txt v="d34" tnum testID="receipt-amount">
                 {formatUsd(amount)}
               </Txt>
-              {m.local(amount) ? (
-                <Txt v="t17" color="muted" weight="medium">
-                  {m.local(amount)}
+              {fx.local(amount) ? (
+                <Txt v="t17" color="muted" weight="medium" testID="receipt-local-amount">
+                  {fx.local(amount)}
                 </Txt>
               ) : null}
             </Row>
@@ -155,6 +154,7 @@ function Receipt({ plan, r, onDone }: { plan: PlanVM; r: ReceiptData; onDone: ()
           </>
         }
       />
+      <CheckRate rates={fx.rates} usedAt={r.at} style={{ marginTop: 12 }} />
     </>
   );
   if (desk)
