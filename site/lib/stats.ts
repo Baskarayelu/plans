@@ -228,8 +228,10 @@ export function formatInt(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
-export function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "—";
+export function formatDuration(input: number | string | null): string {
+  if (input === null) return "—";
+  const seconds = Number(input);
+  if (!Number.isFinite(seconds)) return "—";
   if (seconds < 60) return `${Math.round(seconds)} s`;
   if (seconds < 3600) return `${(seconds / 60).toFixed(seconds < 600 ? 1 : 0)} min`;
   if (seconds < 86400) return `${(seconds / 3600).toFixed(1)} h`;

@@ -100,10 +100,13 @@ export default async function StatsPage() {
   const live = stats.state === "ok" && !!stats.global;
   const g = stats.global;
   const dash = "—";
-  const n = (v: number | undefined) => (live && v !== undefined ? formatInt(v) : dash);
+  // Hasura may send numeric columns as strings (HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES): coerce first.
+  const n = (v: number | string | undefined) => (live && v !== undefined ? formatInt(Number(v)) : dash);
   const usd = (v: number | string | undefined) => (live && v !== undefined ? formatUsd(ausd(v)) : dash);
-  const med = (v: number | undefined) =>
-    live && v !== undefined ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : dash;
+  const med = (v: number | string | undefined) => {
+    const x = Number(v);
+    return live && v !== undefined && Number.isFinite(x) ? (Number.isInteger(x) ? String(x) : x.toFixed(1)) : dash;
+  };
   const ttffa =
     live && stats.ttffaMedianSeconds !== null
       ? formatDuration(stats.ttffaMedianSeconds)
