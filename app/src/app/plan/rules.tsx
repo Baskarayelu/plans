@@ -19,6 +19,7 @@ import { useMoney } from "../../ui/plan/common";
 import { Txt } from "../../ui/Text";
 import { CreateHead, CreatePanel } from "../../ui/desk/create";
 import { Columns, Narrow } from "../../ui/desk/plan";
+import { BudgetsCard } from "../../ui/plan/templates";
 import { useLayout } from "../../ui/shell/responsive";
 
 const VISIBLE: Exclude<PresetId, "demo">[] = ["easygoing", "balanced", "strict", "pilot"];
@@ -107,6 +108,8 @@ export default function RulesPreset() {
           Pilot runs for 48 hours from when you create it, and what's left is shared out straight after.
         </Txt>
       ) : null}
+
+      <BudgetsCard d={d} budgets={rules.categoryBudgets} />
 
       <ListItem
         left={<Tile icon="sliders" />}

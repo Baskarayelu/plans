@@ -11,6 +11,7 @@ import { findEvent } from "../../lib/api/relayer";
 import * as A from "../../lib/chain/actions";
 import { HighTier, PayeePolicy, type Rules } from "../../lib/chain/eip712";
 import { draft, draftRules } from "../../lib/core/draft";
+import { draftTemplateBudgets } from "../../lib/domain/templates";
 import { formatUsdShort, ONE_DOLLAR } from "../../lib/domain/currency";
 import { CATEGORIES, PRESETS, rulesFromIndexer, tierStrip, UINT64_MAX } from "../../lib/domain/rules";
 import { queryClient, qk, usePlan } from "../../lib/state/data";
@@ -125,10 +126,23 @@ export default function Customise() {
   const changed = !sameRules(rules, initial);
   const isMember = !!plan.data?.isMember;
 
-  const reset = () => setRules(proposal ? initial : PRESETS[d.customBase].rules);
+  const reset = () => {
+    if (proposal) return setRules(initial);
+    const tb = draftTemplateBudgets(d);
+    setRules(tb ? { ...PRESETS[d.customBase].rules, categoryBudgets: tb } : PRESETS[d.customBase].rules);
+  };
 
   const save = () => {
-    draft.patch({ preset: "custom", custom: rules });
+    const before = draftRules(d).categoryBudgets;
+    const budgetsChanged = rules.categoryBudgets.some((x, i) => x !== before[i]);
+    const hasBudgets = rules.categoryBudgets.some((x) => x > 0n);
+    draft.patch({
+      preset: "custom",
+      custom: rules,
+      // budgets ride along if the person goes back to a preset card
+      budgets: hasBudgets ? rules.categoryBudgets : undefined,
+      template: d.template ? { ...d.template, edited: d.template.edited || budgetsChanged } : undefined,
+    });
     router.back();
   };
 

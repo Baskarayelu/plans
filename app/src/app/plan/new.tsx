@@ -1,9 +1,13 @@
-/** 10 Create plan: basics — name, emoji, wristband colour and dates, with a live preview card. */
+/**
+ * 10 Create plan: basics — name, emoji, wristband colour and dates, with a live preview card.
+ * "Start from" a trip template fills all of it plus the rules preset and budgets (Group 2).
+ */
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { addDays, dayOf, draft, EMOJIS, MAX_PLAN_SEC, planTimes, resetDraft, type WristbandName } from "../../lib/core/draft";
 import { PRESETS } from "../../lib/domain/rules";
+import { followTemplate } from "../../lib/domain/templates";
 import { useStore } from "../../lib/state/observable";
 import { useColors } from "../../theme/ThemeProvider";
 import { WRISTBANDS } from "../../theme/tokens";
@@ -14,6 +18,7 @@ import { AppBar, Screen } from "../../ui/layout";
 import { Txt } from "../../ui/Text";
 import { CreateHead, CreatePanel } from "../../ui/desk/create";
 import { Narrow } from "../../ui/desk/plan";
+import { TemplateBudgets, TemplatePicker } from "../../ui/plan/templates";
 import { useLayout } from "../../ui/shell/responsive";
 
 const MAX_DAYS = Math.floor(MAX_PLAN_SEC / 86400);
@@ -30,7 +35,7 @@ export default function NewPlan() {
 
   useEffect(() => {
     // a draft left from an earlier day: move the start to today
-    if (d.startDay < today) draft.patch({ startDay: today, endDay: Math.max(d.endDay, addDays(today, 1)) });
+    if (d.startDay < today) draft.patch(followTemplate(d, { startDay: today, endDay: Math.max(d.endDay, addDays(today, 1)) }));
   }, [d.startDay, d.endDay, today]);
 
   const name = d.name.trim();
@@ -123,6 +128,8 @@ export default function NewPlan() {
           </>
         )}
       </View>
+
+      <TemplateBudgets d={d} />
     </>
   );
   const sheets = (
@@ -137,7 +144,7 @@ export default function NewPlan() {
         testID="sheet-start-date"
         onPick={(v) => {
           const span = Math.round((d.endDay - d.startDay) / 86_400_000);
-          draft.patch({ startDay: v, endDay: addDays(v, Math.max(1, Math.min(span, MAX_DAYS - 1))) });
+          draft.patch(followTemplate(d, { startDay: v, endDay: addDays(v, Math.max(1, Math.min(span, MAX_DAYS - 1))) }));
           setPick(null);
         }}
       />
@@ -151,7 +158,7 @@ export default function NewPlan() {
         max={addDays(d.startDay, MAX_DAYS - 1)}
         testID="sheet-end-date"
         onPick={(v) => {
-          draft.patch({ endDay: v });
+          draft.patch(followTemplate(d, { endDay: v }));
           setPick(null);
         }}
       />
@@ -161,8 +168,9 @@ export default function NewPlan() {
   if (desk)
     return (
       <Screen testID="screen-plan-new">
-        <Narrow max={560} center>
+        <Narrow max={640} center>
           <CreateHead step={1} title="Name your plan" sub="A trip, a festival, a house share. You set the rules next, then invite friends." />
+          <TemplatePicker d={d} />
           {form}
         </Narrow>
         <View style={{ height: 24 }} />
@@ -177,6 +185,7 @@ export default function NewPlan() {
   return (
     <Screen testID="screen-plan-new" dock={nextBtn}>
       <AppBar icon="x" title="New plan" onBack={close} right={<Txt v="t13" color="muted" style={{ marginRight: 12 }}>1 of 2</Txt>} />
+      <TemplatePicker d={d} top={0} bottom={16} />
 
       <View style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 14, overflow: "hidden" }} testID="plan-preview">
         <Wristband color={WRISTBANDS[d.color]} text={band} />

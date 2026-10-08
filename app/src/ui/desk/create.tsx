@@ -5,7 +5,9 @@
 import React from "react";
 import { View } from "react-native";
 import { draft, draftBase, draftRules, planTimes } from "../../lib/core/draft";
+import { formatUsdShort } from "../../lib/domain/currency";
 import { PRESETS, presetBlurb, tierStrip } from "../../lib/domain/rules";
+import { budgetTotal, templateOf } from "../../lib/domain/templates";
 import { useStore } from "../../lib/state/observable";
 import { useColors } from "../../theme/ThemeProvider";
 import { WRISTBANDS } from "../../theme/tokens";
@@ -76,9 +78,29 @@ export function CreatePanel({ step, children }: { step: 1 | 2; children: React.R
               Rules
             </Txt>
             <Txt v="t13" weight="bold">
-              {step === 1 ? "Next step" : d.preset === "custom" ? `Custom, from ${PRESETS[base].title}` : PRESETS[base].title}
+              {step === 1 && !d.template ? "Next step" : d.preset === "custom" ? `Custom, from ${PRESETS[base].title}` : PRESETS[base].title}
             </Txt>
           </Row>
+          {rules.categoryBudgets.some((b) => b > 0n) ? (
+            <Row between>
+              <Txt v="t13" color="muted">
+                Budgets
+              </Txt>
+              <Txt v="t13" weight="bold" testID="panel-budget-total">
+                {d.template ? `${formatUsdShort(budgetTotal(rules.categoryBudgets))} · ${d.template.people} people` : formatUsdShort(budgetTotal(rules.categoryBudgets))}
+              </Txt>
+            </Row>
+          ) : null}
+          {d.template ? (
+            <Row between>
+              <Txt v="t13" color="muted">
+                Started from
+              </Txt>
+              <Txt v="t13" weight="bold">
+                {templateOf(d.template.id).title}
+              </Txt>
+            </Row>
+          ) : null}
           {step === 2 ? (
             <>
               <Tiers segs={tierStrip(rules)} height={26} fontSize={11} />
