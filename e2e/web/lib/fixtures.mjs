@@ -512,12 +512,41 @@ export function buildWorld({ me, myPub, now = Math.floor(Date.now() / 1000), emp
     };
   }
 
+  // ── reference rounds (FxReference, written by Chainlink CRE) ──
+  // 40 covers the send to Sam (3 h ago) and the tram spend (1 h ago), with a pound slightly weaker
+  // than today's quote so its receipt shows a real difference; 41 is the one the Glastonbury
+  // settle-up recorded; 42 is the latest (50 min ago). Spends older than 6 h after round 40 have no
+  // round in effect and fall back to Plans' quote.
+  const roundRow = (id, scheduledTime, overrides = {}) => {
+    const rates = { ...USD_PER_E8, ...overrides };
+    return {
+      id: String(id),
+      fxReference: "0xab7eede1da994137a340155f350a8f81358ffca2",
+      roundId: String(id),
+      scheduledTime: String(scheduledTime),
+      writtenAt: scheduledTime + 60,
+      rateDate: Number(new Date((scheduledTime - 86400) * 1000).toISOString().slice(0, 10).replace(/-/g, "")),
+      sourceMask: 3,
+      ...Object.fromEntries(["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"].map((c) => [`rate${c}`, String(rates[c])])),
+      blockNumber: 4_799_000 + id,
+      txHash: txh(`fxround/${id}`),
+      _rates: rates,
+    };
+  };
+  const fxRounds = [roundRow(40, now - 3 * H - 40 * 60, { GBP: 134_650_000n }), roundRow(41, G.settledAt - 25 * 60, { GBP: 127_110_000n, INR: 1_198_800n }), roundRow(42, now - 50 * 60)];
+  const roundById = (id) => fxRounds.find((r) => r.roundId === String(id)) ?? null;
+
   // ── my money (AccountActivity) ──
   const account = { Activity: [], sendsIn: [], sendsOut: [], claimsIn: [], claimsOut: [], payouts: [] };
   if (!empty) {
     for (const p of [pots[POTS.lisbon], pots[POTS.glasto]]) for (const a of p.activity) if (a.account_id === me) account.Activity.push({ ...a });
-    const sendFields = (id, from, to, amountUsd, fromC, toC, fromCur, toCur, at) => {
+    // `roundId` = the round the sender named ("0" = none, then the receipt shows the quoted rate);
+    // its reference rate and the difference are worked out like PlansSend does.
+    const sendFields = (id, from, to, amountUsd, fromC, toC, fromCur, toCur, at, roundId = "0") => {
       const rate = fxRateE8(fromCur, toCur) ?? 100_000_000n;
+      const r = roundById(roundId);
+      const usdOf = (c) => (c === "USD" ? 100_000_000n : r?._rates[c]);
+      const ref = r && usdOf(fromCur) && usdOf(toCur) ? (usdOf(fromCur) * 100_000_000n) / usdOf(toCur) : 0n;
       return {
         id,
         from_id: from,
@@ -529,17 +558,19 @@ export function buildWorld({ me, myPub, now = Math.floor(Date.now() / 1000), emp
         toCurrency: toCur,
         fxRateE8: String(rate),
         fxTimestamp: String(at - 30),
-        fxRoundId: "42",
-        refRateE8: String(rate),
-        fxDiffBps: "0",
+        fxRoundId: r ? String(roundId) : "0",
+        refRateE8: String(ref),
+        fxDiffBps: String(ref > 0n ? ((rate - ref) * 10_000n) / ref : 0n),
         memoHash: ZERO_HASH,
         timestamp: at,
         txHash: txh(`send/${id}`),
       };
     };
-    // I sent £1.50 ($2.02) to Sam; Ben sent me $12.00
-    account.sendsOut.push(sendFields(ev("send/out1").id, me, sam.address, 2.02, myCountry, "US", "GBP", "USD", now - 3 * H));
+    // I sent £1.50 ($2.02) to Sam, naming round 40; Ben sent me $12.00 (pounds to pounds, no round);
+    // Asha sent me $6.00 from rupees with no round (the receipt shows Plans' quote).
+    account.sendsOut.push(sendFields(ev("send/out1").id, me, sam.address, 2.02, myCountry, "US", "GBP", "USD", now - 3 * H, "40"));
     account.sendsIn.push(sendFields(ev("send/in1").id, ben.address, me, 12, "GB", myCountry, "GBP", "GBP", now - 2 * D - 5 * H));
+    account.sendsIn.push(sendFields(ev("send/in2").id, asha.address, me, 6, "IN", myCountry, "INR", "GBP", now - 5 * H));
     // a $25 link I sent, claimed by Asha; a $10 link from Sam that I claimed
     account.claimsOut.push({ id: "c-101", claimId: "101", claimSigner: pad("c1a101", "01"), amount: USD(25), expiry: String(now + 2 * D), status: "Claimed", createdAt: now - 5 * D, claimedAt: now - 5 * D + 2 * H, refundedAt: null, recipient_id: asha.address, txHash: txh("claim/101") });
     account.claimsIn.push({ id: "c-88", claimId: "88", source: sam.address, amount: USD(10), fromCountry: "US", toCountry: myCountry, status: "Claimed", createdAt: now - 7 * D, claimedAt: now - 6 * D, txHash: txh("claim/88") });
@@ -568,20 +599,9 @@ export function buildWorld({ me, myPub, now = Math.floor(Date.now() / 1000), emp
     txHash: txh("claim/202"),
   };
 
-  const fxRound = {
-    id: "42",
-    fxReference: "0xab7eede1da994137a340155f350a8f81358ffca2",
-    roundId: "42",
-    scheduledTime: String(now - 50 * 60),
-    writtenAt: now - 49 * 60,
-    rateDate: Number(new Date((now - 86400) * 1000).toISOString().slice(0, 10).replace(/-/g, "")),
-    sourceMask: 3,
-    ...Object.fromEntries(["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"].map((c) => [`rate${c}`, String(USD_PER_E8[c])])),
-    blockNumber: 4_799_000,
-    txHash: txh("fxround/42"),
-  };
+  const fxRound = fxRounds[fxRounds.length - 1];
 
-  return { me, now, pots, account, claimLink, fxRound, empty };
+  return { me, now, pots, account, claimLink, fxRound, fxRounds, empty };
 }
 
 function hash32(s) {
@@ -701,8 +721,14 @@ export function answerGraphql(world, query, variables = {}, myPubHex = null) {
     case "AccountKeys":
       return { Account: (variables.accounts ?? []).map(keyRow).filter(Boolean) };
     case "LatestFxRound":
+      return { FxRound: strip([world.fxRound]) };
     case "FxRoundById":
-      return { FxRound: [world.fxRound] };
+      return { FxRound: strip(world.fxRounds.filter((r) => r.roundId === String(variables.roundId))) };
+    case "FxRoundAt": {
+      const at = Number(variables.at);
+      const r = world.fxRounds.filter((x) => Number(x.scheduledTime) <= at).sort((a, b) => Number(b.scheduledTime) - Number(a.scheduledTime))[0];
+      return { FxRound: r ? strip([r]) : [] };
+    }
     default:
       return null;
   }
@@ -796,6 +822,43 @@ const preflight = () => ({ status: 204, headers: CORS, body: "" });
 
 const isRelayer = (url) => /relayer/.test(url.hostname);
 
+const bytesToAscii = (h) => {
+  try {
+    return Buffer.from(String(h).replace(/^0x/, ""), "hex").toString("latin1").replace(/\0/g, "");
+  } catch {
+    return "";
+  }
+};
+
+/** A successful relay result with the events the app reads for `action` (opts.relay). */
+function fakeRelay(world, action, params) {
+  const events = [];
+  const big = (v) => BigInt(String(v ?? 0));
+  if (action === "send") {
+    const m = params.meta ?? {};
+    const r = world.fxRounds.find((x) => x.roundId === String(big(m.fxRoundId)));
+    const from = bytesToAscii(m.fromCurrency) || "USD";
+    const to = bytesToAscii(m.toCurrency) || "USD";
+    const usd = (c) => (c === "USD" ? 100_000_000n : r?._rates[c]);
+    const ref = r && usd(from) && usd(to) ? (usd(from) * 100_000_000n) / usd(to) : 0n;
+    const applied = big(m.fxRateE8);
+    events.push({ name: "Sent", args: { from: params.from, to: m.to, amount: String(params.auth?.value ?? 0), fxRoundId: r ? r.roundId : "0", refRateE8: String(ref), fxDiffBps: String(ref > 0n ? ((applied - ref) * 10_000n) / ref : 0n) } });
+  } else if (action === "propose") {
+    events.push({ name: "SpendProposed", address: params.pot, args: { id: "99", approvalsRequired: "1" } }, { name: "SpendExecuted", address: params.pot, args: { id: "99" } });
+  } else if (action === "settle") {
+    const pot = world.pots[String(params.pot).toLowerCase()];
+    let paid = 0n;
+    for (const m of pot?.members ?? []) {
+      const net = big(m.net);
+      if (net <= 0n) continue;
+      paid += net;
+      events.push({ name: "Payout", address: params.pot, args: { member: m.address, amount: String(net) } });
+    }
+    events.push({ name: "Settled", address: params.pot, args: { by: world.me, paidOut: String(paid), pulledIn: "0", unpaidClaims: "0", fxRoundId: world.fxRound.roundId } });
+  }
+  return { action, txHash: toHex(rand(32)), blockNumber: "4800999", status: "success", latencyMs: 640, totalMs: 700, events };
+}
+
 /**
  * Installs the fixtures on `page` (call before the first navigation). Options:
  *   empty      true → no plans, no activity (first-run states)
@@ -806,6 +869,10 @@ const isRelayer = (url) => /relayer/.test(url.hostname);
  *   lisbonEnded true → the Lisbon pot (ids.lisbon) has ended and everyone checked the numbers, so
  *              plan → Review → "See the settle-up" reaches the settle-up preview (design 112).
  *              ids.lisbonEnded is that same ended state under its own address in either mode.
+ *   relay      true → POST /v1/relay answers success with the events the app reads (send: Sent with
+ *              the round's reference rate; propose: SpendProposed + SpendExecuted; settle: Payout per
+ *              member owed money + Settled with the latest round). Nothing reaches the network. Install
+ *              after noTestnetWrites (this route goes first).
  *   log        true → print every answered request
  * Returns { ids, people, world(), me(), stop() }.
  */
@@ -948,6 +1015,29 @@ export async function installFixtures(page, opts = {}) {
     return undefined;
   });
 
+  // Fake relay results (opts.relay): ahead of every other route, including noTestnetWrites.
+  const stopRelay = opts.relay
+    ? await route(
+        page,
+        async (req, url) => {
+          if (!isRelayer(url) || url.pathname !== "/v1/relay") return undefined;
+          if (req.method() === "OPTIONS") return preflight();
+          if (req.method() !== "POST") return undefined;
+          let body;
+          try {
+            body = JSON.parse(req.postData() ?? "");
+          } catch {
+            return undefined;
+          }
+          const world = await worldFor();
+          log(`relay ${body?.action} (fake)`);
+          await new Promise((r) => setTimeout(r, 300));
+          return json(fakeRelay(world, String(body?.action ?? ""), body?.params ?? {}));
+        },
+        { first: true },
+      )
+    : () => undefined;
+
   return {
     ids: {
       lisbon: POTS.lisbon,
@@ -962,7 +1052,7 @@ export async function installFixtures(page, opts = {}) {
     people: PEOPLE,
     me: () => state.me,
     world: () => state.world,
-    stop,
+    stop: () => (stop(), stopRelay()),
   };
 }
 

@@ -97,6 +97,48 @@ async function shoot(page, name, width, takeErrors) {
   }
 }
 
+/** Types an amount on the keypad (phones) or into the amount field (laptops). */
+async function enterAmount(page, text) {
+  if (await visible(page, "key-1")) {
+    for (const ch of text) await tap(page, `key-${ch === "." ? "dot" : ch}`);
+    return;
+  }
+  const el = await page.waitForSelector('input[data-testid="amount-display"]', { visible: true, timeout: 15000 });
+  await el.click({ clickCount: 3 });
+  await el.type(text);
+}
+
+/** Opens a money row from Activity: a phone goes to the receipt; a laptop opens the panel, then the receipt. */
+async function openMoneyRow(page, desk, rowId, screen) {
+  await goPlace(page, "activity", desk);
+  await waitAny(page, ["screen-activity"]);
+  await sleep(800);
+  await tap(page, rowId, { timeout: 15000 });
+  if (desk) {
+    await waitAny(page, ["btn-panel-open", screen], 10000);
+    if (await visible(page, "btn-panel-open")) await tap(page, "btn-panel-open");
+  }
+  await waitAny(page, [screen]);
+  await sleep(1800);
+}
+
+/** Opens "Check this rate" on the receipt on screen (scrolled into view). */
+async function openRateSheet(page) {
+  await page.$eval('[data-testid="btn-check-rate"]', (el) => el.scrollIntoView({ block: "center" }));
+  await tap(page, "btn-check-rate");
+  await waitAny(page, ["sheet-check-rate"]);
+  await sleep(900);
+}
+async function closeRateSheet(page) {
+  try {
+    await page.$eval('[data-testid="btn-rate-done"]', (el) => el.scrollIntoView({ block: "center" }));
+    await tap(page, "btn-rate-done", { timeout: 3000 });
+  } catch {
+    await page.$eval('[data-testid="btn-rate-done"]', (el) => el.click()).catch(() => page.keyboard.press("Escape"));
+  }
+  await sleep(500);
+}
+
 /** Rail on laptops, tab bar on phones; backs out of pushed screens first when needed. */
 async function goPlace(page, place, desk) {
   const id = desk ? `rail-${place}` : `tab-${place}`;
@@ -140,7 +182,8 @@ async function session(browser, width, { ended }) {
   await serveLocalApp(page);
   await addPasskeyAuthenticator(page);
   await noTestnetWrites(page);
-  const fx = await installFixtures(page, { balance: 5_000_000n, lisbonEnded: ended, myCountry: "GB" });
+  // relay: writes answer with fixture results (send, propose, settle), so receipts made "just now" can be shot.
+  const fx = await installFixtures(page, { balance: 5_000_000n, lisbonEnded: ended, myCountry: "GB", relay: true });
   await createAccount(page, { name: "Maya", country: "GB", countryName: "United Kingdom", city: "London" });
   await waitAny(page, [`plan-card-${fx.ids.lisbon.slice(2, 8)}`]);
   await sleep(1500);
@@ -203,10 +246,86 @@ async function session(browser, width, { ended }) {
       await waitAny(page, ["screen-you"]);
       await sleep(1000);
     });
+    // Group 2 · rates on every receipt (150–152): recorded round, Plans' quote, same currency.
+    const acct = fx.world()?.account;
+    const sendOut = acct?.sendsOut[0]?.txHash;
+    const inQuote = acct?.sendsIn.find((x) => x.fromCurrency !== x.toCurrency)?.txHash;
+    const inSame = acct?.sendsIn.find((x) => x.fromCurrency === x.toCurrency)?.txHash;
+    if (sendOut) {
+      await step("receipt-sent", () => openMoneyRow(page, desk, `row-sendOut-${sendOut.slice(2, 8)}`, "screen-sent"));
+      await step("rate-sheet-sent", async () => {
+        if (!(await visible(page, "screen-sent"))) await openMoneyRow(page, desk, `row-sendOut-${sendOut.slice(2, 8)}`, "screen-sent");
+        await openRateSheet(page);
+      });
+      if (want("rate-sheet-sent")) await closeRateSheet(page);
+    }
+    if (inQuote) await step("receipt-received-quote", () => openMoneyRow(page, desk, `row-sendIn-${inQuote.slice(2, 8)}`, "screen-received"));
+    if (inSame) await step("receipt-received-same", () => openMoneyRow(page, desk, `row-sendIn-${inSame.slice(2, 8)}`, "screen-received"));
+    await step("receipt-spend-round", async () => {
+      await openPlan(page, desk, L);
+      await page.$eval('[data-testid="feed-item-5"]', (el) => el.scrollIntoView({ block: "center" })).catch(() => undefined);
+      await tap(page, "feed-item-5", { timeout: 15000 });
+      await waitAny(page, ["spend-amount"]);
+      await sleep(2000);
+    });
+    await step("receipt-spend-quote", async () => {
+      await openPlan(page, desk, L);
+      // an older spend (yesterday): no round was in effect then. Whichever of 1–4 the feed shows.
+      const id = await page.evaluate(() => ["1", "2", "3", "4"].map((n) => `feed-item-${n}`).find((t) => document.querySelector(`[data-testid="${t}"]`)));
+      if (!id) throw new Error("no older spend in the feed");
+      await page.$eval(`[data-testid="${id}"]`, (el) => el.scrollIntoView({ block: "center" }));
+      await sleep(400);
+      await tap(page, id, { timeout: 15000 });
+      await waitAny(page, ["spend-amount"]);
+      await sleep(2000);
+    });
+    // A spend and a send made now (the fake relay answers): receipts from this phone's own result.
+    await step("receipt-spend-done", async () => {
+      await openPlan(page, desk, L);
+      await tap(page, "btn-pay");
+      await waitAny(page, ["screen-pay"]);
+      await sleep(600);
+      await tap(page, "payee-before-0");
+      await waitAny(page, ["screen-pay-form"]);
+      await enterAmount(page, "5");
+      await sleep(800);
+      await tap(page, "btn-confirm-with-fingerprint");
+      await waitAny(page, ["done-title"], 40000);
+      await sleep(2000);
+    });
+    await step("receipt-sent-now", async () => {
+      await goPlace(page, "send", desk);
+      await waitAny(page, ["screen-send"]);
+      await tap(page, `recent-${PEOPLE.sam.address.slice(2, 8)}`, { timeout: 15000 });
+      await waitAny(page, ["amount-display", "screen-send-amount"]);
+      await enterAmount(page, "1.5");
+      await sleep(1200);
+      if (await visible(page, "btn-continue")) await tap(page, "btn-continue");
+      await waitAny(page, ["btn-confirm-with-fingerprint"]);
+      await sleep(1500);
+      await tap(page, "btn-confirm-with-fingerprint");
+      await waitAny(page, ["sent-summary"], 40000);
+      await sleep(2000);
+    });
+    await step("rate-sheet-sent-now", async () => {
+      if (!(await visible(page, "sent-summary"))) throw new Error("no fresh Sent receipt on screen");
+      await openRateSheet(page);
+    });
+    if (want("rate-sheet-sent-now")) await closeRateSheet(page);
     await step("summary", async () => {
       await openPlan(page, desk, G);
       await tap(page, "btn-see-summary");
       await waitAny(page, ["screen-memory"]);
+      await sleep(1200);
+    });
+    await step("summary-rates", async () => {
+      if (!(await visible(page, "screen-memory"))) {
+        await openPlan(page, desk, G);
+        await tap(page, "btn-see-summary");
+        await waitAny(page, ["screen-memory"]);
+      }
+      await waitAny(page, ["memory-rates"], 15000);
+      await page.$eval('[data-testid="memory-rates"]', (el) => el.scrollIntoView({ block: "center" }));
       await sleep(1200);
     });
     // Not reachable by clicking (a settled plan links to its summary, not to /settle): pushState,
@@ -215,6 +334,17 @@ async function session(browser, width, { ended }) {
       await pushRoute(page, `/app/plan/${G}/settle`);
       await unlockIfNeeded(page);
       await sleep(2500);
+    });
+    await step("rate-sheet-settled", async () => {
+      if (!(await visible(page, "screen-settled"))) throw new Error("not on the settled receipt");
+      await openRateSheet(page);
+    });
+    if (want("rate-sheet-settled")) await closeRateSheet(page);
+    await step("share-card", async () => {
+      if (!(await visible(page, "screen-settled"))) throw new Error("not on the settled receipt");
+      await tap(page, "btn-share");
+      await waitAny(page, ["sheet-share-settle"]);
+      await sleep(1500);
     });
   } else {
     await step("settle", async () => {
@@ -225,6 +355,19 @@ async function session(browser, width, { ended }) {
       await tap(page, "btn-see-the-settle-up", { timeout: 15000 });
       await waitAny(page, ["screen-settle-preview"]);
       await sleep(1500);
+    });
+    await step("receipt-settled-now", async () => {
+      if (!(await visible(page, "btn-settle-up"))) {
+        await openPlan(page, desk, L);
+        const got = await waitAny(page, ["btn-review-and-settle", "btn-banner-review"], 10000);
+        await tap(page, got ?? "btn-review-and-settle");
+        await tap(page, "btn-see-the-settle-up", { timeout: 15000 });
+        await waitAny(page, ["screen-settle-preview"]);
+      }
+      await page.waitForFunction(() => !document.querySelector('[data-testid="btn-settle-up"]')?.closest("[aria-disabled=true]"), { timeout: 15000 }).catch(() => undefined);
+      await tap(page, "btn-settle-up");
+      await waitAny(page, ["settled-stub"], 40000);
+      await sleep(2500);
     });
   }
   await ctx.close();
@@ -257,9 +400,9 @@ try {
     console.log(`\n${width} px`);
     await fresh(browser, width, "welcome", "/app", ["screen-welcome"]);
     await fresh(browser, width, "claim", claimPath(), ["screen-claim"]);
-    const normal = ["home", "plan", "approval", "pay", "send", "send-amount", "activity", "you", "summary", "settled"];
+    const normal = ["home", "plan", "approval", "pay", "send", "send-amount", "activity", "you", "summary", "settled", "receipt-sent", "rate-sheet-sent", "receipt-received-quote", "receipt-received-same", "receipt-spend-round", "receipt-spend-quote", "receipt-spend-done", "receipt-sent-now", "rate-sheet-sent-now", "rate-sheet-settled", "share-card", "summary-rates"];
     if (normal.some(want)) await session(browser, width, { ended: false });
-    if (want("settle")) await session(browser, width, { ended: true });
+    if (want("settle") || want("receipt-settled-now")) await session(browser, width, { ended: true });
   }
 } finally {
   await browser.close();
