@@ -225,7 +225,7 @@ function InviteOpened({
   // B5: "Opening passkey…" only when the system sheet takes over a second; 129 after 15 s.
   const waiting = authBusy && wait.phase === "waiting";
   const stuck = authBusy && wait.phase === "stuck" ? passkeyNotice("stuck", "create") : null;
-  const label = waiting ? "Opening passkey…" : stuck ? "Try again" : status === "unlocked" ? "Join" : "Join with fingerprint";
+  const label = waiting ? "Opening passkey…" : stuck ? "Try again" : status === "unlocked" ? "Join" : Platform.OS === "web" ? "Join with passkey" : "Join with fingerprint";
   const shownRules = allRules ? words : words.slice(0, 5);
 
   return (
