@@ -4,7 +4,7 @@ A group money pot for trips and plans. Friends in different countries join with 
 
 Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 
-## Status (7 Oct 2026)
+## Status (8 Oct 2026)
 
 **Live on Monad testnet; not yet on mainnet.** Mainnet comes after the feature set is frozen and a full testnet run has passed.
 
@@ -12,10 +12,14 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 |---|---|---|---|
 | Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **250 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
 | Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 44 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 44 |
-| Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app | **122 passing** (unit, plus integration against anvil) |
-| Envio indexer | [`indexer/`](indexer) | Built and tested, not deployed | **26 passing** |
-| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0, test 2](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.2) (Monad testnet) | **173 passing**, plus a copy check that fails the build on crypto words |
+| Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app, with browser push (web push); Android push pending (needs Firebase) | **165 passing** (unit, plus integration against anvil) |
+| Envio indexer | [`indexer/`](indexer) | **Self-hosted on Railway, syncing Monad testnet** (see [Indexer](#indexer)); Envio Cloud configured, not yet deployed | **26 passing** |
+| Chainlink CRE workflow | [`cre/fx-workflow/`](cre/fx-workflow) | Exchange-rate rounds 1 and 2 written to FxReference on Monad testnet with `cre workflow simulate --broadcast` (simulation forwarder); not deployed to a CRE DON | **69 passing** |
+| Web app | [`app/`](app) (web build) | **Live on Monad testnet** at https://plans.0xo.in/app: passkey sign-in, link a browser, browser notifications, collect after settle-up | Post-deploy check on every deploy against the public URL, Chrome and Safari: last run 43/43 |
+| Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0, test 2](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.2) (Monad testnet) | **314 passing** (shared with the web app), plus a copy check that fails the build on crypto words |
 | Website and docs | [`site/`](site) | Live at https://plans.0xo.in | `next build`; screenshots at 1440 and 390 px in both themes in `site/screenshots/` |
+
+Not done yet: mainnet deployment, a full end-to-end run on testnet across phones and the web app (Stage B), and the pilot with real groups.
 
 ## Monad testnet deployment (chain 10143)
 
@@ -33,6 +37,16 @@ All six contracts are verified on MonadVision (Sourcify, exact match). Redeploye
 
 Every gas limit was taken from Monad's own `eth_estimateGas` (see [`contracts/GAS-LIMITS.md`](contracts/GAS-LIMITS.md)).
 
+## Indexer
+
+**Live: the self-hosted indexer.** The same Envio HyperIndex project runs on Railway (services Postgres, Hasura and the indexer, built from [`indexer/Dockerfile`](indexer/Dockerfile)). Its config, [`indexer/config.selfhost.yaml`](indexer/config.selfhost.yaml), is generated from `config.yaml` by `node indexer/scripts/selfhost-config.mjs` and reads Monad testnet over its public RPC (no HyperSync token needed).
+
+- Public GraphQL (read-only): https://hasura-production-c5c7.up.railway.app/v1/graphql
+- The relayer publishes this URL at `/v1/config` (`graphqlUrl`), and the web app reads it from there.
+- It indexes from block 68,940,999. On 8 Oct it was still catching up. Check before relying on it: `{ _meta { progressBlock sourceBlock isReady } }`.
+
+**Configured, not yet live: Envio Cloud.** [`indexer/config.yaml`](indexer/config.yaml) is the Envio Cloud deployment (HyperSync). It goes live once two old deployments are deleted from the project's free slots. To switch, set `INDEXER_GRAPHQL_URL` on the relayer (Railway) and `NEXT_PUBLIC_ENVIO_GRAPHQL_URL` on the site (Vercel) to the Envio Cloud URL. Nothing else changes, because the app takes the URL from the relayer.
+
 ## Run the tests
 
 ```sh
@@ -44,6 +58,9 @@ cd relayer && pnpm install && pnpm test
 
 # Envio indexer
 cd indexer && pnpm install && pnpm codegen && pnpm test
+
+# Chainlink CRE workflow (offline tests)
+cd cre/fx-workflow && npm install && npm test
 
 # Android app: the copy check (no crypto words in the UI) then jest
 cd app && npm install && npm test
@@ -58,6 +75,7 @@ cd contracts && npm --prefix tools install && npm --prefix tools run gas
 - **Money:** AUSD on Monad. Deposits and sends are ERC-3009 signed transfers; every other action is an EIP-712 message to the plan's pot contract. A relayer pays gas, and anyone can submit the signed messages.
 - **Rules:** enforced by the pot contract — instant limit, approvals, category budgets, per-person caps, payee policy, pause, timelocked rule changes, disputes and one-transaction settle-up. See [`docs/protocol.md`](docs/protocol.md).
 - **Data:** an Envio HyperIndex indexer derives balances, the who-owes-whom graph and cross-border corridors.
+- **Exchange rates:** a Chainlink CRE workflow ([`cre/fx-workflow/`](cre/fx-workflow)) writes reference-rate rounds to `FxReference`. They are for receipts only and never price a transfer.
 
 Docs: [`docs/`](docs) in this repo, and the docs site at https://plans.0xo.in/docs. Updates on X: [@PlansOnMonad](https://x.com/PlansOnMonad).
 
