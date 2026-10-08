@@ -11,7 +11,7 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 | Part | Folder | State | Tests |
 |---|---|---|---|
 | Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **250 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
-| Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 44 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 44 |
+| Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 49 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 49 |
 | Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app, with browser push (web push); Android push pending (needs Firebase) | **165 passing** (unit, plus integration against anvil) |
 | Envio indexer | [`indexer/`](indexer) | **Self-hosted on Railway, syncing Monad testnet** (see [Indexer](#indexer)); Envio Cloud configured, not yet deployed | **26 passing** |
 | Chainlink CRE workflow | [`cre/fx-workflow/`](cre/fx-workflow) | Exchange-rate rounds 1 and 2 written to FxReference on Monad testnet with `cre workflow simulate --broadcast` (simulation forwarder); not deployed to a CRE DON | **69 passing** |
