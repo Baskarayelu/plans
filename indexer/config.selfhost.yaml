@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+#
+# Plans — Envio HyperIndex config.
+#
+# config.selfhost.yaml: the same testnet indexer for SELF-HOSTING (Railway), generated from config.yaml by
+# scripts/selfhost-config.mjs. It reads Monad testnet over public RPC (no HyperSync token needed).
+# Do not edit by hand.
+#
+# This file is the Monad TESTNET indexer deployed on Envio Cloud (free plan: no env vars, so the
+# deployed addresses are written below). The mainnet indexer uses config.mainnet.yaml.
+# Pots are never listed here: they are registered dynamically from PlansFactory.PotCreated.
+name: plans-indexer
+description: Plans — group money pots on Monad (pots, ledgers, settle-up graph, corridors, traction stats)
+
+# Entities are per chain (composite key (id, chainId)): mainnet and testnet never mix,
+# and GlobalStats/DailyStats are per chain. Filter GraphQL queries by chainId.
+disable_default_cross_chain: true
+# Addresses are stored lowercase so the app can query with addr.toLowerCase().
+address_format: lowercase
+# Every handler needs the tx hash (activity feed, links to the explorer). Block number/timestamp are always present.
+field_selection:
+  transaction_fields:
+    - hash
+
+contracts:
+  - name: PlansFactory
+    abi_file_path: ./abis/PlansFactory.json
+    events:
+      - event: PotCreated
+  - name: Pot
+    # No address: registered dynamically by the PotCreated contractRegister handler.
+    abi_file_path: ./abis/Pot.json
+    events:
+      - event: RulesSet
+      - event: AllowlistChanged
+      - event: MemberJoined
+      - event: InviteRotated
+      - event: KeyWrapped
+      - event: Contributed
+      - event: SpendProposed
+      - event: Voted
+      - event: SpendApproved
+      - event: SpendExecuted
+      - event: SpendCancelled
+      - event: DisputeOpened
+      - event: DisputeVoted
+      - event: DisputeResolved
+      - event: Frozen
+      - event: Unfrozen
+      - event: RuleChangeProposed
+      - event: RuleChangeVoted
+      - event: RuleChangeApproved
+      - event: RuleChangeApplied
+      - event: Acked
+      - event: AcksReset
+      - event: Pulled
+      - event: Payout
+      - event: DebtRecorded
+      - event: DebtPaid
+      - event: MemberExited
+      - event: Settled
+      # collect(member) after settlement: emitted right after its Payout (same tx); marks that Payout.
+      - event: Collected
+      - event: EscrowRefunded
+  - name: KeyRegistry
+    abi_file_path: ./abis/KeyRegistry.json
+    events:
+      - event: KeyRegistered
+  - name: ClaimEscrow
+    abi_file_path: ./abis/ClaimEscrow.json
+    events:
+      - event: ClaimCreated
+      - event: Claimed
+      - event: ClaimRefunded
+  - name: PlansSend
+    abi_file_path: ./abis/PlansSend.json
+    events:
+      - event: Sent
+  - name: FxReference
+    # Chainlink CRE receiver: reference FX rounds (display / receipts only, never moves funds).
+    abi_file_path: ./abis/FxReference.json
+    events:
+      - event: RoundWritten
+      - event: SimulationModeSet
+      - event: ProductionModeSet
+      - event: MaxMoveSet
+      - event: OwnershipTransferStarted
+      - event: OwnershipTransferred
+
+chains:
+  # Monad testnet (HyperSync: https://10143.hypersync.xyz). Addresses are written here directly because
+  # Envio Cloud's free plan has no environment variables. Source: contracts/deployments/10143.json.
+  # This deployment indexes testnet only, from the deployment block, to stay within free-plan limits;
+  # mainnet gets its own indexer from config.mainnet.yaml.
+  - id: 10143
+    start_block: 68940999
+    # Self-hosted: Monad's public RPCs (eth_getLogs is capped at 100 blocks there).
+    rpc:
+      - url: https://testnet-rpc.monad.xyz
+        for: sync
+        initial_block_interval: 100
+        interval_ceiling: 100
+        backoff_millis: 1000
+      - url: https://monad-testnet.drpc.org
+        for: fallback
+        initial_block_interval: 100
+        interval_ceiling: 100
+    contracts:
+      - name: PlansFactory
+        address: "0xCE282ad9d8CacA94170eB311b12ebFBAbDa203B4"
+      - name: Pot
+      - name: KeyRegistry
+        address: "0xf514925f5f781455E162148eA5BF3E8f5626d5bb"
+      - name: ClaimEscrow
+        address: "0x720876392Da37b7a3122289F537892E069F91eF5"
+      - name: PlansSend
+        address: "0x2e29d27dBeE1B9fa6C31f0e4cC21CDCc5dbaf56B"
+      - name: FxReference
+        address: "0xaB7eeDe1DA994137a340155f350A8F81358FFCa2"
