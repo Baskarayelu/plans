@@ -60,6 +60,19 @@ const b64 = (b: Uint8Array) => Buffer.from(b).toString("base64url");
 const code = async (r: Response) => ((await r.json()) as { error: { code: string } }).error.code;
 
 describe("keyed slots", () => {
+  it("answers a missing slot with 200 {data: null, rev: 0} when asked with ?absent=200, else 404", async () => {
+    const { app } = build();
+    const id = hex32();
+    const quiet = await app.request(`/v1/slots/${id}?absent=200`);
+    expect(quiet.status).toBe(200);
+    expect(await quiet.json()).toEqual({ data: null, expiresAt: null, rev: 0 });
+    const plain = await app.request(`/v1/slots/${id}`);
+    expect(plain.status).toBe(404);
+    await put(app, id, { data: b64(new Uint8Array([1, 2, 3])) });
+    const found = await app.request(`/v1/slots/${id}?absent=200`);
+    expect(((await found.json()) as { rev: number }).rev).toBe(1);
+  });
+
   it("creates a slot and reads it back (no-store, sharded on disk)", async () => {
     const { app, dir, clock } = build();
     const id = hex32();

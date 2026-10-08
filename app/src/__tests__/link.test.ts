@@ -374,7 +374,7 @@ const fetchMock = jest.fn(async (url: string, init: RequestInit = {}) => {
     server.fail--;
     throw new TypeError("Failed to fetch");
   }
-  const m = /\/v1\/slots\/(.+)$/.exec(url);
+  const m = /\/v1\/slots\/([^?]+)/.exec(url);
   if (!m) return json(404, { error: { code: "NOT_FOUND" } });
   const id = m[1];
   const method = init.method ?? "GET";

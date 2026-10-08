@@ -93,8 +93,11 @@ export async function putSlot(id: string, bytes: Uint8Array, opts: PutSlotOption
 
 /** Reads slot `id` with its revision: null when it doesn't exist or expired (404). Throws SlotError otherwise. */
 export async function getSlotRev(id: string): Promise<{ data: Uint8Array; rev?: number } | null> {
-  const r = await call<{ data?: string; rev?: number }>(slotUrl(id), { method: "GET", timeoutMs: 15_000, cache: "no-store" });
+  // absent=200: a missing slot comes back as 200 {data: null} (no browser-logged 404); an older relayer
+  // still answers 404 NOT_FOUND, handled the same way.
+  const r = await call<{ data?: string | null; rev?: number }>(`${slotUrl(id)}?absent=200`, { method: "GET", timeoutMs: 15_000, cache: "no-store" });
   if (r.status === 404 && (r.body?.error?.code ?? "NOT_FOUND") === "NOT_FOUND") return null;
+  if (r.status === 200 && r.body?.data === null) return null;
   if (r.status !== 200) throw classify(r.status, r.body?.error?.code ?? "", r.body);
   if (typeof r.body?.data !== "string") throw new SlotError("failed", r.status, "BAD_RESPONSE");
   try {

@@ -93,7 +93,7 @@ const json = (status: number, body: unknown) => ({ status, text: async () => JSO
 (globalThis as { fetch: unknown }).fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
   if (relayer.down) throw new TypeError("Failed to fetch");
   if (relayer.status) return json(relayer.status, { error: { code: "INTERNAL" } });
-  const id = /\/v1\/slots\/(.+)$/.exec(url)![1];
+  const id = /\/v1\/slots\/([^?]+)/.exec(url)![1];
   if ((init.method ?? "GET") === "PUT") {
     const body = JSON.parse(String(init.body));
     const cur = relayer.slots.get(id);

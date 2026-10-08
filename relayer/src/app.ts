@@ -356,7 +356,12 @@ export function createApp(s: AppServices) {
     const id = normaliseSlotId(c.req.param("id"));
     const slot = s.slots.get(id);
     c.header("cache-control", "no-store");
-    if (!slot) throw new RelayError(404, "NOT_FOUND", "No slot with that id.");
+    // ?absent=200: "not there yet" is a normal answer for this caller (e.g. a new account's device
+    // list), so answer 200 {data: null, rev: 0} instead of a 404 the browser would log as an error.
+    if (!slot) {
+      if (c.req.query("absent") === "200") return c.json({ data: null, expiresAt: null, rev: 0 });
+      throw new RelayError(404, "NOT_FOUND", "No slot with that id.");
+    }
     return c.json({ data: Buffer.from(slot.data).toString("base64url"), expiresAt: slot.expiresAt, rev: slot.rev });
   });
 

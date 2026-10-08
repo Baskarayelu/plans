@@ -107,6 +107,7 @@ export async function installSlots(page, store, who = "?") {
       if (method === "GET") {
         const s = store.get(id);
         store.log.push({ who, method, id, status: s ? 200 : 404, t: Date.now() });
+        if (!s && url.searchParams.get("absent") === "200") return json({ data: null, expiresAt: null, rev: 0 });
         return s ? json({ data: s.data, expiresAt: s.expiresAt, rev: s.rev }) : json({ error: { code: "NOT_FOUND", message: "No such slot." } }, 404);
       }
       if (method === "PUT") {

@@ -140,7 +140,9 @@ async function chromePage(browser, vp, theme) {
     problems.push(`request failed: ${r.url().split("?")[0]} (${why})${own(r.url()) ? "" : " [other origin]"}`);
   });
   page.on("response", (r) => {
-    if (own(r.url()) && r.status() >= 400) problems.push(`HTTP ${r.status()}: ${r.url()}`);
+    if (r.status() < 400) return;
+    // Own origin: a failure. Elsewhere: named so the matching console error is explained.
+    problems.push(`HTTP ${r.status()}: ${r.url().split("?")[0]}${own(r.url()) ? "" : " [other origin]"}`);
   });
   return { ctx, page, problems };
 }
@@ -225,18 +227,21 @@ async function signedIn(browser) {
         if (s === "demo-disabled") throw new Error("demo is disabled on the relayer");
         await sleep(1000);
         await page.click('[data-testid="btn-start-the-demo"]');
-        await firstVisible(page, ["plan-home"], { timeout: 90000 });
+        // The demo plan has its own screen (screen-demo-running); a regular plan shows plan-home.
+        await firstVisible(page, ["plan-home", "screen-demo-running"], { timeout: 90000 });
         await sleep(3000);
         await shoot("plan");
       });
       await step("pay", async () => {
-        await page.click('[data-testid="btn-pay"]');
+        const payBtn = await firstVisible(page, ["btn-try-a-spend", "btn-pay"], { timeout: 20000 });
+        await page.click(`[data-testid="${payBtn}"]`);
         await firstVisible(page, ["screen-pay", "screen-pay-form"], { timeout: 20000 });
         await sleep(1500);
         await shoot("pay");
       });
     } catch {
-      // recorded in problems
+      // recorded in problems; keep a picture of where it stopped
+      await page.screenshot({ path: join(OUT, `chrome-live-FAILED-${vp.key}.png`) }).catch(() => undefined);
     } finally {
       record({ browser: "chrome", page: "signed-in (welcome, home, plan, pay)", viewport: vp.key, theme: "light+dark", ok: problems.length === 0, problems, shots });
       await ctx.close();

@@ -43,7 +43,7 @@ const ALLOWED: Allowed[] = [
   { file: "relayer/src/gas.ts", line: "export function assertMonadGas(gas: unknown, rpc: GasRpc, tx: GasRequest): asserts gas is MonadGasLimit {", why: "the guard itself" },
   { file: "relayer/src/gas.ts", line: "export function maxCost(gasLimit: bigint, maxFeePerGas: bigint) {", why: "cost arithmetic on a limit; produces no limit" },
   // ── contracts/script/monad-send.mjs: the deploy sender ──
-  { file: "contracts/script/monad-send.mjs", line: "const quote = Object.freeze({ estimate, gasLimit: gasLimitFromEstimate(estimate), tx: Object.freeze({ ...tx, value: BigInt(tx.value ?? 0) }) });", why: "monadGasQuote(): the limit is Monad eth_estimateGas + 10%" },
+  { file: "contracts/script/monad-send.mjs", line: "const quote = Object.freeze({ estimate, gasLimit: gasLimitFromEstimate(estimate), source, tx: Object.freeze({ ...tx, value: BigInt(tx.value ?? 0) }) });", why: "monadGasQuote(): the limit is Monad eth_estimateGas + 10% (source records which RPC answered)" },
   { file: "contracts/script/monad-send.mjs", line: "const raw = await account.signTransaction({", why: "signWithMonadGas(): refuses quotes not issued by monadGasQuote for this exact tx" },
   { file: "contracts/script/monad-send.mjs", line: "gas: quote.gasLimit,", why: "the Monad quote's limit, checked against the issued set" },
   { file: "contracts/script/monad-send.mjs", line: "const SEND = new Set(['eth_sendRawTransaction', 'eth_sendRawTransactionSync']);", why: "marks send methods as never-retried" },
