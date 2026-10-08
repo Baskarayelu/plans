@@ -16,8 +16,17 @@ node "$HERE/scripts/check-copy.mjs"
 export PLANS_WEB=1
 export APP_NETWORK="$NET"
 export NODE_ENV=production
-# The testnet relayer (its /v1/config publishes the indexer URL at runtime, as in the app).
+# The network's relayer (its /v1/config publishes the indexer URL at runtime, as in the app).
 export PLANS_RELAYER_URL_TESTNET="${PLANS_RELAYER_URL_TESTNET:-https://relayer-production-ecef.up.railway.app}"
+export PLANS_RELAYER_URL_MAINNET="${PLANS_RELAYER_URL_MAINNET:-https://relayer.plans.0xo.in}"
+if [ "$NET" = "mainnet" ]; then
+  RELAYER="$PLANS_RELAYER_URL_MAINNET"
+  # A mainnet bundle without the deployed addresses would show "not deployed yet" everywhere.
+  [ -f "$HERE/../contracts/deployments/143.json" ] || { echo "web build: contracts/deployments/143.json missing (deploy mainnet first)" >&2; exit 1; }
+else
+  RELAYER="$PLANS_RELAYER_URL_TESTNET"
+fi
+export RELAYER
 
 cd "$HERE"
 rm -rf "$OUT"
@@ -36,7 +45,7 @@ if find "$OUT" -name node_modules | grep -q . || grep -rlq "assets/[^\"' ]*node_
   exit 1
 fi
 # The bundle must carry this app's config (contract addresses, relayer): refuse a bundle without it.
-grep -q "$PLANS_RELAYER_URL_TESTNET" "$OUT"/_expo/static/js/web/entry-*.js || { echo "web build: app config missing from the bundle (stale Metro cache?)" >&2; exit 1; }
+grep -q "$RELAYER" "$OUT"/_expo/static/js/web/entry-*.js || { echo "web build: app config missing from the bundle (stale Metro cache?)" >&2; exit 1; }
 # Record what was built (no secrets): network, chain, relayer and contract addresses.
 node -e '
 const fs = require("fs");
@@ -44,6 +53,6 @@ process.env.PLANS_WEB = "1";
 const out = process.argv[1];
 const html = fs.readFileSync(out + "/index.html", "utf8");
 const bundle = (html.match(/_expo\/static\/js\/web\/[^"]+\.js/) || [""])[0];
-fs.writeFileSync(out + "/build.json", JSON.stringify({ network: process.env.APP_NETWORK, relayer: process.env.PLANS_RELAYER_URL_TESTNET, bundle, builtAt: new Date().toISOString() }, null, 2) + "\n");
+fs.writeFileSync(out + "/build.json", JSON.stringify({ network: process.env.APP_NETWORK, relayer: process.env.RELAYER, bundle, builtAt: new Date().toISOString() }, null, 2) + "\n");
 ' "$OUT"
 du -sh "$OUT" | cut -f1 | xargs echo "web app →" "$OUT" "·"

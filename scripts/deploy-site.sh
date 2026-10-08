@@ -7,6 +7,8 @@
 #   4. run e2e/web/postdeploy.mjs against the public URL (Chrome and Safari, clean sessions, both
 #      widths and themes); any console error, failed own-origin request or blank screen fails it.
 # Extra arguments go to postdeploy.mjs (e.g. --signed-in). Exit code 1 if any step fails.
+# PLANS_WEB_NETWORK=mainnet builds the web app for Monad mainnet (needs contracts/deployments/143.json
+# committed); default testnet.
 #   scripts/deploy-site.sh [--signed-in] [--browsers chrome,safari]
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,7 +23,7 @@ cp -R "$REPO/site/.vercel" "$ROOT/site/.vercel"
 echo "deploy: HEAD $(git -C "$ROOT" rev-parse --short HEAD) from a clean checkout"
 
 if [ "${SKIP_APP_BUILD:-0}" != "1" ]; then
-  bash "$ROOT/app/scripts/build-web.sh" testnet
+  bash "$ROOT/app/scripts/build-web.sh" "${PLANS_WEB_NETWORK:-testnet}"
 fi
 BUILT_AT="$(node -p 'require(process.argv[1]).builtAt' "$ROOT/site/public/app/build.json")"
 
