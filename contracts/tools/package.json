@@ -4,7 +4,7 @@
   "description": "Monad gas measurement for the Plans contracts (see ../GAS.md)",
   "scripts": {
     "gas": "node ../script/monad-gas.mjs",
-    "test": "node --test ../script/monad-send.test.mjs"
+    "test": "node --test ../script/monad-send.test.mjs ../../scripts/lib/monad-ops.test.mjs"
   },
   "type": "module",
   "dependencies": {
