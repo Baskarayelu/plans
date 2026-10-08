@@ -6,6 +6,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-ENV ENVIO_CONFIG=config.selfhost.yaml TUI_OFF=true NODE_ENV=production
-RUN pnpm envio codegen
+# `envio start` runs codegen at startup, when the database and Hasura settings are present.
+ENV ENVIO_CONFIG=config.selfhost.yaml TUI_OFF=true
 CMD ["pnpm", "envio", "start"]
