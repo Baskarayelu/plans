@@ -17,6 +17,7 @@ import { clearDraft, patchDraft, startDraft, useDraft } from "../../../lib/spend
 import { activeMembers, planRules, refreshSpend, useRulePreview } from "../../../lib/spend/hooks";
 import { eachAmount, joinNames, plainFixed, ruleLine } from "../../../lib/spend/logic";
 import { useMe, usePlan, type PlanVM } from "../../../lib/state/data";
+import { RatesOutOfDate, useTypedRateGate } from "../../../ui/fx/rates";
 import { putReceipt, useAction } from "../../../lib/state/useAction";
 import { Banner, Btn, Card, EmojiTile, Field, Overline, Row, Tile } from "../../../ui/kit";
 import { AppBar, Screen } from "../../../ui/layout";
@@ -60,6 +61,7 @@ function PayFormBody({ plan, kind, payee, name, category, amount }: { plan: Plan
   }, [key]);
   const d = useDraft();
   const units = useDraftUnits(d);
+  const typed = useTypedRateGate(me.currency, d.inLocal);
   const rules = planRules(plan.raw);
   const split = draftSplit(plan, d);
   const [cover, setCover] = useState<{ part: bigint; over: bigint } | null>(null);
@@ -138,9 +140,9 @@ function PayFormBody({ plan, kind, payee, name, category, amount }: { plan: Plan
     dock = <Btn label="Can't pay this from the pot" kind="off" icon="ban" disabled testID="btn-cant-pay" />;
   } else if (verdict.kind === "ask") {
     const n = verdict.approvals - 1;
-    dock = <Btn label={n === 1 ? "Ask for an OK" : `Ask for ${n} OKs`} kind="pri" icon="send" onPress={() => void confirm()} loading={action.busy} testID="btn-ask-for-an-ok" />;
+    dock = <Btn label={n === 1 ? "Ask for an OK" : `Ask for ${n} OKs`} kind="pri" icon="send" onPress={() => void confirm()} loading={action.busy} disabled={typed.gate !== "ok"} testID="btn-ask-for-an-ok" />;
   } else {
-    dock = <Btn label={confirmLabel} kind="pri" icon={desk ? "key" : "fp"} onPress={() => void confirm()} loading={action.busy} disabled={verdict.kind !== "now"} testID="btn-confirm-with-fingerprint" />;
+    dock = <Btn label={confirmLabel} kind="pri" icon={desk ? "key" : "fp"} onPress={() => void confirm()} loading={action.busy} disabled={verdict.kind !== "now" || typed.gate !== "ok"} testID="btn-confirm-with-fingerprint" />;
   }
 
   const coverNote =
@@ -149,6 +151,7 @@ function PayFormBody({ plan, kind, payee, name, category, amount }: { plan: Plan
         You'll pay the other {formatUsd(cover.over)} yourself. It stays off the plan, so the {categoryOf(d.category).name} budget isn't passed.
       </Txt>
     ) : null;
+  const rateBanner = typed.blocked ? <RatesOutOfDate gate={typed.gate} onRefresh={typed.refresh} refreshing={typed.refreshing} /> : null;
   const ruleBanner = (
     <RuleBanner
       plan={plan}
@@ -227,6 +230,7 @@ function PayFormBody({ plan, kind, payee, name, category, amount }: { plan: Plan
             {units > 0n ? <PayBudgets plan={plan} rules={rules} units={units} category={d.category} /> : null}
             {coverNote ? <View style={{ marginTop: 12 }}>{coverNote}</View> : null}
             <View style={{ flex: 1, minHeight: 24 }} />
+            {rateBanner ? <View style={{ marginBottom: 12 }}>{rateBanner}</View> : null}
             {action.error ? (
               <View style={{ marginBottom: 12 }}>
                 <Banner kind="neg" icon="alert" title={action.error.title} text={action.error.message} testID="banner-action-error" />
@@ -260,6 +264,7 @@ function PayFormBody({ plan, kind, payee, name, category, amount }: { plan: Plan
       </View>
       <View style={{ flex: 1, minHeight: 12 }} />
       <View style={{ marginTop: 12, gap: 8 }}>
+        {rateBanner}
         {ruleBanner}
         {coverNote}
         {action.error ? <Banner kind="neg" icon="alert" title={action.error.title} text={action.error.message} testID="banner-action-error" /> : null}

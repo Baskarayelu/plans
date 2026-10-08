@@ -17,6 +17,7 @@ import { showToast } from "../../../ui/Toast";
 import { Txt } from "../../../ui/Text";
 import { DeskAmountInput } from "../../../ui/desk/pay";
 import { DeskColumn } from "../../../ui/desk/plan";
+import { RatesOutOfDate, useTypedRateGate } from "../../../ui/fx/rates";
 import { useLayout } from "../../../ui/shell/responsive";
 
 export default function AddMoney() {
@@ -33,6 +34,7 @@ export default function AddMoney() {
   const [inDollars, setInDollars] = useState(!hasLocal);
   const [text, setText] = useState("");
   const rate = money.rateE8;
+  const rateGate = useTypedRateGate(cur, !inDollars);
   const ccy = currencyFor(inDollars ? "USD" : cur);
 
   // amount in AUSD units
@@ -66,7 +68,7 @@ export default function AddMoney() {
   };
 
   const rateLine = hasLocal && rate && money.fx ? `Rate ${formatRate(cur, "USD", invertRateE8(rate))}${money.fx.source ? ` · ${money.fx.source}` : ""} ${hhmmUtc(money.fx.timestamp)}` : undefined;
-  const canAdd = units > 0n && !short && !!plan.data?.isMember && !plan.data?.settled;
+  const canAdd = units > 0n && !short && !!plan.data?.isMember && !plan.data?.settled && rateGate.gate === "ok";
 
   return (
     <Screen testID="screen-add-money" scroll>
@@ -121,6 +123,11 @@ export default function AddMoney() {
       {short && !bal.isLoading ? (
         <View style={{ marginTop: 8 }}>
           <Btn label="Add to your balance" kind="sec" icon="plus" sm onPress={() => router.push("/add-balance")} testID="btn-add-to-balance" />
+        </View>
+      ) : null}
+      {rateGate.blocked ? (
+        <View style={{ marginTop: 12 }}>
+          <RatesOutOfDate gate={rateGate.gate} onRefresh={rateGate.refresh} refreshing={rateGate.refreshing} />
         </View>
       ) : null}
       {add.error ? (

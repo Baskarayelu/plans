@@ -28,6 +28,7 @@ import { PlanGate } from "../../../ui/spend/parts";
 import { Txt } from "../../../ui/Text";
 import { showToast } from "../../../ui/Toast";
 import { DeskColumn } from "../../../ui/desk/plan";
+import { RatesOutOfDate, useTypedRateGate } from "../../../ui/fx/rates";
 import { useLayout } from "../../../ui/shell/responsive";
 
 export default function RecordPersonal() {
@@ -58,6 +59,7 @@ function PersonalBody({ plan }: { plan: PlanVM }) {
   const rules = planRules(plan.raw);
   const split = draftSplit(plan, d);
   const inLocal = d.inLocal && local.currency !== "USD";
+  const typed = useTypedRateGate(local.currency, d.inLocal);
   const pv = useRulePreview({ pot: plan.pot, me: me.address, kind: SpendKind.PERSONAL, payee: me.address?.toLowerCase(), amount: units, category: d.category, enabled: d.key === key });
   const verdict = verdictOf(pv, units, split.members.length);
   const others = activeMembers(plan)
@@ -119,8 +121,8 @@ function PersonalBody({ plan }: { plan: PlanVM }) {
   if (verdict.kind === "blocked") dock = <Btn label="Can't record this now" kind="off" icon="ban" disabled testID="btn-cant-record" />;
   else if (verdict.kind === "ask") {
     const n = verdict.approvals - 1;
-    dock = <Btn label={n === 1 ? "Ask for an OK" : `Ask for ${n} OKs`} icon="send" onPress={() => void record()} loading={action.busy} testID="btn-ask-for-an-ok" />;
-  } else dock = <Btn label="Record it" onPress={() => void record()} loading={action.busy} disabled={verdict.kind !== "now" || !d.note.trim()} testID="btn-record-it" />;
+    dock = <Btn label={n === 1 ? "Ask for an OK" : `Ask for ${n} OKs`} icon="send" onPress={() => void record()} loading={action.busy} disabled={typed.gate !== "ok"} testID="btn-ask-for-an-ok" />;
+  } else dock = <Btn label="Record it" onPress={() => void record()} loading={action.busy} disabled={verdict.kind !== "now" || !d.note.trim() || typed.gate !== "ok"} testID="btn-record-it" />;
 
   return (
     <Screen testID="screen-personal" dock={desk ? undefined : dock}>
@@ -145,6 +147,7 @@ function PersonalBody({ plan }: { plan: PlanVM }) {
           }
         />
         {local.currency !== "USD" && local.rateE8 ? <Chip sm ol icon="swap" label={inLocal ? "Type in dollars" : `Type in ${cur.plural}`} onPress={swap} testID="btn-swap-currency" /> : null}
+        {typed.blocked ? <RatesOutOfDate gate={typed.gate} onRefresh={typed.refresh} refreshing={typed.refreshing} /> : null}
       </View>
       <Overline style={{ marginTop: 20 }}>Category</Overline>
       <View style={{ marginTop: 8 }}>
