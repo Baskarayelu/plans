@@ -5,7 +5,7 @@
  * decided in lib/fx/receiptRate.ts.
  */
 import { useQueries, useQuery } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { fetchFxRound, fetchFxRoundAt } from "../../lib/api/envio";
 import { getFx, getFxRound } from "../../lib/api/relayer";
@@ -14,6 +14,11 @@ import { currencyFor, formatUsd } from "../../lib/domain/currency";
 import {
   diffText,
   formatLocalAt,
+  previewRate,
+  rateGate,
+  sendPreview,
+  type PreviewStatus,
+  type RateGate,
   groupedRateLines,
   normCurrency,
   pairTexts,
@@ -29,11 +34,13 @@ import {
   type ReceiptRate,
   type RoundLike,
 } from "../../lib/fx/receiptRate";
-import { qk, type PlanVM } from "../../lib/state/data";
+import { qk, useFx, type PlanVM } from "../../lib/state/data";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts } from "../../theme/tokens";
 import { Icon } from "../Icon";
-import { Btn, Card, Proof, Row } from "../kit";
+import { Banner, Btn, Card, Proof, Row } from "../kit";
+import { useFxPair } from "../send/bits";
+import { StubLine } from "../Stub";
 import { Sheet } from "../layout";
 import { Txt } from "../Text";
 
@@ -120,7 +127,7 @@ export function useFxQuotes(currencies: string[]) {
     const d = res[i]?.data;
     if (d) quotes[c] = d;
   });
-  return { quotes, loading: res.some((r) => r.isLoading) };
+  return { quotes, loading: res.some((r) => r.isLoading), refetch: () => Promise.all(res.map((r) => r.refetch())), fetching: res.some((r) => r.isFetching) };
 }
 
 /**
@@ -312,4 +319,121 @@ export function useSettleRates(plan: PlanVM | undefined, override?: { fxRoundId?
     return [local ? `Paid out ${formatUsd(paidOut)} = ${local}` : null, shareRateLine(r)].filter(Boolean).join(" · ");
   };
   return { ...rr, cardLine };
+}
+
+// ─────────────── before confirming: previews and the out-of-date block ───────────────
+
+/** The latest reference round as the relayer reads it from FxReference: the one a send or settle-up would name. */
+export function useLatestFxRound() {
+  return useQuery({
+    queryKey: ["fxRoundLatest"],
+    queryFn: async (): Promise<RoundLike | null> => {
+      const r = await getFxRound();
+      return r ? roundFromMap(r) : null;
+    },
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    retry: 1,
+  });
+}
+
+/** Unix seconds, ticking, so a rate that goes out of date while the screen is open blocks the button. */
+function useNowSec(everyMs = 30_000): number {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), everyMs);
+    return () => clearInterval(t);
+  }, [everyMs]);
+  return now;
+}
+
+/**
+ * Rates for money about to move (settle-up preview, leave, a spend typed in your money): dollars →
+ * each currency, chosen the way the finished receipt chooses them (the latest round while it is
+ * fresh, else Plans' quote), with amounts at those rates, the receipt's lines, and the gate for the
+ * confirm button. `records`: the money records the round (a settle-up).
+ */
+export function usePreviewRates({ currencies, records, needed = true }: { currencies: string[]; records?: boolean; needed?: boolean }) {
+  const latest = useLatestFxRound();
+  const fq = useFxQuotes(currencies);
+  const now = useNowSec();
+  const uniq = Array.from(new Set(currencies.map(normCurrency)));
+  const rates: Record<string, ReceiptRate> = {};
+  const statuses: PreviewStatus[] = [];
+  for (const cur of uniq) {
+    const p = previewRate({ from: "USD", to: cur, nowSec: now, round: latest.data, quote: fq.quotes[cur], records });
+    rates[cur] = p.rate;
+    statuses.push(p.status);
+  }
+  const loading = latest.isLoading || fq.loading;
+  const gate: RateGate = needed ? rateGate(statuses, loading) : "ok";
+  const local = (units: bigint, cur: string, o: { sign?: boolean } = {}) => {
+    const c = normCurrency(cur);
+    if (c === "USD") return formatUsd(units, o);
+    const r = rates[c];
+    return r ? formatLocalAt(units, r, o) : undefined;
+  };
+  const lines = (only?: string[]): [string, string][] => {
+    const list = (only ?? uniq).map(normCurrency).filter((c, i, a) => a.indexOf(c) === i);
+    if (loading && statuses.some((st) => st !== "ok")) return [["Rate", "Loading"]];
+    return groupedRateLines(list.map((c) => rates[c]).filter(Boolean));
+  };
+  const refresh = () => void Promise.all([latest.refetch(), fq.refetch()]);
+  return { rates, local, lines, gate, refresh, refreshing: latest.isFetching || fq.fetching, round: latest.data ?? null };
+}
+
+/** Check and send: the rate the Sent receipt will show and whether the send may go (sendPreview). */
+export function useSendPreview(from: string, to: string) {
+  const pair = useFxPair(from, to, { refetchMs: 60_000 });
+  const usdFrom = useFx(from);
+  const usdTo = useFx(to);
+  const latest = useLatestFxRound();
+  const now = useNowSec();
+  const same = normCurrency(from) === normCurrency(to);
+  const pairQuote = same ? null : pair.data ? { rateE8: pair.data.rateE8, timestamp: pair.data.timestamp, source: pair.data.source } : null;
+  const loading = (!same && pair.isLoading) || usdFrom.isLoading || usdTo.isLoading || latest.isLoading;
+  const { rate, gate } = sendPreview({ from, to, nowSec: now, round: latest.data, pair: pairQuote, usdFrom: usdFrom.data, usdTo: usdTo.data, loading });
+  const refresh = () => void Promise.all([pair.refetch(), usdFrom.refetch(), usdTo.refetch(), latest.refetch()]);
+  return { rate, gate, refresh, refreshing: pair.isFetching || usdFrom.isFetching || usdTo.isFetching || latest.isFetching };
+}
+
+/** A receipt's rate lines, drawn exactly as on the stub (the same StubLine), for a preview card. */
+export function RateLines({ lines, testID = "rate-lines" }: { lines: [string, string][]; testID?: string }) {
+  if (lines.length === 0) return null;
+  return (
+    <View testID={testID}>
+      {lines.map(([k, v], i) => (
+        <StubLine key={`${k}-${i}`} k={k} v={v} testID={i === 0 ? `${testID}-first` : undefined} />
+      ))}
+    </View>
+  );
+}
+
+/**
+ * Shown instead of letting someone confirm when the rate the money would use is more than 6 hours
+ * old (less the half-hour margin), or there is none: "Rates are out of date. Try again in a minute."
+ */
+export function RatesOutOfDate({ gate, onRefresh, refreshing }: { gate: RateGate; onRefresh: () => void; refreshing?: boolean }) {
+  if (gate !== "stale" && gate !== "missing") return null;
+  return (
+    <Banner kind="neg" icon="clock" title={gate === "stale" ? "Rates are out of date" : "Rates aren't available"} text="Try again in a minute." testID="rates-out-of-date">
+      <Btn label="Refresh rates" kind="sec" sm icon="refresh" loading={refreshing} onPress={onRefresh} style={{ marginTop: 8, alignSelf: "flex-start" }} testID="btn-refresh-rates" />
+    </Banner>
+  );
+}
+
+/** True when the confirm button may be pressed as far as rates go. */
+export const ratesReady = (gate: RateGate) => gate === "ok";
+
+/**
+ * A spend or money added typed in your own money: the quote that turns it into dollars must be fresh
+ * (6 h less the half-hour margin) before confirming. Typed in dollars, no rate is needed.
+ */
+export function useTypedRateGate(currency: string, inLocal: boolean) {
+  const fx = useFx(currency);
+  const now = useNowSec();
+  const needed = inLocal && normCurrency(currency) !== "USD";
+  const status = previewRate({ from: "USD", to: currency, nowSec: now, quote: fx.data, applied: true }).status;
+  const gate: RateGate = needed ? rateGate([status], fx.isLoading) : "ok";
+  return { gate, blocked: gate === "stale" || gate === "missing", refresh: () => void fx.refetch(), refreshing: fx.isFetching };
 }

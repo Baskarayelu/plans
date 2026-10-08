@@ -13,7 +13,8 @@ import { currencyFor, formatUsd } from "../../lib/domain/currency";
 import { parseLink } from "../../lib/domain/links";
 import { sendMoney } from "../../lib/domain/planOps";
 import { identity } from "../../lib/identity/session";
-import { e8ToText, fitNote, fmtE8, noteBudget, quote, rateLine, unitsToE8, utf8Len } from "../../lib/send/convert";
+import { rateLines, shareRateLine } from "../../lib/fx/receiptRate";
+import { e8ToText, fitNote, fmtE8, noteBudget, quote, unitsToE8, utf8Len } from "../../lib/send/convert";
 import { placeLine, putSendReceipt, type Recipient } from "../../lib/send/draft";
 import { recentRecipients } from "../../lib/send/history";
 import { hrefForLink } from "../../lib/send/route";
@@ -31,6 +32,7 @@ import { DeskTitle, PanelHead } from "../shell/desk";
 import { SidePanel } from "../shell/panel";
 import { useConfirmLabel } from "../shell/responsive";
 import { Txt } from "../Text";
+import { CheckRate, RateLines, RatesOutOfDate, useSendPreview } from "../fx/rates";
 import { KV, Mono, useFxPair } from "./bits";
 
 export type SendPick = Person & { lastAt: number };
@@ -284,6 +286,7 @@ export function DeskSend({ to: initialTo, text: initialText, inDollars: initialD
   const fxMy = useFx(myCurrency);
   const fxTheir = useFx(toCur);
   const pair = useFxPair(myCurrency, toCur, { refetchMs: 60_000 });
+  const preview = useSendPreview(myCurrency, toCur);
   const [inDollars, setInDollars] = useState(initialDollars ?? myCurrency === "USD");
   const [text, setText] = useState(initialText ?? "");
   const [note, setNote] = useState("");
@@ -352,7 +355,9 @@ export function DeskSend({ to: initialTo, text: initialText, inDollars: initialD
   const ratesFailed = (fxMy.isError && !fxMy.data) || (fxTheir.isError && !fxTheir.data);
   const myText = myCurrency === "USD" ? (q.usdUnits !== null ? formatUsd(q.usdUnits) : null) : q.myE8 !== null ? fmtE8(q.myE8, myCurrency) : null;
   const theirText = q.theirE8 !== null ? fmtE8(q.theirE8, toCur) : null;
-  const rate = toCur !== myCurrency && pair.data ? rateLine(myCurrency, toCur, pair.data.rateE8, pair.data.timestamp, pair.data.source) : null;
+  // The rate the Sent receipt will carry (round named while fresh, else Plans' quote), in its words.
+  const rate = toCur !== myCurrency && preview.gate === "ok" ? shareRateLine(preview.rate) : null;
+  const blocked = preview.gate === "stale" || preview.gate === "missing";
   const place = to.city ? ` in ${to.city}` : "";
   const budget = noteBudget(profile?.name ?? "Friend", profile?.city);
   const trimmed = note.trim();
@@ -365,7 +370,7 @@ export function DeskSend({ to: initialTo, text: initialText, inDollars: initialD
       : utf8Len(trimmed) > budget
         ? `Too long: ${to.name} will see “${fits}”.`
         : `Only ${to.name} can read it.`;
-  const ready = !own && q.valid && q.usdUnits !== null && q.usdUnits > 0n && theirText !== null && balance !== undefined && !over;
+  const ready = !own && q.valid && q.usdUnits !== null && q.usdUnits > 0n && theirText !== null && balance !== undefined && !over && preview.gate === "ok";
 
   const swap = () => {
     if (q.valid) {
@@ -504,13 +509,19 @@ export function DeskSend({ to: initialTo, text: initialText, inDollars: initialD
               </Banner>
             </View>
           ) : null}
+          {blocked ? (
+            <View style={{ marginTop: 16 }}>
+              <RatesOutOfDate gate={preview.gate} onRefresh={preview.refresh} refreshing={preview.refreshing} />
+            </View>
+          ) : null}
           <Card style={{ marginTop: 16, gap: 8 }}>
             <KV k="You send" v={q.valid && myText ? myText : "…"} testID="confirm-you-send" />
             <KV k={`${to.name} gets`} v={q.valid && theirText ? theirText : "…"} testID="confirm-they-get" />
             <KV k="Fee" v="$0.00" />
             {trimmed ? <KV k="Note" v={noKey ? trimmed : fits} /> : null}
-            {rate ? <Mono>{rate}</Mono> : null}
+            {preview.gate === "ok" ? <RateLines lines={rateLines(preview.rate)} testID="confirm-rate-lines" /> : null}
           </Card>
+          {preview.gate === "ok" ? <CheckRate rates={[preview.rate]} subtitle={`For your payment to ${to.name}.`} style={{ marginTop: 10 }} /> : null}
           {rate ? (
             <Txt v="t13" color="muted" style={{ marginTop: 10 }}>
               The rate is held for 60 seconds. After that we refresh it and tell you.

@@ -7,7 +7,8 @@ import { registeredKey } from "../../lib/chain/rpc";
 import { formatUsd } from "../../lib/domain/currency";
 import { sendMoney } from "../../lib/domain/planOps";
 import { identity } from "../../lib/identity/session";
-import { fitNote, fmtE8, noteBudget, quote, rateLine, utf8Len } from "../../lib/send/convert";
+import { rateLines } from "../../lib/fx/receiptRate";
+import { fitNote, fmtE8, noteBudget, quote, utf8Len } from "../../lib/send/convert";
 import { putSendReceipt, sendDraft } from "../../lib/send/draft";
 import { personFor, useBalance, useFx, useMe } from "../../lib/state/data";
 import { useStore } from "../../lib/state/observable";
@@ -15,12 +16,17 @@ import { useAction } from "../../lib/state/useAction";
 import { Icon } from "../../ui/Icon";
 import { Avatar, Banner, Btn, Card, Chip, Field, Row, Skel } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
-import { KV, Mono, useFxPair } from "../../ui/send/bits";
+import { CheckRate, RateLines, RatesOutOfDate, useSendPreview } from "../../ui/fx/rates";
+import { KV, useFxPair } from "../../ui/send/bits";
 import { DeskSend } from "../../ui/send/desk";
 import { useConfirmLabel, useLayout } from "../../ui/shell/responsive";
 import { Txt } from "../../ui/Text";
 
-/** 46 Check and send. The rate is refreshed when it is over a minute old. */
+/**
+ * 46 Check and send. The rate is refreshed when it is over a minute old; the rate lines are the
+ * ones the Sent receipt will carry (same lines, same choice of round or quote); a rate more than
+ * 6 hours old (less the half-hour margin) or none at all blocks the button until it's refreshed.
+ */
 export default function SendConfirm() {
   const draft = useStore(sendDraft);
   const status = useStore(identity, (s) => s.status);
@@ -30,6 +36,7 @@ export default function SendConfirm() {
   const fxMy = useFx(myCurrency);
   const fxTheir = useFx(toCur);
   const pair = useFxPair(myCurrency, toCur, { refetchMs: 60_000 });
+  const preview = useSendPreview(myCurrency, toCur);
   const [note, setNote] = useState("");
   const [rateUpdated, setRateUpdated] = useState(false);
   const firstTheir = useRef<bigint | null>(null);
@@ -91,7 +98,7 @@ export default function SendConfirm() {
       : utf8Len(trimmed) > budget
         ? `Too long: ${to.name} will see “${fits}”.`
         : `Only ${to.name} can read it.`;
-  const ready = q.usdUnits !== null && q.usdUnits > 0n && theirText !== null && balance !== undefined && !over;
+  const ready = q.usdUnits !== null && q.usdUnits > 0n && theirText !== null && balance !== undefined && !over && preview.gate === "ok";
 
   const confirm = async () => {
     if (!ready || q.usdUnits === null) return;
@@ -122,7 +129,6 @@ export default function SendConfirm() {
     router.replace({ pathname: "/send/sent", params: { tx: r.result.txHash } });
   };
 
-  const rate = to.currency !== myCurrency && pair.data ? rateLine(myCurrency, to.currency, pair.data.rateE8, pair.data.timestamp, pair.data.source) : null;
 
   return (
     <Screen
@@ -163,13 +169,19 @@ export default function SendConfirm() {
           <Banner kind="neg" icon="alert" title="That's more than you have" text="Go back and send less, or add money first." />
         </View>
       ) : null}
+      {preview.gate === "stale" || preview.gate === "missing" ? (
+        <View style={{ marginTop: 16 }}>
+          <RatesOutOfDate gate={preview.gate} onRefresh={preview.refresh} refreshing={preview.refreshing} />
+        </View>
+      ) : null}
       <Card style={{ marginTop: 20, gap: 8 }}>
         <KV k="To" v={`${to.name}${to.city ? ` · ${to.city}` : ""}`} />
         <KV k="You send" v={myText ?? "…"} testID="confirm-you-send" />
         <KV k={`${to.name} gets`} v={theirText ?? "…"} testID="confirm-they-get" />
         <KV k="Fee" v="$0.00" />
-        {rate ? <Mono testID="rate-line">{rate}</Mono> : null}
+        {preview.gate === "ok" ? <RateLines lines={rateLines(preview.rate)} testID="rate-line" /> : null}
       </Card>
+      {preview.gate === "ok" ? <CheckRate rates={[preview.rate]} subtitle={`For your payment to ${to.name}.`} style={{ marginTop: 12 }} /> : null}
       <View style={{ marginTop: 12 }}>
         <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee ☕" maxLength={24} hint={noteHint} testID="field-send-note" />
       </View>

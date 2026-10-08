@@ -2,20 +2,19 @@
  * Shared bits for the safety, ending and demo screens (33–42, 56–57): per-person money, the
  * rates line, loading/error states, the settle-up arrow and the settling ring.
  */
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { NO_MOTION } from "../motion";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import type { Address } from "viem";
-import { getFx } from "../../lib/api/relayer";
 import { canSettle } from "../../lib/chain/rpc";
 import { fromHex } from "../../lib/crypto/bytes";
 import { decodeMemo } from "../../lib/crypto/seal";
 import { formatLocal, formatUsd } from "../../lib/domain/currency";
 import { categoryOf } from "../../lib/domain/rules";
-import { qk, useFxMap, type Person, type PlanVM } from "../../lib/state/data";
+import { useFxMap, type Person, type PlanVM } from "../../lib/state/data";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts } from "../../theme/tokens";
 import { Banner, Btn, Card, Skel } from "../kit";
@@ -35,38 +34,6 @@ export function usePeopleMoney(people: Person[]) {
   return { local, second, fx };
 }
 
-/** "Rates ECB 14:05 UTC · GBP 1.3472 · INR 83.60" for the currencies on screen (null when only dollars). */
-export function useRatesLine(currencies: string[]): string | null {
-  const uniq = Array.from(new Set(currencies.filter((c) => c && c !== "USD"))).sort();
-  const res = useQueries({
-    queries: uniq.map((to) => ({
-      queryKey: qk.fx(to),
-      queryFn: async () => {
-        const q = await getFx("USD", to);
-        return { rateE8: BigInt(q.rateE8), timestamp: q.timestamp, source: q.source, date: q.date };
-      },
-      staleTime: 10 * 60_000,
-    })),
-  });
-  if (uniq.length === 0) return null;
-  const parts: string[] = [];
-  let ts = 0;
-  let source = "";
-  uniq.forEach((cur, i) => {
-    const d = res[i]?.data;
-    if (!d) return;
-    ts = Math.max(ts, d.timestamp);
-    if (!source && /ECB/i.test(d.source)) source = "ECB";
-    // Currencies stronger than the dollar read as dollars per unit (GBP 1.3472), others per dollar (INR 83.60).
-    const perUsd = Number(d.rateE8) / 1e8;
-    const v = perUsd < 1 ? 1 / perUsd : perUsd;
-    parts.push(`${cur} ${v >= 100 ? v.toFixed(2) : v.toFixed(4)}`);
-  });
-  if (parts.length === 0) return null;
-  const t = ts ? new Date(ts * 1000) : null;
-  const when = t ? ` ${String(t.getUTCHours()).padStart(2, "0")}:${String(t.getUTCMinutes()).padStart(2, "0")} UTC` : "";
-  return `Rates${source ? ` ${source}` : ""}${when} · ${parts.join(" · ")}`;
-}
 
 // ─────────────── reads ───────────────
 

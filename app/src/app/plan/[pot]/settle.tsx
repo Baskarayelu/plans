@@ -18,7 +18,7 @@ import { queryClient, qk, useMe, usePlan, type Person, type PlanVM } from "../..
 import { getReceipt, putReceipt, useAction } from "../../../lib/state/useAction";
 import { useColors } from "../../../theme/ThemeProvider";
 import { fonts, WRISTBANDS } from "../../../theme/tokens";
-import { EdgeArrow, personOf, PlanProblem, PlanSkeleton, SpinnerRing, useCanSettle, useNow, usePeopleMoney, useRatesLine } from "../../../ui/ending/common";
+import { EdgeArrow, personOf, PlanProblem, PlanSkeleton, SpinnerRing, useCanSettle, useNow, usePeopleMoney } from "../../../ui/ending/common";
 import { Icon } from "../../../ui/Icon";
 import { Banner, BigIcon, Btn, Btns, Card, Chip, Confetti, formatSeconds, ListItem, Overline, Proof, Row, SettledIn, Skel } from "../../../ui/kit";
 import { AppBar, Screen } from "../../../ui/layout";
@@ -26,7 +26,7 @@ import { dateRange } from "../../../ui/planBits";
 import { PersonAvatar, PersonName } from "../../../ui/plan/common";
 import { SettleShareSheet } from "../../../ui/share/SettleShareSheet";
 import { Stub } from "../../../ui/Stub";
-import { CheckRate, useSettleRates } from "../../../ui/fx/rates";
+import { CheckRate, RateLines, RatesOutOfDate, usePreviewRates, useSettleRates } from "../../../ui/fx/rates";
 import { DeskSettled, DeskSettlePreview } from "../../../ui/desk/settle";
 import { useLayout } from "../../../ui/shell/responsive";
 import { Txt } from "../../../ui/Text";
@@ -80,8 +80,22 @@ export default function SettleUp() {
   const { desk } = useLayout();
   const settleQ = useCanSettle(pot, !!plan && !plan.settled && phase === "preview");
   const people = useMemo(() => Object.values(plan?.people ?? {}), [plan]);
-  const money = usePeopleMoney(people);
-  const rates = useRatesLine(people.map((p) => p.currency));
+  // 38/112: amounts and rate lines at the rates the settle-up receipt will use (the latest round
+  // while it is fresh, which the pot records, else Plans' quote); out-of-date rates block the button.
+  const fx = usePreviewRates({ currencies: people.map((p) => p.currency), records: true, needed: !!plan && !plan.settled && phase === "preview" });
+  const base = usePeopleMoney(people);
+  const localAt = (units: bigint, p: Person | undefined, o: { sign?: boolean } = {}) => (p && p.currency !== "USD" ? fx.local(units, p.currency, o) : undefined);
+  const money: ReturnType<typeof usePeopleMoney> = {
+    ...base,
+    local: (units, p, o = {}) => localAt(units, p, o) ?? formatUsd(units, o),
+    // the small second line: dollars under their money, or just "dollars" when that's all there is
+    second: (units, p) => (localAt(units, p) ? formatUsd(units) : "dollars"),
+  };
+  const paidCurrencies = Array.from(new Set((preview.vm?.rows ?? []).filter((r) => r.payout > 0n).map((r) => plan?.people[r.address]?.currency ?? "USD")));
+  const rateCurrencies = paidCurrencies.length ? paidCurrencies : people.map((p) => p.currency);
+  const rateRows = fx.gate === "ok" ? fx.lines(rateCurrencies) : [];
+  const checkRates = fx.gate === "ok" ? Array.from(new Set(rateCurrencies.map((c) => (c === "AUSD" ? "USD" : c)))).map((c) => fx.rates[c]).filter(Boolean) : [];
+  const ratesOk = fx.gate === "ok";
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => (timer.current ? clearTimeout(timer.current) : undefined), []);
   // Someone else settled first: wait for the indexer to show their receipt.
@@ -158,7 +172,11 @@ export default function SettleUp() {
           onSettle={() => void start()}
           failed={preview.failed}
           onRetry={preview.retry}
-          rates={rates}
+          rateRows={rateRows}
+          checkRates={checkRates}
+          rateGate={fx.gate}
+          onRefreshRates={fx.refresh}
+          refreshingRates={fx.refreshing}
           money={money}
           settling={phase === "settling" ? <Settling plan={plan} preview={preview.vm} done={done} t0={t0} tRes={tRes} money={money} panel /> : undefined}
         />
@@ -218,7 +236,7 @@ export default function SettleUp() {
           {!can && !settleQ.isLoading ? (
             <Btn label="Check the numbers first" kind="sec" onPress={() => router.push({ pathname: "/plan/[pot]/review", params: { pot: plan.pot } })} testID="btn-check-the-numbers" />
           ) : null}
-          <Btn label="Settle up · one tap" icon="fp" disabled={!can || !vm} loading={act.busy || settleQ.isLoading} onPress={() => void start()} testID="btn-settle-up" />
+          <Btn label="Settle up · one tap" icon="fp" disabled={!can || !vm || !ratesOk} loading={act.busy || settleQ.isLoading} onPress={() => void start()} testID="btn-settle-up" />
         </>
       }
     >
@@ -231,6 +249,11 @@ export default function SettleUp() {
       {!can && !settleQ.isLoading ? (
         <View style={{ marginBottom: 12 }}>
           <Banner kind="inf" icon="clock" title="Settle-up isn't open yet" text="It opens when everyone has said the numbers look right and nothing is still waiting for a vote, or when the review time is over." testID="settle-not-open" />
+        </View>
+      ) : null}
+      {fx.gate === "stale" || fx.gate === "missing" ? (
+        <View style={{ marginBottom: 12 }}>
+          <RatesOutOfDate gate={fx.gate} onRefresh={fx.refresh} refreshing={fx.refreshing} />
         </View>
       ) : null}
       {preview.failed ? (
@@ -325,11 +348,12 @@ export default function SettleUp() {
           <Banner kind="mut" icon="info" title="Some of it is carried as a debt" text="When someone owes more than their safety net covers, the rest stays owed. They can pay it later from the plan." />
         </View>
       ) : null}
-      {rates ? (
-        <Txt v="mono11" color="muted" style={{ marginTop: 12 }} testID="settle-rates">
-          {rates}
-        </Txt>
+      {rateRows.length ? (
+        <Card style={{ marginTop: 12 }}>
+          <RateLines lines={rateRows} testID="settle-rates" />
+        </Card>
       ) : null}
+      {checkRates.length ? <CheckRate rates={checkRates} subtitle="For the settle-up payouts." style={{ marginTop: 12 }} /> : null}
     </Screen>
   );
 }

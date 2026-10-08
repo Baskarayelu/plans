@@ -17,6 +17,8 @@ import type { PlanVM } from "../../lib/state/data";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts, WRISTBANDS } from "../../theme/tokens";
 import { EdgeArrow, personOf, type usePeopleMoney } from "../ending/common";
+import type { RateGate, ReceiptRate } from "../../lib/fx/receiptRate";
+import { CheckRate, RateLines, RatesOutOfDate } from "../fx/rates";
 import { Icon } from "../Icon";
 import { Banner, Bar, BigIcon, Btn, Card, Chip, Confetti, formatSeconds, ListItem, Row, Step } from "../kit";
 import { PersonAvatar, PersonName } from "../plan/common";
@@ -113,7 +115,11 @@ export function DeskSettlePreview({
   onSettle,
   failed,
   onRetry,
-  rates,
+  rateRows,
+  checkRates,
+  rateGate,
+  onRefreshRates,
+  refreshingRates,
   money,
   settling,
 }: {
@@ -125,7 +131,12 @@ export function DeskSettlePreview({
   onSettle: () => void;
   failed: boolean;
   onRetry: () => void;
-  rates: string | null;
+  /** the settle-up receipt's rate lines (empty while blocked) and the rates to check */
+  rateRows: [string, string][];
+  checkRates: ReceiptRate[];
+  rateGate: RateGate;
+  onRefreshRates: () => void;
+  refreshingRates?: boolean;
   money: Money;
   settling?: React.ReactNode;
 }) {
@@ -258,11 +269,12 @@ export function DeskSettlePreview({
           <Banner kind="mut" icon="info" title="Some of it is carried as a debt" text="When someone owes more than their safety net covers, the rest stays owed. They can pay it later from the plan." />
         </View>
       ) : null}
-      {rates ? (
-        <Txt v="mono11" color="muted" style={{ marginTop: 12 }} testID="settle-rates">
-          {rates} · locked when you press
-        </Txt>
+      {rateRows.length ? (
+        <Card style={{ marginTop: 12 }}>
+          <RateLines lines={rateRows} testID="settle-rates" />
+        </Card>
       ) : null}
+      {checkRates.length ? <CheckRate rates={checkRates} subtitle="For the settle-up payouts." style={{ marginTop: 12 }} /> : null}
       <View style={{ height: 24 }} />
 
       <SidePanel kind="form">
@@ -315,7 +327,12 @@ export function DeskSettlePreview({
             {!can && !checking ? (
               <Btn label="Check the numbers first" kind="sec" onPress={() => router.push({ pathname: "/plan/[pot]/review", params: { pot: plan.pot } })} style={{ marginBottom: 8 }} testID="btn-check-the-numbers" />
             ) : null}
-            <Btn label="Settle up · one tap" icon="key" disabled={!can || !vm} loading={busy || checking} onPress={onSettle} testID="btn-settle-up" />
+            {rateGate === "stale" || rateGate === "missing" ? (
+              <View style={{ marginBottom: 8 }}>
+                <RatesOutOfDate gate={rateGate} onRefresh={onRefreshRates} refreshing={refreshingRates} />
+              </View>
+            ) : null}
+            <Btn label="Settle up · one tap" icon="key" disabled={!can || !vm || rateGate !== "ok"} loading={busy || checking} onPress={onSettle} testID="btn-settle-up" />
             <Txt v="t13" color="muted" center style={{ marginTop: 8 }}>
               Anyone in the plan can press it. It only runs once.
             </Txt>

@@ -1,4 +1,8 @@
-/** 36 Leave the plan: your share back now (Pot.exit), or what you pay to leave if you owe. */
+/**
+ * 36 Leave the plan: your share back now (Pot.exit), or what you pay to leave if you owe. Your money
+ * is shown at the rate a receipt would use (the latest round while fresh, else Plans' quote), with
+ * the receipt's rate lines; an out-of-date rate blocks leaving until it's refreshed.
+ */
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { View } from "react-native";
@@ -10,7 +14,8 @@ import { previewExit } from "../../../lib/domain/settlement";
 import { leaveBlockers, leaveSummary } from "../../../lib/ending/planChecks";
 import { queryClient, qk, useAllowance, useBalance, useMe, usePlan } from "../../../lib/state/data";
 import { putReceipt, useAction } from "../../../lib/state/useAction";
-import { NoticeScreen, PlanProblem, PlanSkeleton, spendLabel, useRatesLine } from "../../../ui/ending/common";
+import { NoticeScreen, PlanProblem, PlanSkeleton, spendLabel } from "../../../ui/ending/common";
+import { CheckRate, RatesOutOfDate, usePreviewRates } from "../../../ui/fx/rates";
 import { Banner, Btn, Hero, Overline, Row, Skel } from "../../../ui/kit";
 import { AppBar, Screen } from "../../../ui/layout";
 import { useMoney } from "../../../ui/plan/common";
@@ -28,7 +33,7 @@ export default function LeavePlan() {
   const money = useMoney();
   const bal = useBalance();
   const allowance = useAllowance(pot);
-  const rates = useRatesLine([money.currency]);
+  const fx = usePreviewRates({ currencies: [money.currency], needed: money.currency !== "USD" && !!q.data && !q.data.settled });
   const act = useAction(async () => {
     const r = await exitPot(pot as Address);
     void queryClient.invalidateQueries({ queryKey: qk.plan(pot) });
@@ -52,7 +57,15 @@ export default function LeavePlan() {
   const potBalance = BigInt(plan.raw.balance);
   const loadingMine = s.net < 0n && (bal.isLoading || allowance.isLoading);
   const ex = previewExit(s.net, potBalance, allowance.data ?? 0n, bal.data ?? 0n);
-  const fmt = (u: bigint) => money.local(u) ?? formatUsd(u);
+  const localOf = (u: bigint) => (money.currency === "USD" ? undefined : fx.local(u, money.currency));
+  const fmt = (u: bigint) => localOf(u) ?? formatUsd(u);
+  const both = (u: bigint) => {
+    const l = localOf(u);
+    return l ? `${formatUsd(u)} · ${l}` : formatUsd(u);
+  };
+  const ratesOk = fx.gate === "ok";
+  const showRates = money.currency !== "USD" && ratesOk;
+  const myRate = fx.rates[money.currency === "AUSD" ? "USD" : money.currency];
 
   const leave = async () => {
     const r = await act.run();
@@ -63,7 +76,7 @@ export default function LeavePlan() {
     putReceipt({ kind: "exit", txHash: r.txHash, settledMs: settledMs(r), at: Math.floor(Date.now() / 1000), pot: plan.pot, plan: plan.meta.name, paid: paid.toString(), pulled: pulled.toString() });
     showToast({
       title: `You left ${plan.meta.name}`,
-      sub: paid > 0n ? `${money.both(paid)} back to your Plans account` : pulled > 0n ? `You paid ${money.both(pulled)}` : "All square",
+      sub: paid > 0n ? `${both(paid)} back to your Plans account` : pulled > 0n ? `You paid ${both(pulled)}` : "All square",
       emoji: plan.meta.emoji,
     });
     router.dismissTo("/");
@@ -77,12 +90,12 @@ export default function LeavePlan() {
     <Screen
       testID="screen-leave"
       dock={desk ? undefined : <>
-          <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine} onPress={() => void leave()} testID="btn-leave-plan" />
+          <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine || !ratesOk} onPress={() => void leave()} testID="btn-leave-plan" />
           <Btn label="Stay in the plan" kind="txt" onPress={back} testID="btn-stay-in-the-plan" />
         </>}
     >
       <DeskColumn dock={<>
-          <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine} onPress={() => void leave()} testID="btn-leave-plan" />
+          <Btn label={label} kind="dng" icon="logout" loading={act.busy} disabled={blockers.length > 0 || loadingMine || !ratesOk} onPress={() => void leave()} testID="btn-leave-plan" />
           <Btn label="Stay in the plan" kind="txt" onPress={back} testID="btn-stay-in-the-plan" />
         </>}>
       <AppBar title={`Leave ${plan.meta.name}?`} icon="x" />
@@ -90,6 +103,11 @@ export default function LeavePlan() {
         {owes ? "You've used more than you put in, so you settle your part now. Spends you were part of stay split as they are." : "You get your share back now. Spends you were part of stay split as they are."}
       </Txt>
 
+      {fx.gate === "stale" || fx.gate === "missing" ? (
+        <View style={{ marginBottom: 16 }}>
+          <RatesOutOfDate gate={fx.gate} onRefresh={fx.refresh} refreshing={fx.refreshing} />
+        </View>
+      ) : null}
       {blockers.length > 0 ? (
         <View style={{ marginBottom: 16, gap: 8 }}>
           {blockers.map((b) => (
@@ -121,7 +139,7 @@ export default function LeavePlan() {
               {loadingMine ? (
                 <Skel w={160} h={36} />
               ) : (
-                <Hero big={fmt(owes ? ex.pulled + ex.debt : ex.paid)} small={money.local(owes ? ex.pulled + ex.debt : ex.paid) ? formatUsd(owes ? ex.pulled + ex.debt : ex.paid) : undefined} testID="leave-amount" />
+                <Hero big={fmt(owes ? ex.pulled + ex.debt : ex.paid)} small={localOf(owes ? ex.pulled + ex.debt : ex.paid) ? formatUsd(owes ? ex.pulled + ex.debt : ex.paid) : undefined} testID="leave-amount" />
               )}
             </View>
             <Txt v="t15" weight="bold" style={{ marginTop: 4 }}>
@@ -137,9 +155,10 @@ export default function LeavePlan() {
           owes ? ["You owe", formatUsd(-s.net)] : ["Back to you", formatUsd(ex.paid)],
           ...(owes && ex.debt > 0n ? ([["Owed after you leave", formatUsd(ex.debt)]] as [string, string][]) : []),
           ...(!owes && ex.paid < s.net ? ([["Still owed to you", formatUsd(s.net - ex.paid)]] as [string, string][]) : []),
-          ...(rates ? ([["", rates]] as [string, string][]) : []),
+          ...(showRates ? fx.lines([money.currency]) : []),
         ]}
       />
+      {showRates && myRate ? <CheckRate rates={[myRate]} subtitle="For your money in this plan." style={{ marginTop: 12 }} /> : null}
 
       <View style={{ marginTop: 16, gap: 8 }}>
         {owes && ex.debt > 0n ? (

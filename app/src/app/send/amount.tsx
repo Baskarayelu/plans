@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { currencyFor, formatUsd } from "../../lib/domain/currency";
 import { identity } from "../../lib/identity/session";
-import { e8ToText, fmtE8, quote, rateLine, unitsToE8 } from "../../lib/send/convert";
+import { shareRateLine } from "../../lib/fx/receiptRate";
+import { e8ToText, fmtE8, quote, unitsToE8 } from "../../lib/send/convert";
 import { placeLine, recipientFrom, sendDraft } from "../../lib/send/draft";
 import { personFor, useBalance, useFx, useMe } from "../../lib/state/data";
 import { useStore } from "../../lib/state/observable";
@@ -11,6 +12,7 @@ import { Keypad } from "../../ui/Keypad";
 import { Avatar, Banner, Btn, Btns, Card, Chip, Row, Skel } from "../../ui/kit";
 import { AppBar, Screen } from "../../ui/layout";
 import { useLocal } from "../../ui/money";
+import { useSendPreview } from "../../ui/fx/rates";
 import { BigAmount, Mono, useFxPair } from "../../ui/send/bits";
 import { AusdPill } from "../../ui/agora/dollars";
 import { DeskSend } from "../../ui/send/desk";
@@ -28,6 +30,7 @@ export default function SendAmount() {
   const fxMy = useFx(myCurrency);
   const fxTheir = useFx(to?.currency ?? "USD");
   const pair = useFxPair(myCurrency, to?.currency ?? myCurrency);
+  const preview = useSendPreview(myCurrency, to?.currency ?? myCurrency);
   const [inDollars, setInDollars] = useState(myCurrency === "USD");
   const [text, setText] = useState("");
   const { desk } = useLayout();
@@ -99,7 +102,8 @@ export default function SendAmount() {
     router.push("/send/confirm");
   };
 
-  const pairLine = to.currency !== myCurrency && pair.data ? rateLine(myCurrency, to.currency, pair.data.rateE8, pair.data.timestamp, pair.data.source) : null;
+  // The rate the receipt will carry, in its words (the same choice of round or quote as Check and send).
+  const pairLine = to.currency !== myCurrency && preview.gate === "ok" ? shareRateLine(preview.rate) : null;
   const secondary = dollars && myCurrency !== "USD" ? (q.myE8 !== null && q.valid ? `${fmtE8(q.myE8, myCurrency)}` : null) : !dollars && q.usdUnits !== null && q.valid ? formatUsd(q.usdUnits) : null;
 
   return (
