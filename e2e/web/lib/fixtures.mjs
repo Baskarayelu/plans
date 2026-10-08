@@ -714,6 +714,11 @@ export function answerGraphql(world, query, variables = {}, myPubHex = null) {
         ],
       };
     }
+    case "AllSpends": {
+      // The settled summary's spend list and CSV (lib/ending/memory.ts): every executed spend, oldest first.
+      const rows = pot ? pot.spends.filter((s) => s.status === "Executed").sort((a, b) => (a.executedAt ?? 0) - (b.executedAt ?? 0)) : [];
+      return { Spend: rows.map((s) => ({ spendId: s.spendId, kind: s.kind, proposer_id: s.proposer_id, amount: s.amount, category: s.category, memo: s.memo, executedAt: s.executedAt, proposedAt: s.proposedAt, status: s.status, txHash: s.txHash })) };
+    }
     case "ClaimBySigner":
       return { Claim: world.empty ? [] : [world.claimLink] };
     case "AccountKey":
@@ -873,6 +878,9 @@ function fakeRelay(world, action, params) {
  *              the round's reference rate; propose: SpendProposed + SpendExecuted; settle: Payout per
  *              member owed money + Settled with the latest round). Nothing reaches the network. Install
  *              after noTestnetWrites (this route goes first).
+ *   staleFx    true → the relayer's latest round (/v1/fx/round) was scheduled 7 hours ago and every
+ *              quote (/v1/fx) was fetched 7 hours ago: past the 6-hour limit, so Check and send,
+ *              settle-up, leave and spends typed in pounds show "Rates are out of date".
  *   log        true → print every answered request
  * Returns { ids, people, world(), me(), stop() }.
  */
@@ -947,20 +955,22 @@ export async function installFixtures(page, opts = {}) {
       if (p === "/v1/config") return json({ chainId: CHAIN_ID, graphqlUrl: GRAPHQL_URL });
       if (p === "/v1/demo/accounts") return json(opts.demo ?? { enabled: true, accounts: [], pots: [] });
       const world = await worldFor();
+      const STALE = 7 * 3600;
       if (p === "/v1/fx/round") {
         const r = world.fxRound;
+        const scheduledTime = opts.staleFx ? world.now - STALE : Number(r.scheduledTime);
         return json({
           fxReference: r.fxReference,
           roundId: r.roundId,
-          scheduledTime: Number(r.scheduledTime),
+          scheduledTime,
           writtenAt: r.writtenAt,
           rateDate: r.rateDate,
           sourceMask: r.sourceMask,
           usdPerUnitE8: Object.fromEntries(Object.entries(USD_PER_E8).filter(([c]) => c !== "USD").map(([c, v]) => [c, String(v)])),
           sourceMasks: Object.fromEntries(Object.keys(USD_PER_E8).filter((c) => c !== "USD").map((c) => [c, 3])),
-          ageSec: world.now - Number(r.scheduledTime),
+          ageSec: world.now - scheduledTime,
           maxAgeSec: 21600,
-          fresh: true,
+          fresh: world.now - scheduledTime <= 21600,
         });
       }
       const from = (url.searchParams.get("from") ?? "USD").toUpperCase();
@@ -968,17 +978,18 @@ export async function installFixtures(page, opts = {}) {
       const rate = fxRateE8(from, to);
       if (rate === null) return json({ error: { code: "FX_UNSUPPORTED", message: `No rate for ${from}/${to}` } }, 400);
       const date = new Date((world.now - 86400) * 1000).toISOString().slice(0, 10);
+      const fetched = world.now - (opts.staleFx ? STALE : 600);
       const rateStr = (Number(rate) / 1e8).toFixed(8).replace(/0+$/, "").replace(/\.$/, "");
       return json({
         from,
         to,
         rate: rateStr,
         rateE8: String(rate),
-        timestamp: world.now - 600,
+        timestamp: fetched,
         date,
         source: "ECB reference rates via frankfurter.app (fixture)",
         signer: "0x0000000000000000000000000000000000000000",
-        message: `Plans FX reference\nPair: ${from}/${to}\nRateE8: ${rate}\nTimestamp: ${world.now - 600}\nDate: ${date}\nSource: fixture`,
+        message: `Plans FX reference\nPair: ${from}/${to}\nRateE8: ${rate}\nTimestamp: ${fetched}\nDate: ${date}\nSource: fixture`,
         signature: "0x" + "00".repeat(65),
       });
     }

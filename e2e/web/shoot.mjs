@@ -173,7 +173,37 @@ async function openPlan(page, desk, pot) {
   await sleep(800);
 }
 
-async function session(browser, width, { ended }) {
+/** Send → Sam → $1.50 → Check and send (a phone continues to 46; a laptop has it in the panel). */
+async function toSendConfirm(page, desk) {
+  await goPlace(page, "send", desk);
+  await waitAny(page, ["screen-send"]);
+  await tap(page, `recent-${PEOPLE.sam.address.slice(2, 8)}`, { timeout: 15000 });
+  await waitAny(page, ["amount-display", "screen-send-amount"]);
+  await enterAmount(page, "1.5");
+  await sleep(1200);
+  if (await visible(page, "btn-continue")) await tap(page, "btn-continue");
+  await waitAny(page, ["btn-confirm-with-fingerprint"]);
+  await sleep(1500);
+}
+
+/** Plan → More → Leave plan. */
+async function toLeave(page, desk, pot) {
+  await openPlan(page, desk, pot);
+  await tap(page, "btn-plan-more", { timeout: 15000 });
+  await waitAny(page, ["menu-leave"]);
+  await sleep(400);
+  await tap(page, "menu-leave");
+  await waitAny(page, ["screen-leave"]);
+  await sleep(1800);
+}
+
+/** Scrolls a test id to the middle of the screen (phones: the part of a long screen that changed). */
+async function centre(page, id) {
+  await page.$eval(`[data-testid="${id}"]`, (el) => el.scrollIntoView({ block: "center" })).catch(() => undefined);
+  await sleep(500);
+}
+
+async function session(browser, width, { ended, stale = false }) {
   const desk = width >= 1024;
   // a fresh browser context per session: localStorage (the stored account) isn't shared
   const ctx = await browser.createBrowserContext();
@@ -183,7 +213,8 @@ async function session(browser, width, { ended }) {
   await addPasskeyAuthenticator(page);
   await noTestnetWrites(page);
   // relay: writes answer with fixture results (send, propose, settle), so receipts made "just now" can be shot.
-  const fx = await installFixtures(page, { balance: 5_000_000n, lisbonEnded: ended, myCountry: "GB", relay: true });
+  // stale: every rate is 7 hours old, so confirming is blocked with "Rates are out of date".
+  const fx = await installFixtures(page, { balance: 5_000_000n, lisbonEnded: ended, myCountry: "GB", relay: true, staleFx: stale });
   await createAccount(page, { name: "Maya", country: "GB", countryName: "United Kingdom", city: "London" });
   await waitAny(page, [`plan-card-${fx.ids.lisbon.slice(2, 8)}`]);
   await sleep(1500);
@@ -200,7 +231,41 @@ async function session(browser, width, { ended }) {
     }
   };
 
-  if (!ended) {
+  if (stale && !ended) {
+    // Group 2 follow-up: the out-of-date block before confirming (152 States), with a refresh.
+    await step("send-confirm-stale", async () => {
+      await toSendConfirm(page, desk);
+      await waitAny(page, ["rates-out-of-date"], 15000);
+      if (!desk) await centre(page, "rates-out-of-date");
+    });
+    await step("personal-stale", async () => {
+      await openPlan(page, desk, L);
+      await tap(page, "btn-plan-more", { timeout: 15000 });
+      await waitAny(page, ["menu-personal"]);
+      await sleep(400);
+      await tap(page, "menu-personal");
+      await waitAny(page, ["screen-personal"]);
+      await page.type('[data-testid="field-what-was-it"]', "Groceries");
+      await page.type('[data-testid="field-amount"]', "12");
+      await waitAny(page, ["rates-out-of-date"], 15000);
+      await centre(page, "rates-out-of-date");
+    });
+    await step("leave-stale", async () => {
+      await toLeave(page, desk, L);
+      await waitAny(page, ["rates-out-of-date"], 15000);
+    });
+  } else if (stale && ended) {
+    await step("settle-stale", async () => {
+      await openPlan(page, desk, L);
+      const got = await waitAny(page, ["btn-review-and-settle", "btn-banner-review"], 10000);
+      await tap(page, got ?? "btn-review-and-settle");
+      await waitAny(page, ["screen-review"]);
+      await tap(page, "btn-see-the-settle-up", { timeout: 15000 });
+      await waitAny(page, ["screen-settle-preview"]);
+      await waitAny(page, ["rates-out-of-date"], 15000);
+      await sleep(1500);
+    });
+  } else if (!ended) {
     await step("home", async () => {
       await goPlace(page, "plans", desk);
       await waitAny(page, [`plan-card-${L.slice(2, 8)}`]);
@@ -235,6 +300,16 @@ async function session(browser, width, { ended }) {
       await tap(page, `recent-${PEOPLE.sam.address.slice(2, 8)}`, { timeout: 15000 });
       await waitAny(page, ["screen-send-amount"]);
       await sleep(1200);
+    });
+    // Check and send with the Sent receipt's own rate lines (the round it will name), and Leave.
+    await step("send-confirm", async () => {
+      await toSendConfirm(page, desk);
+      await waitAny(page, [desk ? "confirm-rate-lines" : "rate-line"], 15000);
+      if (!desk) await centre(page, "rate-line");
+    });
+    await step("leave", async () => {
+      await toLeave(page, desk, L);
+      if (!desk) await centre(page, "leave-stub");
     });
     await step("activity", async () => {
       await goPlace(page, "activity", desk);
@@ -356,6 +431,11 @@ async function session(browser, width, { ended }) {
       await waitAny(page, ["screen-settle-preview"]);
       await sleep(1500);
     });
+    await step("settle-rates", async () => {
+      if (!(await visible(page, "screen-settle-preview"))) throw new Error("not on the settle-up preview");
+      await waitAny(page, ["settle-rates"], 15000);
+      await centre(page, "settle-rates");
+    });
     await step("receipt-settled-now", async () => {
       if (!(await visible(page, "btn-settle-up"))) {
         await openPlan(page, desk, L);
@@ -400,9 +480,11 @@ try {
     console.log(`\n${width} px`);
     await fresh(browser, width, "welcome", "/app", ["screen-welcome"]);
     await fresh(browser, width, "claim", claimPath(), ["screen-claim"]);
-    const normal = ["home", "plan", "approval", "pay", "send", "send-amount", "activity", "you", "summary", "settled", "receipt-sent", "rate-sheet-sent", "receipt-received-quote", "receipt-received-same", "receipt-spend-round", "receipt-spend-quote", "receipt-spend-done", "receipt-sent-now", "rate-sheet-sent-now", "rate-sheet-settled", "share-card", "summary-rates"];
+    const normal = ["home", "plan", "approval", "pay", "send", "send-amount", "send-confirm", "leave", "activity", "you", "summary", "settled", "receipt-sent", "rate-sheet-sent", "receipt-received-quote", "receipt-received-same", "receipt-spend-round", "receipt-spend-quote", "receipt-spend-done", "receipt-sent-now", "rate-sheet-sent-now", "rate-sheet-settled", "share-card", "summary-rates"];
     if (normal.some(want)) await session(browser, width, { ended: false });
-    if (want("settle") || want("receipt-settled-now")) await session(browser, width, { ended: true });
+    if (want("settle") || want("settle-rates") || want("receipt-settled-now")) await session(browser, width, { ended: true });
+    if (want("send-confirm-stale") || want("personal-stale") || want("leave-stale")) await session(browser, width, { ended: false, stale: true });
+    if (want("settle-stale")) await session(browser, width, { ended: true, stale: true });
   }
 } finally {
   await browser.close();
