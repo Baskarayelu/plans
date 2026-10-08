@@ -31,7 +31,7 @@ const opt = (k, d) => {
 };
 const BASE = opt("--base", process.env.PLANS_ORIGIN ?? "https://plans.0xo.in").replace(/\/$/, "");
 const ORIGIN = new URL(BASE).origin;
-const OUT = resolve(opt("--out", join(HERE, ".runs", "postdeploy-" + new Date().toISOString().replace(/[:.]/g, "-"))));
+const OUT = resolve(opt("--out", join(HERE, "..", "evidence", "postdeploy", "postdeploy-" + new Date().toISOString().replace(/[:.]/g, "-"))));
 const BROWSERS = opt("--browsers", "chrome,safari").split(",");
 const SIGNED_IN = args.includes("--signed-in");
 const ONLY_APP = args.includes("--only-app");
