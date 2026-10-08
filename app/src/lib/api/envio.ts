@@ -348,6 +348,11 @@ export const Q_FX_ROUND = `query FxRoundById($roundId: numeric!, $chainId: Int!)
   FxRound(where: { roundId: { _eq: $roundId }, chainId: { _eq: $chainId } }, limit: 1) { ${FX_ROUND_FIELDS} }
 }`;
 
+/** The round in effect at a time: the newest scheduled at or before `$at` (unix seconds). */
+export const Q_FX_ROUND_AT = `query FxRoundAt($at: numeric!, $chainId: Int!) {
+  FxRound(where: { scheduledTime: { _lte: $at }, chainId: { _eq: $chainId } }, order_by: { scheduledTime: desc }, limit: 1) { ${FX_ROUND_FIELDS} }
+}`;
+
 export const FX_ROUND_CURRENCIES = ["GBP", "EUR", "INR", "NGN", "JPY", "CHF", "AED", "SGD"] as const;
 
 /** USD per 1 unit (8 decimals) by ISO code from an FxRound row; currencies absent from the round are left out. */
@@ -426,5 +431,6 @@ export const fetchSpendDetail = async (spendEntityId: string) =>
 export const fetchClaimBySigner = async (signer: string) => (await gql<{ Claim: ClaimRow[] }>(Q_CLAIM_BY_SIGNER, { signer: lc(signer) })).Claim[0] ?? null;
 export const fetchLatestFxRound = async () => (await gql<{ FxRound: FxRoundRow[] }>(Q_LATEST_FX_ROUND, {})).FxRound[0] ?? null;
 export const fetchFxRound = async (roundId: bigint | string) => (await gql<{ FxRound: FxRoundRow[] }>(Q_FX_ROUND, { roundId: String(roundId) })).FxRound[0] ?? null;
+export const fetchFxRoundAt = async (atSec: number) => (await gql<{ FxRound: FxRoundRow[] }>(Q_FX_ROUND_AT, { at: String(Math.floor(atSec)) })).FxRound[0] ?? null;
 export const fetchAccountKeys = async (accounts: string[]) =>
   (await gql<{ Account: { id: string; key?: string | null; country?: string | null }[] }>(Q_ACCOUNT_KEYS, { accounts: accounts.map(lc) })).Account;

@@ -142,6 +142,13 @@ export async function latestFxRound(fx?: Address): Promise<FxRound | null> {
   return toFxRound((await rpc().readContract({ address, abi: fxReferenceAbi, functionName: "latestRound" })) as RawRound);
 }
 
+/** One FxReference round by id, or null when there is no FxReference or no such round. */
+export async function fxRoundById(id: bigint, fx?: Address): Promise<FxRound | null> {
+  const address = fx ?? (await fxReferenceAddress());
+  if (!address || id <= 0n) return null;
+  return toFxRound((await rpc().readContract({ address, abi: fxReferenceAbi, functionName: "round", args: [id] })) as RawRound);
+}
+
 /** True while a round can still be quoted on a send (at most MAX_FX_AGE_SEC after its scheduled time). */
 export const isFxRoundFresh = (r: Pick<FxRound, "scheduledTime"> | null, nowSec = Math.floor(Date.now() / 1000)) =>
   !!r && r.scheduledTime > 0 && nowSec <= r.scheduledTime + MAX_FX_AGE_SEC;
