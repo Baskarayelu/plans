@@ -1,8 +1,8 @@
 {
-  "date": "2026-10-08T13:22:27.038Z",
+  "date": "2026-10-08T13:34:12.281Z",
   "forkUrl": "https://rpc.monad.xyz",
-  "forkBlock": 111620590,
-  "passed": 47,
+  "forkBlock": 111622911,
+  "passed": 50,
   "failed": 0,
   "deployment": {
     "keyRegistry": "0xf514925f5f781455E162148eA5BF3E8f5626d5bb",
@@ -63,7 +63,7 @@
     {
       "name": "deploy: check prints 4 pending CREATE2 transactions and a fingerprint",
       "ok": true,
-      "detail": "0xcb48ed46"
+      "detail": "0x30951c42"
     },
     {
       "name": "deploy: send with a wrong fingerprint refused",
@@ -117,6 +117,21 @@
     },
     {
       "name": "deploy: re-run check skips everything (0 of 4 to send)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-lanes: RELAYER_1 has 1.3 MON",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-lanes: RELAYER_2 has 1.3 MON",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-lanes: RELAYER_3 has 1.3 MON",
       "ok": true,
       "detail": ""
     },
@@ -248,17 +263,17 @@
     {
       "name": "return-funds: MON conserved: before - gas paid = after",
       "ok": true,
-      "detail": "gas 0.001714258320166736 MON over 18 txs"
+      "detail": "gas 0.001642402295599822 MON over 18 txs"
     },
     {
       "name": "return-funds: every MON holder was swept; what remains is at most its sweep's gasLimit x maxFee (fee dust)",
       "ok": true,
-      "detail": "TREASURY 0.003004919496492 MON, RELAYER_1 0.003005054521599 MON, RELAYER_2 0.00300517267329 MON, RELAYER_3 0.003005276060154 MON, DEMO_BEN 0 MON, DEMO_ASHA 0 MON, DEMO_MAYA 0.003005366527293 MON, TEST_ALICE 0.003005445689208 MON"
+      "detail": "TREASURY 0.003005437644759 MON, RELAYER_1 0.003005507919474 MON, RELAYER_2 0.003005569412304 MON, RELAYER_3 0.003005623220688 MON, DEMO_BEN 0 MON, DEMO_ASHA 0 MON, DEMO_MAYA 0.003005670304914 MON, TEST_ALICE 0.003005711505255 MON"
     },
     {
       "name": "return-funds: deployer MON after = before + swept - its own gas",
       "ok": true,
-      "detail": "+4.401712 MON"
+      "detail": "+4.451712 MON"
     },
     {
       "name": "return-funds: MON moved only after a quiet window of k + 1 blocks",

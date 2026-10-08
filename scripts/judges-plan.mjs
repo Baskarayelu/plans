@@ -19,7 +19,7 @@
 // Options: --name <text>, --end <ISO time> (default 2026-10-31T23:59:59Z), --deposits <maya,ben,asha
 // dollars> (default 0.40,0.30,0.30), --out-dir, --deployments, --host, --chain, --rpc, --keys,
 // --tip-gwei, --fork (local anvil fork tests only).
-// Needs: npm --prefix e2e/stage-a install (tsx) and app/node_modules (pnpm --dir app install).
+// Needs: npm --prefix e2e/stage-a install (tsx) and app/node_modules (npm --prefix app install).
 
 import { existsSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import path from 'node:path';
@@ -33,7 +33,7 @@ const { encodeFunctionData, toHex, parseUnits, stringToHex } = V;
 const TSX = path.join(O.REPO, 'e2e', 'stage-a', 'node_modules', 'tsx', 'dist', 'esm', 'api', 'index.mjs');
 async function appModules() {
   if (!existsSync(TSX)) throw new Error('tsx not installed: run `npm --prefix e2e/stage-a install` first');
-  if (!existsSync(path.join(O.REPO, 'app', 'node_modules', '@noble'))) throw new Error('app dependencies missing: run `pnpm --dir app install` first');
+  if (!existsSync(path.join(O.REPO, 'app', 'node_modules', '@noble'))) throw new Error('app dependencies missing: run `npm --prefix app install` first');
   const { tsImport } = await import(pathToFileURL(TSX).href);
   const p = (f) => pathToFileURL(path.join(O.REPO, 'app', 'src', 'lib', f)).href;
   const [eip712, abi, seal, keys, links, rules] = await Promise.all(

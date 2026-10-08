@@ -521,12 +521,12 @@ node scripts/return-funds.mjs send --confirm $FP
 
 ## Rehearsal on a mainnet fork
 
-`node e2e/mainnet-prep/run.mjs` ([README](../e2e/mainnet-prep/README.md)) runs steps 2, 5, 9, 10, 11 and 14 on a local anvil fork of mainnet with real AUSD, using throwaway keys. Each step runs as `check` and then `send --confirm`, and the result is asserted onchain. Last run, 8 Oct 2026, fork block 111,620,590: **47 passed, 0 failed**.
+`node e2e/mainnet-prep/run.mjs` ([README](../e2e/mainnet-prep/README.md)) runs steps 2, 5, 9, 10, 11 and 14 on a local anvil fork of mainnet with real AUSD, using throwaway keys. Each step runs as `check` and then `send --confirm`, and the result is asserted onchain. Last run, 8 Oct 2026: **50 passed, 0 failed**.
 
 | Step | Result on the fork |
 |---|---|
 | Deploy (2) | All 6 contracts deployed and wired. The addresses are listed in 2a. A re-run sends nothing, and `contracts/deployments/143.json` is untouched. |
-| Relayer lanes (5) | Each lane topped up to target. |
+| Relayer lanes (5) | All three lanes at 1.3 MON. |
 | Demo members (9) | Ben, Asha and Maya at $1.00. |
 | Claim links (11) | 8 × $0.50 open, signer = link key. Link 1 claimed with its key. |
 | Judges' plan (10) | The plan holds $1.00, with Maya, Ben and Asha as members. |

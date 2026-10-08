@@ -8,6 +8,7 @@
 //
 //   1. deploy: forge dry run of Deploy.s.sol (into a temp broadcast dir) -> monad-send.mjs check/send
 //      --fork; all six contracts, wiring verified, deployments written to a temp <chain>-fork.json.
+//   1b. fund-lanes.mjs: the three relayer lanes topped up to 1.3 MON from the deployer.
 //   2. fund-demo.mjs: Ben, Asha, Maya topped up to $1.00 from the treasury.
 //   3. claim-links.mjs: 8 x $0.50 links; every link checked onchain; one claimed with its key.
 //   4. judges-plan.mjs: "Metropolis Judges' Trip" created by Maya, Ben and Asha join, $1.00 in total.
@@ -128,7 +129,7 @@ async function main() {
     const ts = BigInt(await rpc('eth_getStorageAt', [AUSD, SUPPLY_SLOT, 'latest']));
     await rpc('anvil_setStorageAt', [AUSD, SUPPLY_SLOT, pad(toHex(ts + amount), { size: 32 })]);
   }
-  const monStart = { DEPLOYER: MON(15), RELAYER_1: MON('1.3'), RELAYER_2: MON('1.2'), RELAYER_3: MON('1.35'), TREASURY: MON('0.05'), DEMO_MAYA: MON('0.02'), TEST_ALICE: MON('0.5') };
+  const monStart = { DEPLOYER: MON(15), RELAYER_2: MON('0.2'), TREASURY: MON('0.05'), DEMO_MAYA: MON('0.02'), TEST_ALICE: MON('0.5') };
   for (const [n, w] of Object.entries(monStart)) await setMon(acct[n].address, w);
   const ausdStart = { TREASURY: USD(12), RELAYER_1: USD('0.25'), TEST_ALICE: USD(2) };
   for (const [n, u] of Object.entries(ausdStart)) await addAusd(acct[n].address, u);
@@ -169,6 +170,13 @@ async function main() {
     const real = JSON.parse(readFileSync(realDep, 'utf8'));
     check('deploy: fork addresses equal contracts/deployments/143.json', ['keyRegistry', 'fxReference', 'plansSend', 'plansFactory', 'claimEscrow', 'potImplementation'].every((k) => O.lc(real[k]) === O.lc(dep[k])));
   }
+
+  // ── 1b. relayer lanes ──
+  const flCheck = run('node', ['scripts/fund-lanes.mjs', 'check', ...common, '--each', '1.3', '--keep', '1']);
+  log('1b-fund-lanes-check', flCheck.out);
+  const flSend = run('node', ['scripts/fund-lanes.mjs', 'send', ...common, '--each', '1.3', '--keep', '1', '--confirm', fpOf(flCheck.out)]);
+  log('1b-fund-lanes-send', flSend.out);
+  for (const n of ['RELAYER_1', 'RELAYER_2', 'RELAYER_3']) check(`fund-lanes: ${n} has 1.3 MON`, (await O.balance(conn, acct[n].address)) === MON('1.3'));
 
   // ── 2. fund demo members ──
   const fdCheck = run('node', ['scripts/fund-demo.mjs', 'check', ...common]);
