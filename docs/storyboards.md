@@ -1,57 +1,78 @@
-# Video storyboards
+# Video storyboards (final)
 
-Living document. Nothing is recorded until the flows exist on the network named in each shot. Each shot lists what must be live first. Timings are targets.
+Final shot lists for the three required videos. **Nothing is recorded yet.** Each shot gives the time, the exact flow in the app (route file, testIDs and taps, from `app/src/app/**`), the text on screen, and the claims the shot makes with how to check each one before it is published. A shot whose claim can't be checked on the day is cut, not narrated around.
 
-Status key: **ready** (exists on testnet now) · **pending** (not built or not deployed yet).
+Last checked against the code and the live services: 8 Oct 2026 (web build `builtAt 2026-10-07T22:14Z`, relayer healthy on chain 10143, CRE round 2 latest).
+
+## Rules for every video
+
+- **Network on screen.** Record on mainnet if it is live and checked by then; otherwise on Monad testnet. The first frame says which, in words: "Recorded on Monad testnet, <date>" or "Recorded on Monad mainnet, <date>". Testnet dollars are labelled "test dollars" in the app; never call them real.
+- **Real product only.** No mock screens, no edited numbers, no slides in the technical demo (rules §4.1). Captions may be added; numbers in captions must come from the recording or from a check listed here.
+- **Before recording:** the multi-device end-to-end run on testnet (Stage B) has passed for every flow in the shot list, the indexer's `_meta.isReady` is true, and a fresh CRE round has been written within the last 6 hours (so sends and settle-up cite it).
+- **Devices.** Phones are the Plans Test Android app on our emulators `play35-a/b/c` (or a physical phone); laptop shots are Chrome on macOS at https://plans.0xo.in/app. Android push notifications are pending (Firebase), so no shot shows an Android notification; laptop notifications (web push) are fine.
+- **People.** Leah (London, £), Sam (New York, $), Asha (Bengaluru, ₹) are team test accounts listed in `indexer/internal-accounts.json`. Ben, Asha and Maya in the in-app demo are relayer demo accounts and show a `DEMO` tag; don't present them as users.
+- **Times.** "Settled in" shows the app's own measurement. Don't caption a speed that the receipt doesn't show.
+
+Status key: **ready** (works on testnet today; still re-check on the day) · **gated** (needs the item named before it can be recorded).
 
 ---
 
 ## 1. Agora bounty video (required, at most 2:00)
 
-The bounty requires three things on screen: passkey onboarding, an AUSD balance, and a completed send and receive settled instantly, between two members in different countries.
+The bounty requires three things on screen: passkey onboarding, an AUSD balance, and a completed send and receive settled instantly, between two people in different countries. One continuous take, two phones side by side (screen recordings composed into one frame, no cuts inside a shot).
 
-Recorded on **mainnet** after go-live, with smallest amounts. Two phones side by side (or two emulators), one continuous take.
+Network: mainnet if live; otherwise testnet with the network line on screen. Gated on: mainnet deployment (or the decision to record on testnet), Stage B passing for Send.
 
-| Time | Phone A: Leah, London (funded by a $3 claim link beforehand) | Phone B: Sam, New York (fresh install) | Proves | Status |
+Setup (off camera): Phone A is Leah (profile country United Kingdom, city London, money GBP), funded with a $3.00 claim link (mainnet) or test dollars (testnet). Phone B has Plans freshly installed, never opened.
+
+| Time | Phone A: Leah, London | Phone B: Sam, New York | On-screen text (caption / in-app) | Claims to verify, and how |
 |---|---|---|---|---|
-| 0:00–0:08 | Title card over both home screens: "London → New York, one fingerprint each" | — | Context | pending |
-| 0:08–0:30 | — | Open Plans, **Create account**, one fingerprint, pick United States. Home shows $0.00 | **Passkey onboarding** | pending (needs mainnet) |
-| 0:30–0:42 | Open the **Send** tab: "$3.00 · £2.2x", captioned "Digital dollars (AUSD)", with the Agora backing line | — | **AUSD balance** | pending |
-| 0:42–0:52 | — | You → My Plans code (QR) | — | pending |
-| 0:52–1:15 | Scan Sam's code, enter £1.00, see "Sam gets $1.3x" and the reference rate, confirm with fingerprint | — | Send | pending |
-| 1:15–1:30 | — | Buzzes: "+$1.3x from Leah, London". Receipt shows both currencies, reference rate, "Settled in 0.x s", Proof | **Completed receive, settled instantly** | pending |
-| 1:30–1:45 | Tap Proof: the Monad explorer shows the transaction, final | — | Onchain proof | pending |
-| 1:45–2:00 | End card: "Mera passkeys · AUSD on Monad · settled in under a second" | — | — | pending |
+| 0:00–0:06 | Home (`screen-home`) | Plans icon on the launcher | Caption: "London → New York. One fingerprint each." + "Recorded on Monad <network>, <date>" | Network: `curl …/v1/health` → `chainId` 143 (mainnet) or 10143 (testnet) the same day. |
+| 0:06–0:28 | — | Open Plans → `screen-welcome` "One pot for the whole plan." → tap **Create account** (`btn-create-account`) → Android passkey sheet "Create passkey for plans.0xo.in?" → fingerprint → `screen-profile` "Step 2 of 2", "Your Plans account is ready" → type "Sam" in `field-name`, `field-country` = United States, `field-city` "New York" → **Continue** (`btn-continue`) → `screen-home`, `home-balance` $0.00 | In-app: "Your fingerprint is the key. There is no password to forget." Caption: "Passkey onboarding: one fingerprint, no seed phrase" | One prompt: count the system sheets in the raw recording (exactly one). No seed phrase / password: nothing is typed except the name. |
+| 0:28–0:40 | Tap **Send** tab (`tab-send`) → `screen-send`: `send-balance-card` "You can send" with `send-balance` and the AUSD pill (`pill-ausd`) | — | Caption: "Leah's balance: digital dollars (AUSD)" | Balance is AUSD: on Proof later, the token contract is `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (mainnet) or `0xa9012a05…22dC` (testnet). Amount matches `cast call <AUSD> 'balanceOf(address)(uint256)' <Leah>` after the shoot. |
+| 0:40–0:50 | — | **Send** tab → **My code** (`btn-my-code`) → `screen-my-code` "My Plans code", `my-code-qr` | In-app: "Anyone can scan this to send you money. It can't be used to take money." | — |
+| 0:50–1:12 | **Scan code** (`btn-scan-code`) → `screen-scan` "Point at a friend's Plans code" → scan Phone B's QR → `screen-send-amount` "Send to Sam" → type 1.00 (pounds) in `amount-display` → `recipient-gets` "Sam gets $1.3x", `rate-line` → **Continue** (`btn-continue`) → `screen-send-confirm` "Check and send": `confirm-you-send`, `confirm-they-get`, `rate-line` → **Confirm with fingerprint** (`btn-confirm-with-fingerprint`) → fingerprint | — | In-app: "No fee · arrives in under a second" | Rate line source: the app shows "Rate 1 GBP = x USD · ECB HH:MM UTC" from the relayer's signed ECB quote; compare with `curl '…/v1/fx?from=GBP&to=USD'` at the time. If a fresh CRE round exists, the send's `Sent` event carries `fxRoundId` > 0 (check the tx logs). |
+| 1:12–1:30 | `screen-sent` "Sent", `sent-summary` "Sam got $1.3x in New York.", `receipt-stub` with `Fee` $0.00 and **Settled in 0.x s** (`settled-in`) | Live money-in → `screen-received`: `received-amount` "+$1.3x", `received-from` "from Leah, London", `received-their-amount` "Leah sent £1.00", `received-balance` | Caption: "Sent and received. Settled in <value from the receipt>" | "Settled in": read the value off the receipt; cross-check the tx's block time on the explorer is consistent (sub-second claim only if the receipt shows < 1 s). Receive on Phone B happens without a refresh: keep the take uncut. |
+| 1:30–1:45 | — | Tap **Proof** (`proof`) → explorer page for the transaction | Caption: "Proof: the transfer on Monad" | Explorer shows status Success, the AUSD contract, from Leah's address to Sam's, the same amount. |
+| 1:45–2:00 | End card | End card | "Mera passkeys · AUSD on Monad · plans.0xo.in · @PlansOnMonad" | — |
+
+Optional, only if time remains and it works in the take: Sam taps **Send back** (`btn-send-back`) with $0.50 and Phone A shows `screen-received`.
 
 ## 2. Technical demo (required, at most 3:00)
 
-Must show the live, working product and Monad transactions (rules §4.1): no slides or code walkthrough. Recorded on the network that's live at submission (mainnet if the go-ahead comes in time, otherwise testnet, stated on screen).
+Shows the live product and Monad transactions; no slides, no code. Three people in three countries: Leah on Phone A (Android, London, £), Asha on Phone C (Android, Bengaluru, ₹), Sam on a laptop (Chrome web app, New York, $). Composed as three panes; each shot is uncut.
 
-| Time | Shot | Proves | Status |
+Gated on: Stage B passing on testnet for every flow below (plan, invite, join, add, pay, approval, budget refusal, end early, settle, restore, link a browser); indexer `isReady`; a CRE round under 6 hours old. Mainnet only if deployed and checked; otherwise testnet with the network line.
+
+Setup (off camera): all three accounts exist and each has claimed $25 test dollars (testnet) or a claim link (mainnet). Sam's laptop has notifications turned on (You → Notifications → `btn-allow-notifications`).
+
+| Time | Exact flow (screen → taps) | On-screen text | Claims to verify, and how |
 |---|---|---|---|
-| 0:00–0:15 | Three phones (London £, New York $, Bengaluru ₹). A judge-style "Join with fingerprint" from a WhatsApp invite link | One-prompt join across countries | pending |
-| 0:15–0:40 | Add money on each phone; the pot balance updates on all three within a second | Live feed, sub-second blocks | pending |
-| 0:40–1:05 | Pay $36 dinner from the pot (instant); then try a $250 boat trip: "Needs 1 more approval"; the second phone approves with a thumb; it executes | Onchain rules: tiers, approvals | pending |
-| 1:05–1:20 | Try to overspend the Food budget: the contract refuses, with a plain-English reason | Rules enforced by the contract, not the app | pending |
-| 1:20–1:40 | Clear the app's storage on one phone, then "I already use Plans": account, plans and an encrypted receipt come back; the key fingerprint matches | Mera stateless test; One Passkey, Many Keys | pending |
-| 1:40–2:10 | Plan ends → "Looks right" on each phone → **Settle up**: one transaction, three phones buzz with payouts in £, $ and ₹; "Settled in 0.x s" | One-transaction settlement across borders | pending |
-| 2:10–2:30 | Share the settle summary; open the public proof page; tap through to the transaction on the explorer | Proof page, shareable | pending |
-| 2:30–2:50 | Laptop: the same plan in the web app, full-screen layout | Web app parity | pending |
-| 2:50–3:00 | End card: numbers (finality, cost per action), repo, @PlansOnMonad | — | pending |
+| 0:00–0:08 | Three panes on `screen-home` | Caption: "Plans: one pot for the whole plan. Recorded on Monad <network>, <date>." | Network as in §1. |
+| 0:08–0:30 | **Phone A:** `btn-new-plan` → `screen-plan-new` "New plan · 1 of 2": `field-plan-name` "Lisbon, 12–16 Oct", pick an emoji → **Next: set the rules** (`btn-next-set-the-rules`) → `screen-plan-rules` "How careful should the pot be?" → `preset-balanced` → **Customise rules** (`btn-customise-rules`) → `stepper-budget-3` (Food & drink) to $10 → **Save rules** (`btn-save-rules`) → **Create plan** (`btn-create-plan`) → `screen-invite` "Invite friends to Lisbon…", `invite-qr` → **Copy link** (`btn-copy-link`, toast "Link copied") | In-app: "Under $25 goes through now", budget line "Budgets: Food & drink $10." | Rules match what's set: after the shoot, read the pot's rules from the indexer (`Pot` entity) or `cast call <pot>`; Balanced = $25 instant, $25–$200 one OK, majority over $200, $150/day per person. |
+| 0:30–0:52 | **Laptop (Sam):** paste the invite link in the address bar → `screen-join` "Leah invited you", "The rules, in plain words" → **Join** (`btn-join-with-fingerprint`) → passkey prompt (Touch ID) → `screen-joined` "You're in!". **Phone C (Asha):** Home → **Join with a link or code** (`btn-join-link`) → `screen-join-link` → **Paste** (`btn-paste`) → **Open** (`btn-open-link`) → `btn-join-with-fingerprint` → fingerprint → "You're in!" | Caption: "Join from a link: one fingerprint" | One prompt each: count prompts in the raw recording. The joins are relayed transactions: find them in the relayer log or the indexer `Member` rows. |
+| 0:52–1:10 | Each pane: plan home (`plan-home`) → **Add money** (`btn-add-money`) → `screen-add-money` "Add to Lisbon pot" → type 20 in `add-amount` → **Add $20** → toast "You added $20". The pot balance (`pot-balance`) changes on all three panes. | Caption: "Everyone adds money. Every screen updates." | Don't caption a time unless measured; the uncut take shows it. `pot-balance` = $60 matches `cast call <AUSD> balanceOf(<pot>)`. |
+| 1:10–1:30 | **Phone A:** **Pay** (`btn-pay`) → `screen-pay` → pick a payee (`payee-member-*` or scan a business code) → `screen-pay-form`: amount 8, category Food & drink (`chip-category-3`), split everyone (`chip-split-everyone`), `rule-preview` "Goes through now" → **Confirm with fingerprint** → `screen-spend-done` "Paid", **Settled in** + **Proof** | In-app: "Goes through now / Under $25." | Spend executed onchain: `SpendExecuted` in the tx logs via Proof. |
+| 1:30–1:55 | **Phone A:** Pay $30, category Tickets & activities (`chip-category-4`) → `rule-preview` "Needs 1 more approval" → **Ask for an OK** (`btn-ask-for-an-ok`) → toast "Request sent". **Laptop:** browser notification "Approval needed" → click → `screen-approve` "Leah wants to pay … $30" → **Approve** (`btn-approve`) → passkey → `screen-approved` "Approved and paid", **Settled in** | In-app: "$25–$200 needs one friend's OK. … It's paid the moment one says yes." | The laptop notification is real web push: relayer `/v1/health` `push.web.sent` increases by ≥ 1 across the take. Approval then execution: `SpendProposed`, then `SpendExecuted` in the same tx as the approval (Proof). |
+| 1:55–2:08 | **Phone C (Asha):** Pay $5, category Food & drink (`chip-category-3`) → `rule-preview` "Over the Food & drink budget by $3 / Only $2 left of $10." → button **Can't pay this from the pot** (`btn-cant-pay`, disabled) | Caption: "The pot's rules say no. Not our server: the contract." | The contract enforces it: the same spend submitted to the relayer (or `cast call` against the pot with Asha's signed spend, from the Stage B harness) reverts with the budget error. Only caption "the contract" if that check passes on the day. |
+| 2:08–2:30 | **Phone A:** plan menu (`btn-plan-more`) → **End plan & check** (`menu-end`) → `screen-review` "End Lisbon early?" → **Looks right** (`btn-looks-right`); Laptop and Phone C the same → **See the settle-up** (`btn-see-the-settle-up`) → `screen-settle-preview` "Everyone is paid at once, in their own money." (`settle-payouts`, `settle-rates`) → **Settle up · one tap** (`btn-settle-up`) → `screen-settling` → `screen-settled` "All settled", chip "Settled in 0.x s", `settled-paid-out` | Caption: "One transaction pays everyone, in £, $ and ₹" | One transaction: the Proof link opens one tx containing `Settled` and the `Payout` events for each creditor. Rates line: `Settled.fxRoundId` equals the latest CRE round id if one was fresh (`cast call 0xaB7e…FCa2 'latestRoundTime()(uint64,uint64)'`). |
+| 2:30–2:45 | **Phone C:** You tab (`tab-you`) → note the key fingerprint (`card-key`) → Android Settings → Apps → Plans Test → Clear storage → reopen → `screen-welcome` → **I already use Plans** (`btn-restore`) → fingerprint → `screen-restored` "Welcome back, Asha", same three emoji, "Go to my plans" → the Lisbon plan is there | Caption: "Cleared the app. One fingerprint brings it all back." | Same emoji before and after (freeze-frame both). Plans come back from the indexer: `isReady` true on the day. |
+| 2:45–2:55 | **Laptop:** You → **Devices with your passkey** (`row-phones`) → `screen-devices` lists the phone and this browser | Caption: "The same account on a laptop" | The devices list reflects the linked browser (linked off camera through `/link` and `add-browser`). |
+| 2:55–3:00 | End card | "Mera passkeys · AUSD on Monad · Envio · Chainlink CRE · github.com/Baskarayelu/plans · @PlansOnMonad" | Each name on the card is used in the build shown (see docs/bounties.md). |
 
 ## 3. Pitch video (required, at most 2:00)
 
-Team, problem, why us. **Generated voice, no one on camera**: the founder story is told in the first person by the voiceover and carried by visuals (a group chat, a spreadsheet, a map, the product). The script is written and approved first; the voice is generated from the approved script only. On-screen credit at the end: "Voice generated; story and words by Baskar A".
+Team, problem, why us. **Generated voice, no one on camera.** The founder story is told in the first person by the voiceover and carried by visuals. The words of the founder story must be Baskar's own; they are not written here and are not to be invented. The voice is generated only from the approved script. End credit: "Voice generated; story and words by Baskar A".
 
-| Time | Voiceover beat | Visuals | Notes |
-|---|---|---|---|
-| 0:00–0:15 | Who Baskar is and the moment that started it: a trip with friends in different countries, one person's card, a spreadsheet, weeks of chasing | Animated group chat with "who paid for what?" messages; a spreadsheet filling with red cells; three flags on a map | Real story only, in his words |
-| 0:15–0:35 | The problem: every group-money product stops at a border or a bank; shared pots need you to trust the admin | Side-by-side cards for Monzo, Wise and Revolut pots, each with its limit stamped on | Cite limits from `research/block4/best-in-class.md` |
-| 0:35–0:55 | Zeel Patel's request, and Plans as the answer | The request as a quote card: under 15 words, attributed; then the Plans wordmark | Quote under 15 words |
-| 0:55–1:20 | The product in 25 seconds: join with a fingerprint, rules the pot keeps, settle in one tap across countries | Clips from the technical demo (three phones), with no faces | Reuse demo footage |
-| 1:20–1:40 | Who it's for and how the next 100 users arrive: cross-country friend groups, festivals and trips; the invite link and the settle summary as the loop; pilot results | Invite link landing in a chat; the proof page; pilot numbers as counters | Only real pilot numbers |
-| 1:40–2:00 | Why Monad (sub-second final settlement, cost per action) and what's next (iOS, card top-up partner) | The measured stats from plans.0xo.in; end card with the repo and @PlansOnMonad | — |
+| Time | Voiceover (approved script; generated voice) | Visuals | On-screen text | Claims to verify, and how |
+|---|---|---|---|---|
+| 0:00–0:18 | **[Baskar's own words, supplied before generation: who he is, and the real trip or plan with friends in different countries that started this.]** | Animated group chat ("who paid for the villa?", "I'll send you the rest… in rupees?"), a spreadsheet filling up, three flags on a map. No faces. | "Baskar A · builder of Plans" | Only details Baskar confirms in writing. |
+| 0:18–0:38 | "Splitting a trip is solved on paper. Paying it isn't. Splitwise keeps each currency separate and every way to pay it back is domestic. A joint account is for two people at one bank. A shared pocket asks you to trust the admin." | Three cards: Splitwise, a joint account, a shared pocket, each with its limit stamped on | "Splitwise: settle-up rails are domestic" · "Revolut joint account: two people, both customers" · "Revolut Group Pockets: 'only join … if you trust the admin'" | research/block4/best-in-class.md §1.1 (Splitwise KB links), §2.1 (Revolut joint account blog; Group Pockets help page, marked [snippet] there). Re-open each source the day before; drop any card whose source no longer says it. |
+| 0:38–0:52 | "In September a Monad builder asked for exactly this: a neobank for plans. So I built Plans." | Quote card, then the Plans wordmark | Quote (under 15 words): "…a neobank specifically for plans!", Zeel Patel, 8 Sep 2026 | x.com/patelzeel68/status/2097320416591438140 still public and says it. |
+| 0:52–1:20 | "Friends join with one fingerprint, anywhere. The pot keeps the rules you agree on: what goes through now, what needs a friend's OK, the budgets. When the trip ends, one tap pays everyone back, each in their own money." | Cuts from the technical demo (§2): join, add money, approval, budget refusal, settle-up. Screens only. | Captions from §2 | Every clip comes from the §2 recording, so its checks apply. |
+| 1:20–1:40 | "It's live on Monad testnet today, as an Android app and in any browser. Next, three real groups across three countries run a plan from invite to settle-up." | plans.0xo.in/app on a laptop and a phone; the invite link landing in a chat | "Live on Monad testnet" (and "on mainnet" only if true) · pilot numbers only if the pilot has run | Network: `/v1/health`. Pilot: show numbers only from docs/traction.md / the stats page, excluding demo and team accounts; if the pilot hasn't run, say "next" as written, never a number. |
+| 1:40–2:00 | "Why Monad: blocks every 300 milliseconds and final in under a second, at a fraction of a cent per action, so we pay every tap's gas and nobody ever needs a token. What's next: mainnet, a card top-up partner, then iOS." | The measured numbers as counters; end card | "301 ms blocks · 583 ms finality (median) · ~$0.0004 per relayed transfer (5 Oct 2026, mainnet)" · "github.com/Baskarayelu/plans · @PlansOnMonad" · "Voice generated; story and words by Baskar A" | Numbers from the 5 Oct mainnet measurement in submission.md "WHY MONAD"; don't round them differently. If mainnet is live by then, change "What's next: mainnet" accordingly. |
 
 ## 4. 30-second product clip (optional)
 
-Cut from the technical demo: join → pay → contract refuses → settle in one tap → proof page. Silent, captioned.
+Cut from the technical demo: join → pay → the contract refuses → settle in one tap → Proof. Silent, captioned, with the same network line.
