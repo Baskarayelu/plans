@@ -1,0 +1,443 @@
+{
+  "base": "https://plans.0xo.in",
+  "at": "2026-10-08T20:17:29.608Z",
+  "seconds": 377,
+  "passed": 43,
+  "failed": 2,
+  "results": [
+    {
+      "browser": "http",
+      "page": "sw.js + manifest",
+      "viewport": "-",
+      "theme": "-",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "browser": "chrome",
+      "page": "landing",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-landing-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "landing",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-landing-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "landing",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-landing-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "landing",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-landing-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "download",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-download-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "download",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-download-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "download",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-download-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "download",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-download-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "stats",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-stats-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "stats",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-stats-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "stats",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-stats-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "stats",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-stats-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "docs",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-docs-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "docs",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-docs-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "docs",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-docs-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "docs",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-docs-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-root",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-root-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-root",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-root-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-root",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-root-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-root",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-root-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-welcome",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-welcome-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-welcome",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-welcome-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-welcome",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-welcome-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-welcome",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-welcome-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-invite-dead",
+      "viewport": "1440",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-invite-dead-1440-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-invite-dead",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-invite-dead-1440-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-invite-dead",
+      "viewport": "390",
+      "theme": "light",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-invite-dead-390-light.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "app-invite-dead",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-app-invite-dead-390-dark.png"
+    },
+    {
+      "browser": "chrome",
+      "page": "signed-in (welcome, home, plan, pay)",
+      "viewport": "1440",
+      "theme": "light+dark",
+      "ok": false,
+      "problems": [
+        "console error: Failed to load resource: the server responded with a status of 404 ()",
+        "demo plan: Waiting failed: 90000ms exceeded"
+      ],
+      "shots": [
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-welcome-1440-light.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-welcome-1440-dark.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-home-1440-light.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-home-1440-dark.png"
+      ]
+    },
+    {
+      "browser": "chrome",
+      "page": "signed-in (welcome, home, plan, pay)",
+      "viewport": "390",
+      "theme": "light+dark",
+      "ok": false,
+      "problems": [
+        "console error: Failed to load resource: the server responded with a status of 404 ()",
+        "demo plan: Waiting failed: 90000ms exceeded"
+      ],
+      "shots": [
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-welcome-390-light.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-welcome-390-dark.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-home-390-light.png",
+        "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/chrome-live-home-390-dark.png"
+      ]
+    },
+    {
+      "browser": "safari",
+      "page": "landing",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-landing-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "landing",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-landing-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "download",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-download-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "download",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-download-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "stats",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-stats-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "stats",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-stats-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "docs",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-docs-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "docs",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-docs-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "app-root",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-root-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "app-root",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-root-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "app-welcome",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-welcome-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "app-welcome",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-welcome-390-dark.png",
+      "width": 390
+    },
+    {
+      "browser": "safari",
+      "page": "app-invite-dead",
+      "viewport": "1440",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-invite-dead-1440-dark.png",
+      "width": 1440
+    },
+    {
+      "browser": "safari",
+      "page": "app-invite-dead",
+      "viewport": "390",
+      "theme": "dark",
+      "ok": true,
+      "problems": [],
+      "shot": "/Users/jagadeesh/boss/grants/monad/plans/e2e/evidence/postdeploy/postdeploy-20261008T201112Z-f62e781/safari-app-invite-dead-390-dark.png",
+      "width": 390
+    }
+  ]
+}
