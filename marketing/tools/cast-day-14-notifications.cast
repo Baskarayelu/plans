@@ -1,0 +1,8 @@
+{"version":3,"term":{"cols":48,"rows":21},"timestamp":1791465185,"command":"bash day-14-notifications.sh","env":{"SHELL":"/bin/zsh"}}
+[0.010, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m curl -s $R/v1/health | jq -c '.push.web'\r\n"]
+[1.281, "o", "\u001b[1;39m{\u001b[0m\u001b[1;34m\"enabled\"\u001b[0m\u001b[1;39m:\u001b[0m\u001b[0;39mtrue\u001b[0m\u001b[1;39m,\u001b[0m\u001b[1;34m\"subscriptions\"\u001b[0m\u001b[1;39m:\u001b[0m\u001b[0;39m0\u001b[0m\u001b[1;39m,\u001b[0m\u001b[1;34m\"sent\"\u001b[0m\u001b[1;39m:\u001b[0m\u001b[0;39m0\u001b[0m\u001b[1;39m,\u001b[0m\u001b[1;34m\"failed\"\u001b[0m\u001b[1;39m:\u001b[0m\u001b[0;39m0\u001b[0m\u001b[1;39m,\u001b[0m\u001b[1;34m\"removed\"\u001b[0m\u001b[1;39m:\u001b[0m\u001b[0;39m0\u001b[0m\u001b[1;39m\u001b[1;39m}\u001b[0m\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m curl -s $R/v1/config | jq -r '.webPushPublicKey|length'\r\n"]
+[2.197, "o", "\u001b[0;39m87\u001b[0m\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m curl -sI plans.0xo.in/app/sw.js | grep -iE '^(HTTP|content-type|service-worker)'\r\n"]
+[0.789, "o", "HTTP/2 200 \r\ncontent-type: application/javascript; charset=utf-8\r\nservice-worker-allowed: /app\r\n"]
+[1.006, "x", "0"]

@@ -1,0 +1,3 @@
+Plans now runs in your browser too. Open plans.0xo.in/app on a laptop or a phone: no install, no password, no wallet. Your passkey is your key. Live on Monad testnet; mainnet: pending.
+
+@PlansOnMonad

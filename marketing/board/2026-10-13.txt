@@ -1,0 +1,5 @@
+A Chainlink CRE workflow for Plans reads up to 3 public FX sources, keeps the median and writes an exchange-rate round to our FxReference contract on Monad testnet.
+
+Rounds 1 and 2 are onchain, sent by cre workflow simulate --broadcast. DON deployment: pending.
+
+@PlansOnMonad

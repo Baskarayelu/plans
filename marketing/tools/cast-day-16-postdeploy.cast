@@ -1,0 +1,8 @@
+{"version":3,"term":{"cols":48,"rows":21},"timestamp":1791465281,"command":"bash day-16-postdeploy.sh","env":{"SHELL":"/bin/zsh"}}
+[0.009, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m jq -cM '{at: .at[0:16], passed, failed}' $RUN/results.json\r\n"]
+[0.612, "o", "{\"at\":\"2026-10-07T22:18\",\"passed\":43,\"failed\":0}\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m jq -r '.results|group_by(.browser)[]|…' $RUN/results.json\r\n"]
+[0.610, "o", "chrome\t28/28\r\nhttp\t1/1\r\nsafari\t14/14\r\n"]
+[0.001, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m curl -s plans.0xo.in/app/build.json | jq -r .builtAt\r\n"]
+[0.859, "o", "2026-10-07T22:14:33.403Z\r\n"]
+[1.005, "x", "0"]

@@ -1,0 +1,5 @@
+What if settle-up can't pay someone at that moment, say their account is frozen? Their share stays theirs. Later anyone can tap Collect, and the pot pays that person and nobody else.
+
+It's in the Pot contract deployed on Monad testnet, with 10 unit tests.
+
+@PlansOnMonad

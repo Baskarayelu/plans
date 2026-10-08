@@ -1,0 +1,12 @@
+{"version":3,"term":{"cols":48,"rows":21},"timestamp":1791465190,"command":"bash day-15-collect.sh","env":{"SHELL":"/bin/zsh"}}
+[0.010, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m cast sig 'collect(address)'\r\n"]
+[0.621, "o", "0x06ec16f8\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m cast code $POT | grep -c ${SEL#0x}  # testnet\r\n"]
+[1.355, "o", "1\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m forge test --match-path test/unit/PotCollect.t.sol\r\n"]
+[1.045, "o", "[PASS] alwaysRevertingRecipient_doesNotBlockOthers()\r\n[PASS] exitedMember()\r\n"]
+[0.000, "o", "[PASS] frozenThenUnfrozenRecipient()\r\n[PASS] gasLimitCannotSkipPayout()\r\n[PASS] neverMoreThanNet()\r\n[PASS] proRataWhenPotShort()\r\n"]
+[0.000, "o", "[PASS] refusalIsNotMistakenForStarvation()\r\n[PASS] revertsBeforeSettlement()\r\n[PASS] revertsForNonMemberAndNothingOwed()\r\n"]
+[0.000, "o", "[PASS] tokenReturningFalse_reverts()\r\n"]
+[0.000, "o", "Suite result: ok. 10 passed; 0 failed; 0 skipped\r\n"]
+[1.007, "x", "0"]

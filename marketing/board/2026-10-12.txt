@@ -1,0 +1,4 @@
+Already use Plans on your phone? Link your laptop's browser to the same account. The browser saves its own passkey, you check three pictures match, then say yes on your phone. Same plans, same money.
+
+Live on Monad testnet: plans.0xo.in/app
+@PlansOnMonad

@@ -1,0 +1,7 @@
+The Plans web app can now notify you: approval requests, money in, settle-ups. Turn it on under You > Notifications; our relayer sends them by web push.
+
+On iPhone, add Plans to your Home Screen first. The app shows how.
+
+Android app notifications: pending.
+
+@PlansOnMonad

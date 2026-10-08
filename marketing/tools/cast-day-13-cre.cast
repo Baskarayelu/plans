@@ -1,0 +1,11 @@
+{"version":3,"term":{"cols":48,"rows":21},"timestamp":1791465237,"command":"bash day-13-cre.sh","env":{"SHELL":"/bin/zsh"}}
+[0.017, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m cast call $FWD 'typeAndVersion()(string)'\r\n"]
+[2.201, "o", "\"MockKeystoneForwarder 1.0.0\"\r\n"]
+[0.004, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m # simulate --broadcast txs, rounds 1 and 2\r\n"]
+[1.585, "o", "0x66ad55a2… ok  block 69031314  RoundWritten×1\r\n"]
+[0.618, "o", "0x94f2071f… ok  block 69031576  RoundWritten×1\r\n"]
+[0.000, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m cast call $FX 'latestRoundTime()(uint64,uint64)'\r\n"]
+[1.604, "o", "round 2\r\n"]
+[0.004, "o", "\u001b[38;2;245;184;61mplans $\u001b[0m # lastRates(): USD per 1 unit\r\n"]
+[2.347, "o", "GBP  1.320929\r\nEUR  1.119596\r\nINR  0.010355\r\nNGN  0.000754\r\nJPY  0.006322\r\nCHF  1.201474\r\nAED  0.272294\r\nSGD  0.781286\r\n"]
+[1.004, "x", "0"]

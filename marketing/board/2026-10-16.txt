@@ -1,0 +1,5 @@
+Every deploy of plans.0xo.in ends with a check against the public site: fresh Chrome and Safari sessions, phone and laptop widths, no console errors, no failed requests to our own site, no blank screens.
+
+Last run: 43 of 43 passed.
+
+@PlansOnMonad
