@@ -45,7 +45,9 @@ hand), then Gradle with `JAVA_HOME=/opt/homebrew/opt/openjdk@17` and
 `plugins/withPlansAndroid.js` adds a Gradle signing config that reads `PLANS_KEYSTORE_PATH` and
 `PLANS_KEYSTORE_PASSWORD` (alias `plans`) from the environment; the script fills them from
 `../../secrets/` if unset. No secret is written into the repository. The debug variant bundles
-its JavaScript, so it runs without Metro.
+its JavaScript, so it runs without Metro. The relayer defaults to the same URLs as the web build
+(testnet `https://relayer-production-ecef.up.railway.app`; override with `PLANS_RELAYER_URL_TESTNET`),
+and the script refuses an APK whose embedded app config doesn't name it.
 
 ### Dependency pins
 

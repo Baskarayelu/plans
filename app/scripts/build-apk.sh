@@ -31,6 +31,11 @@ fi
 export APP_NETWORK="$NET"
 export PLANS_ABIS="${PLANS_ABIS:-arm64-v8a}"
 export NODE_ENV=production
+# The network's relayer, the same defaults as scripts/build-web.sh (app.config.ts's own testnet default,
+# relayer-testnet.plans.0xo.in, has no DNS record). PLANS_RELAYER_URL[_TESTNET|_MAINNET] override it.
+export PLANS_RELAYER_URL_TESTNET="${PLANS_RELAYER_URL_TESTNET:-${PLANS_RELAYER_URL:-https://relayer-production-ecef.up.railway.app}}"
+export PLANS_RELAYER_URL_MAINNET="${PLANS_RELAYER_URL_MAINNET:-${PLANS_RELAYER_URL:-https://relayer.plans.0xo.in}}"
+if [ "$NET" = "mainnet" ]; then RELAYER="$PLANS_RELAYER_URL_MAINNET"; else RELAYER="$PLANS_RELAYER_URL_TESTNET"; fi
 
 cd "$HERE"
 npx expo prebuild --platform android --clean --no-install >/dev/null
@@ -41,5 +46,7 @@ OUT="app/build/outputs/apk/$VARIANT/app-$VARIANT.apk"
 mkdir -p "$HERE/dist"
 DEST="$HERE/dist/plans-$NET-$VARIANT.apk"
 cp "$OUT" "$DEST"
+# The APK must carry this network's relayer in its app config (assets/app.config), or nothing it does reaches the chain.
+unzip -p "$DEST" assets/app.config | grep -qF "\"relayerUrl\":\"$RELAYER\"" || { echo "apk build: the APK's app config doesn't name the relayer $RELAYER" >&2; exit 1; }
 echo "$DEST"
 "$ANDROID_HOME"/build-tools/36*/apksigner verify --print-certs "$DEST" 2>/dev/null | grep -i "SHA-256" | head -1 || true
