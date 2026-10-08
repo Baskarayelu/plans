@@ -1,0 +1,24 @@
+# Alerts (a failed run, which GitHub emails to the repo owner) when the newest exchange-rate round on
+# Monad testnet's FxReference is older than 4 hours. Rounds are kept fresh by
+# cre/fx-workflow/scripts/keep-fresh.sh (every 30 min, writes when older than 3 h); the contract
+# refuses rounds older than 6 hours.
+name: fx-round-freshness
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Newest FxReference round is under 4 hours old
+        run: |
+          set -euo pipefail
+          FX=0xaB7eeDe1DA994137a340155f350A8F81358FFCa2
+          R=$(curl -fsS -X POST https://testnet-rpc.monad.xyz -H 'content-type: application/json' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"'$FX'","data":"0xde188e59"},"latest"]}')
+          HEX=$(echo "$R" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"])')
+          T=$(python3 -c "print(int('$HEX'[2+64:2+128],16))")
+          AGE=$(( $(date +%s) - T ))
+          echo "newest round scheduledTime=$T age=${AGE}s"
+          if [ "$AGE" -gt 14400 ]; then echo "::error::FxReference newest round is $((AGE/60)) minutes old (limit 240)"; exit 1; fi
