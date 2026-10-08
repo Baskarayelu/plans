@@ -3,6 +3,7 @@
  * plan"). Dates are kept as local calendar days; `planTimes` turns them into onchain seconds.
  */
 import type { Rules } from "../chain/eip712";
+import type { TemplateId } from "../domain/templates";
 import { PRESETS, type PresetId } from "../domain/rules";
 import { createStore } from "../state/observable";
 import { WRISTBANDS } from "../../theme/tokens";
@@ -40,6 +41,12 @@ export type Draft = {
   custom?: Rules;
   /** The preset the custom rules started from (review window and Pilot dates follow it). */
   customBase: Exclude<PresetId, "demo">;
+  /** Category budgets that sit on top of the chosen preset (from a template or screen 12). */
+  budgets?: Rules["categoryBudgets"];
+  /** The template the draft started from; budgets follow people and dates until someone edits them. */
+  template?: { id: TemplateId; people: number; edited: boolean };
+  /** The name the template filled in, so it can follow the dates until the person types their own. */
+  autoName?: string;
 };
 
 function fresh(): Draft {
@@ -53,15 +60,28 @@ export function resetDraft(): void {
   draft.set(fresh());
 }
 
+/** The rules "Create plan" sends: the preset (or screen 12's custom rules), with the draft's budgets on top. */
 export function draftRules(d: Draft): Rules {
-  if (d.preset === "custom" && d.custom) return d.custom;
-  return PRESETS[d.preset === "custom" ? d.customBase : d.preset].rules;
+  const r = d.preset === "custom" && d.custom ? d.custom : PRESETS[d.preset === "custom" ? d.customBase : d.preset].rules;
+  return d.budgets ? { ...r, categoryBudgets: d.budgets } : r;
 }
 
 /** The preset that decides the review window and whether dates are fixed. */
 export function draftBase(d: Draft): Exclude<PresetId, "demo"> {
   if (d.preset === "custom") return d.customBase;
   return d.preset === "demo" ? "balanced" : d.preset;
+}
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "12–16 Oct" / "30 Oct – 2 Nov" from local days. */
+export function dayRange(a: number, b: number): string {
+  const s = new Date(a);
+  const e = new Date(b);
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return s.getDate() === e.getDate() ? `${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}` : `${s.getDate()}–${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}`;
+  }
+  return `${s.getDate()} ${SHORT_MONTHS[s.getMonth()]} – ${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}`;
 }
 
 /** Seconds subtracted from "now" for plans that start today (see planTimes). */

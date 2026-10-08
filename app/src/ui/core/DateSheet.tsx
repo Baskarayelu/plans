@@ -1,7 +1,7 @@
 /** Month calendar in a bottom sheet (no native date picker dependency). Picks one local day. */
 import React, { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
-import { addDays, dayOf } from "../../lib/core/draft";
+import { addDays, dayOf, dayRange } from "../../lib/core/draft";
 import { useColors } from "../../theme/ThemeProvider";
 import { fonts } from "../../theme/tokens";
 import { Btn, IconBtn, Row } from "../kit";
@@ -18,15 +18,7 @@ export function dayLabel(dayMs: number): string {
   return `${DOW[(d.getDay() + 6) % 7]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
 
-/** "12–16 Oct" / "30 Oct – 2 Nov" from local days. */
-export function dayRange(a: number, b: number): string {
-  const s = new Date(a);
-  const e = new Date(b);
-  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
-    return s.getDate() === e.getDate() ? `${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}` : `${s.getDate()}–${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}`;
-  }
-  return `${s.getDate()} ${SHORT_MONTHS[s.getMonth()]} – ${e.getDate()} ${SHORT_MONTHS[e.getMonth()]}`;
-}
+export { dayRange };
 
 export function DateSheet({
   visible,
