@@ -309,9 +309,112 @@ export function roundFromMap(r: { roundId: string | bigint; scheduledTime: numbe
  * PlansSend's 6-hour window with `marginSec` to spare (so it can't go stale between signing and
  * landing, which would turn the send down).
  */
-export function roundQuotable(round: RoundLike | null | undefined, from: string, to: string, nowSec: number, marginSec = 30 * 60): boolean {
+export function roundQuotable(round: RoundLike | null | undefined, from: string, to: string, nowSec: number, marginSec = CONFIRM_MARGIN_SEC): boolean {
   if (!round || big(round.roundId) <= 0n || normCurrency(from) === normCurrency(to)) return false;
-  const t = round.scheduledTime;
-  if (!(t > 0) || nowSec < t - FUTURE_SKEW_SEC || nowSec - t > MAX_ROUND_AGE_SEC - marginSec) return false;
+  if (!rateFreshAt(round.scheduledTime, nowSec, marginSec)) return false;
   return roundRateE8(round, from, to) !== null;
+}
+
+// ─────────────── before confirming ───────────────
+
+/**
+ * Half an hour short of the 6-hour limit. A send names a round only with this much to spare, and a
+ * confirm leans on any rate (round or quote) with the same margin, so nothing can go out of date
+ * between pressing the button and the money landing.
+ */
+export const CONFIRM_MARGIN_SEC = 30 * 60;
+
+/** True when a rate published (round) or fetched (quote) at `atSec` may still be confirmed against at `nowSec`. */
+export function rateFreshAt(atSec: number | undefined | null, nowSec: number, marginSec = CONFIRM_MARGIN_SEC): boolean {
+  if (!atSec || !(atSec > 0)) return false;
+  return nowSec >= atSec - FUTURE_SKEW_SEC && nowSec - atSec <= MAX_ROUND_AGE_SEC - marginSec;
+}
+
+/** ok: a fresh rate; stale: only an out-of-date one; missing: none at all. */
+export type PreviewStatus = "ok" | "stale" | "missing";
+
+export type PreviewInput = {
+  from: string;
+  to: string;
+  nowSec: number;
+  /** the latest reference round (what a send or a settle-up would name) */
+  round?: RoundLike | null;
+  /** Plans' quote for the pair (`to` per 1 `from`) */
+  quote?: QuoteLike | null;
+  /**
+   * A send: the quote is the rate applied to the money, so it must be fresh; the round, when it
+   * can be named, is the reference it is checked against.
+   */
+  applied?: boolean;
+  /** The money records the round it used (a settle-up's `Settled`), rather than it being looked up for the time (leave, spends). */
+  records?: boolean;
+};
+
+const hasPair = (round: RoundLike | null | undefined, from: string, to: string) => !!round && roundRateE8(round, from, to) !== null;
+
+/**
+ * The rate a receipt will show for money about to move, chosen exactly as the finished receipt
+ * chooses it (pickReceiptRate), and whether it is fresh enough to confirm against (6 h less the
+ * half-hour margin). A preview never shows an out-of-date rate: stale or missing gives kind "none".
+ */
+export function previewRate(i: PreviewInput): { rate: ReceiptRate; status: PreviewStatus } {
+  const from = normCurrency(i.from);
+  const to = normCurrency(i.to);
+  if (from === to) return { rate: { kind: "same", from, to }, status: "ok" };
+  const round = i.round ?? null;
+  const roundOk = roundQuotable(round, from, to, i.nowSec);
+  const q = i.quote && i.quote.rateE8 > 0n ? i.quote : null;
+  const quoteOk = !!q && rateFreshAt(q.timestamp, i.nowSec);
+  const out = (status: PreviewStatus) => ({ rate: { kind: "none", from, to } as ReceiptRate, status });
+  const notOk = () => out(q || hasPair(round, from, to) ? "stale" : "missing");
+  if (i.applied) {
+    if (!quoteOk || !q) return notOk();
+    const rate = pickReceiptRate({
+      from,
+      to,
+      recorded: { roundId: roundOk && round ? round.roundId : undefined, appliedE8: q.rateE8, appliedAt: q.timestamp, appliedSource: q.source },
+      round: roundOk ? round : null,
+    });
+    return { rate, status: "ok" };
+  }
+  if (roundOk && round) {
+    const rate = pickReceiptRate({ from, to, recorded: i.records ? { roundId: round.roundId } : undefined, round, atSec: i.nowSec, quote: q });
+    return { rate, status: "ok" };
+  }
+  if (quoteOk && q) return { rate: pickReceiptRate({ from, to, quote: q }), status: "ok" };
+  return notOk();
+}
+
+/** What a confirm button may do: go ahead, wait for rates still loading, or stay blocked. */
+export type RateGate = "ok" | "loading" | "stale" | "missing";
+
+export function rateGate(statuses: PreviewStatus[], loading: boolean): RateGate {
+  if (statuses.every((s) => s === "ok")) return "ok";
+  if (loading) return "loading";
+  return statuses.includes("stale") ? "stale" : "missing";
+}
+
+/**
+ * A send about to go: the rate its receipt will show (the applied quote, with the round it names
+ * when one is fresh) and whether every rate the confirm screen uses is fresh: the pair quote that
+ * is applied, and the dollar quotes that turn the typed amount into dollars and their money.
+ */
+export function sendPreview(i: {
+  from: string;
+  to: string;
+  nowSec: number;
+  round?: RoundLike | null;
+  /** `to` per 1 `from`: the rate the send applies */
+  pair?: QuoteLike | null;
+  /** USD → `from` and USD → `to` (the amounts on screen) */
+  usdFrom?: QuoteLike | null;
+  usdTo?: QuoteLike | null;
+  loading?: boolean;
+}): { rate: ReceiptRate; gate: RateGate } {
+  const main = previewRate({ from: i.from, to: i.to, nowSec: i.nowSec, round: i.round, quote: i.pair, applied: true });
+  const legs = [
+    previewRate({ from: "USD", to: i.from, nowSec: i.nowSec, quote: i.usdFrom, applied: true }).status,
+    previewRate({ from: "USD", to: i.to, nowSec: i.nowSec, quote: i.usdTo, applied: true }).status,
+  ];
+  return { rate: main.rate, gate: rateGate([main.status, ...legs], !!i.loading) };
 }

@@ -7,7 +7,7 @@ import { keccak256, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../../config";
 import { fetchClaimBySigner, type ClaimRow } from "../api/envio";
-import { findEvent, getFx, getFxRound, putBlob, type RelayResult } from "../api/relayer";
+import { findEvent, getFx, getFxRound, putBlob, RelayError, type RelayResult } from "../api/relayer";
 import * as A from "../chain/actions";
 import { codeToBytes, SpendKind, ZERO_BYTES32, type Rules, type Split } from "../chain/eip712";
 import { ausdBalance, registeredKey } from "../chain/rpc";
@@ -20,7 +20,7 @@ import { queryClient, qk } from "../state/data";
 import { claimUrl, inviteUrl } from "./links";
 import { groupKeyFor, inviteSecretFor, rememberContact, rememberGroupKey, rememberInviteSecret } from "./groups";
 import { ONE_DOLLAR } from "./currency";
-import { diffBpsOf, roundFromMap, roundQuotable, roundRateE8 } from "../fx/receiptRate";
+import { diffBpsOf, rateFreshAt, roundFromMap, roundQuotable, roundRateE8 } from "../fx/receiptRate";
 
 const lc = (s: string) => s.toLowerCase();
 
@@ -230,6 +230,8 @@ export async function sendMoney(s: SendInput): Promise<{ result: RelayResult; ra
   const fromCurrency = p.currency;
   const fx: { rateE8: string; timestamp: number; source?: string } =
     fromCurrency === s.toCurrency ? { rateE8: "100000000", timestamp: Math.floor(Date.now() / 1000) } : await getFx(fromCurrency, s.toCurrency);
+  // Never send at an out-of-date rate (the relayer serves its last rates when the source is down).
+  if (fromCurrency !== s.toCurrency && !rateFreshAt(fx.timestamp, Math.floor(Date.now() / 1000))) throw new RelayError(409, "FX_OUT_OF_DATE", "");
   // Name the latest reference round when it is fresh enough and carries both currencies, so the
   // receipt records that round's rate and the difference from the rate applied. Best effort: a send
   // without a round still goes through, with the quoted rate on its receipt.

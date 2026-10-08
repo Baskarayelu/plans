@@ -296,6 +296,7 @@ export const CODE_COPY: Record<string, string> = {
   NOTHING_TO_COLLECT: "There's nothing left to collect from this plan.",
   PAYOUT_REFUSED: "The payout was refused for now, for example because the account is frozen. What you're owed is kept: try again later.",
   INSUFFICIENT_GAS: "That didn't go through. Nothing moved. Try again.",
+  FX_OUT_OF_DATE: "Try again in a minute.",
   FX_ROUND_UNKNOWN: "The exchange rate we showed isn't available any more. Get a fresh rate and try again.",
   FX_ROUND_STALE: "The exchange rate is more than 6 hours old. Get a fresh rate and try again.",
   FX_PAIR_UNAVAILABLE: "There's no reference rate for these currencies right now. Get a fresh rate and try again.",
@@ -310,6 +311,7 @@ export function friendlyError(e: unknown): { title: string; message: string; cod
   if (e instanceof RelayError) {
     if (e.status === 429 && !CODE_COPY[e.code]) return { title: "Slow down a little", message: CODE_COPY.RATE_LIMITED, code: e.code, offline: false };
     if (e.status >= 500) return { title: "Plans is having a moment", message: "Our side didn't respond properly. Nothing moved. Try again in a minute.", code: e.code, offline: false };
+    if (e.code === "FX_OUT_OF_DATE") return { title: "Rates are out of date", message: CODE_COPY.FX_OUT_OF_DATE, code: e.code, offline: false };
     const mapped = CODE_COPY[e.code];
     const server = e.serverMessage && !BANNED.test(e.serverMessage) ? e.serverMessage : undefined;
     return { title: "That didn't go through", message: mapped ?? server ?? "Nothing moved. Check the details and try again.", code: e.code, offline: false };
