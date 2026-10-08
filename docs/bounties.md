@@ -53,7 +53,7 @@ Last checked: 8 Oct 2026. "Testnet" below means live on Monad testnet (chain 101
 
 | Requirement | Source | How Plans meets it | Status | Evidence |
 |---|---|---|---|---|
-| HyperIndex, HyperSync or HyperRPC actually drives a feature | Official | Balances, budget bars, settle-up preview, fresh-device rebuild, stats page | 🟡 self-hosted HyperIndex on Railway, syncing testnet; Envio Cloud (HyperSync) configured, pending | Public GraphQL https://hasura-production-c5c7.up.railway.app/v1/graphql; relayer `/v1/config` → `graphqlUrl`; README [Indexer](../README.md#indexer) |
+| HyperIndex, HyperSync or HyperRPC actually drives a feature | Official | Balances, budget bars, settle-up preview, fresh-device rebuild, stats page | 🟡 self-hosted HyperIndex deployed on Railway for testnet, not yet serving data (`_meta.isReady` false on 8 Oct); Envio Cloud (HyperSync) configured, pending | Public GraphQL https://hasura-production-c5c7.up.railway.app/v1/graphql; relayer `/v1/config` → `graphqlUrl`; README [Indexer](../README.md#indexer) |
 | Optional video: data flowing end to end | Official | Spend → GraphQL → app updates | ⏳ needs the indexer caught up | — |
 | Public repo with `config.yaml`, `schema.graphql` and handlers | 2nd | `indexer/` in this repo | ✅ | [indexer/config.yaml](../indexer/config.yaml), [config.selfhost.yaml](../indexer/config.selfhost.yaml), [schema.graphql](../indexer/schema.graphql), [src/handlers](../indexer/src/handlers); 26 tests |
 | Non-trivial schema with derived or aggregated entities | 2nd | MemberBalance, CategorySpend, SettlementEdge, Corridor, PotDaily, GlobalStats, FxRound links | ✅ built | 34 entities; settlement-graph tests on 2,000 random pots |

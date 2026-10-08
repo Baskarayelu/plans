@@ -13,7 +13,7 @@ Built for Monad Metropolis, Track 02: Consumer Products & Payments.
 | Contracts | [`contracts/`](contracts) | **Deployed and verified on Monad testnet** (addresses below); not on mainnet | **250 passing**: unit, fuzz, 6 invariants at 51,200 random calls each, and fork tests against real AUSD on Monad mainnet |
 | Gas model | [`contracts/GAS.md`](contracts/GAS.md) | Done | 49 transactions replayed read-only on Monad mainnet; the model's minimum gas matched all 49 |
 | Relayer | [`relayer/`](relayer) | **Live on Monad testnet** at https://relayer-production-ecef.up.railway.app, with browser push (web push); Android push pending (needs Firebase) | **165 passing** (unit, plus integration against anvil) |
-| Envio indexer | [`indexer/`](indexer) | **Self-hosted on Railway, syncing Monad testnet** (see [Indexer](#indexer)); Envio Cloud configured, not yet deployed | **26 passing** |
+| Envio indexer | [`indexer/`](indexer) | **Deployed self-hosted on Railway for Monad testnet; not yet serving indexed data** (see [Indexer](#indexer)); Envio Cloud configured, not yet deployed | **26 passing** |
 | Chainlink CRE workflow | [`cre/fx-workflow/`](cre/fx-workflow) | Exchange-rate rounds 1 and 2 written to FxReference on Monad testnet with `cre workflow simulate --broadcast` (simulation forwarder); not deployed to a CRE DON | **69 passing** |
 | Web app | [`app/`](app) (web build) | **Live on Monad testnet** at https://plans.0xo.in/app: passkey sign-in, link a browser, browser notifications, collect after settle-up | Post-deploy check on every deploy against the public URL, Chrome and Safari: last run 43/43 |
 | Android app | [`app/`](app) | **Test version published**: [Plans Test 1.0.0, test 2](https://github.com/Baskarayelu/plans/releases/tag/v1.0.0-test.2) (Monad testnet) | **314 passing** (shared with the web app), plus a copy check that fails the build on crypto words |
@@ -43,7 +43,7 @@ Every gas limit was taken from Monad's own `eth_estimateGas` (see [`contracts/GA
 
 - Public GraphQL (read-only): https://hasura-production-c5c7.up.railway.app/v1/graphql
 - The relayer publishes this URL at `/v1/config` (`graphqlUrl`), and the web app reads it from there.
-- It indexes from block 68,940,999. On 8 Oct it was still catching up. Check before relying on it: `{ _meta { progressBlock sourceBlock isReady } }`.
+- It indexes from block 68,940,999. On 8 Oct (evening, IST) the GraphQL answered but `_meta` showed `progressBlock: -1`, `isReady: false`: no blocks processed yet. Check before relying on it: `{ _meta { progressBlock sourceBlock isReady } }`.
 
 **Configured, not yet live: Envio Cloud.** [`indexer/config.yaml`](indexer/config.yaml) is the Envio Cloud deployment (HyperSync). It goes live once two old deployments are deleted from the project's free slots. To switch, set `INDEXER_GRAPHQL_URL` on the relayer (Railway) and `NEXT_PUBLIC_ENVIO_GRAPHQL_URL` on the site (Vercel) to the Envio Cloud URL. Nothing else changes, because the app takes the URL from the relayer.
 

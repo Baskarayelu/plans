@@ -8,7 +8,7 @@ Rules for editing this file:
 - Never put claim links, invite secrets or keys in this file. The repository is public. Those go into the portal's private judge field only (marked below).
 - Update this file in the same commit as any product change that makes a sentence here true or false.
 
-Last updated: 8 Oct 2026. Product state: live on Monad testnet (contracts verified, relayer, web app at plans.0xo.in/app, Android test build, self-hosted indexer syncing, two Chainlink CRE rounds). Not on mainnet. Not yet run: the multi-device end-to-end run on testnet (Stage B) and the pilot. Portal: only the repository URL is saved so far.
+Last updated: 8 Oct 2026. Product state: live on Monad testnet (contracts verified, relayer, web app at plans.0xo.in/app, Android test build, self-hosted indexer deployed, not yet serving data, two Chainlink CRE rounds). Not on mainnet. Not yet run: the multi-device end-to-end run on testnet (Stage B) and the pilot. Portal: only the repository URL is saved so far.
 
 How each claim below was checked on 8 Oct 2026:
 
@@ -17,7 +17,7 @@ How each claim below was checked on 8 Oct 2026:
 | Six contracts deployed and verified on testnet | `contracts/deployments/10143.json`; `curl https://sourcify-api-monad.blockvision.org/v2/contract/10143/<address>` returns `exact_match` for all six |
 | Relayer live, web push on, Expo push off | `curl https://relayer-production-ecef.up.railway.app/v1/health`: `ok: true`, `chainId: 10143`, `push.web.enabled: true`, `push.enabled: false` |
 | Relayer publishes the indexer URL | `curl …/v1/config`: `graphqlUrl` = the Railway Hasura URL |
-| Indexer syncing, not caught up | `{ _meta { progressBlock sourceBlock isReady } }` on the public GraphQL: `isReady: false` on 8 Oct |
+| Indexer deployed, not yet serving data | `{ _meta { progressBlock sourceBlock isReady } }` on the public GraphQL: `progressBlock: -1`, `isReady: false` on 8 Oct |
 | Web app live on testnet | `https://plans.0xo.in/app` 200; `/app/build.json` → `network: testnet`, built 2026-10-07T22:14Z |
 | Post-deploy check 43/43 | `e2e/web/.runs/postdeploy-20261007T221523Z-a80c7ab/results.json` (Chrome 28, Safari 14, HTTP 1) |
 | First transaction from the web | `docs/first-tx-timing.md`, live 8 Oct: 8 taps, 6.05 s (1440 px), faucet tx `0x635c5408…` |
@@ -55,7 +55,7 @@ A group money pot for trips and plans: friends in different countries join with 
 ### Description
 
 <!-- field: Description | limit: 8000 -->
-Characters: 6163 / 8000
+Characters: 6228 / 8000
 ```text
 Plans is a group money pot for trips, festivals and anything friends plan together, including friends who live in different countries. It runs as an Android app and as a web app in any browser, on Monad.
 
@@ -80,7 +80,7 @@ HOW IT WORKS
 - Money: AUSD by Agora. Deposits and sends use AUSD's ERC-3009 signed transfers; every other action is an EIP-712 message to the pot. A relayer pays gas, so users never hold MON. Anyone can submit the signed messages; the relayer is a convenience, not a gatekeeper.
 - Contracts: a factory that deploys one pot contract per plan, a key registry, a send router, a claim escrow and FxReference. No admin keys over funds. Unit, fuzz and invariant tests, including that members' balances always sum to the pot's balance.
 - Privacy: a second passkey namespace (PRF salt "plans.keys.v1") gives each member an encryption key. Receipts, notes and names are encrypted to the group.
-- Data: an Envio HyperIndex indexer derives balances, budgets, the who-owes-whom graph and cross-border volume by country pair. On testnet it is self-hosted on Railway and still syncing; Envio Cloud is configured and pending.
+- Data: an Envio HyperIndex indexer derives balances, budgets, the who-owes-whom graph and cross-border volume by country pair. On testnet it is deployed self-hosted on Railway but not yet serving indexed data (pending); Envio Cloud is configured and pending.
 - Exchange rates: a Chainlink CRE workflow reads three public FX sources, takes the median and writes rate rounds to FxReference. Sends can cite a round (the contract records the reference rate and the difference), and settle-up tags the latest fresh round. Rounds are for receipts only and never price a transfer. Two rounds are on testnet, written with "cre workflow simulate --broadcast" (Chainlink's simulation forwarder); a deployed DON workflow is pending.
 
 WHY MONAD (measured on mainnet, 5 Oct 2026, 20:18 to 20:28 UTC)
@@ -91,7 +91,7 @@ WHY MONAD (measured on mainnet, 5 Oct 2026, 20:18 to 20:28 UTC)
 
 STATUS (8 Oct 2026)
 Done: six contracts with 250 tests (unit, fuzz, invariants, and fork tests against real AUSD on Monad mainnet); gas for 49 actions checked exactly against live Monad mainnet; the relayer (165 tests); the Envio indexer (26 tests); the app, Android and web from one codebase (314 tests); the Chainlink CRE workflow (69 tests). 256 end-to-end scenarios pass on a mainnet fork with real AUSD.
-Live on Monad testnet: six contracts deployed and verified on MonadVision; the relayer, with browser push; the web app at https://plans.0xo.in/app, checked after every deploy in Chrome and Safari against the public URL (last run 43 of 43); the Plans Test Android build; the self-hosted indexer (syncing); two Chainlink CRE exchange-rate rounds.
+Live on Monad testnet: six contracts deployed and verified on MonadVision; the relayer, with browser push; the web app at https://plans.0xo.in/app, checked after every deploy in Chrome and Safari against the public URL (last run 43 of 43); the Plans Test Android build; the self-hosted indexer (deployed; not yet serving indexed data); two Chainlink CRE exchange-rate rounds.
 Pending: Android push, Envio Cloud, a deployed CRE DON workflow, the multi-device end-to-end run on testnet, the pilot with real groups, mainnet deployment and live numbers on the stats page.
 Live on mainnet: nothing yet. This description is updated as each part ships, with contract addresses and transaction hashes.
 ```
@@ -239,7 +239,7 @@ Bounty answers are text areas with an 8,000-character limit; bounty video links 
 | Agora: Best Cross-Border Payments App on Monad | **Add now** | Track 02 only, which is our track. Send and cross-border settle-up are core flows. |
 | Monad Foundation: Best Mera-Powered UX on Monad | **Add now** | Mera is the only account layer. |
 | Monad Foundation: Mera: One Passkey, Many Keys | **Add now** | The `plans.keys.v1` namespace does the encryption work. |
-| Envio: Best Use of Envio | **Add now** | Balances, the settlement graph and corridor stats come from HyperIndex. Self-hosted indexer live on testnet; Envio Cloud pending. |
+| Envio: Best Use of Envio | **Add now** | Balances, the settlement graph and corridor stats come from HyperIndex. Self-hosted indexer deployed on testnet, not yet serving data; Envio Cloud pending. |
 | Chainlink: Best workflow with CRE | **Add now** | The card accepts "build, simulate, or deploy". Two simulated rounds are onchain on Monad testnet; DON deployment pending. |
 | Aurora Intents: Bring Any-Chain Liquidity to Monad | **Do not add yet** | Every Monad route was unavailable when re-tested on 5 Oct, 20:59 UTC, and Aurora lists no AUSD. Re-test on 10 Oct. |
 
@@ -319,12 +319,12 @@ How it is evaluated: a Mera WebAuthn client wrapper asks the authenticator for b
 **Asked at submission:** "Describe how your project meaningfully uses Envio's HyperIndex, HyperSync or HyperRPC to power real on-chain data in your app — not just installed, but actually driving a feature."
 
 <!-- field: Envio: usage answer | limit: 8000 -->
-Characters: 2114 / 8000
+Characters: 2205 / 8000
 ```text
 An Envio HyperIndex indexer (envio 3.12.1) is the app's data layer for everything except the instant live feed. The app has no database of its own.
 
 Deployment status (8 Oct 2026):
-- Live: the indexer is self-hosted on Railway (Postgres, Hasura and the HyperIndex indexer, from indexer/Dockerfile) and indexes Monad testnet from block 68,940,999 over Monad's public RPC. Public GraphQL: https://hasura-production-c5c7.up.railway.app/v1/graphql. Our relayer publishes that URL at /v1/config and the app reads it from there. On 8 Oct it was still catching up with the chain.
+- Live: the indexer is self-hosted on Railway (Postgres, Hasura and the HyperIndex indexer, from indexer/Dockerfile) and indexes Monad testnet from block 68,940,999 over Monad's public RPC. Public GraphQL: https://hasura-production-c5c7.up.railway.app/v1/graphql. Our relayer publishes that URL at /v1/config and the app reads it from there. On 8 Oct it had not yet processed any blocks (its _meta reports isReady: false), so it is not yet serving data. Pending until it catches up.
 - Configured, pending: Envio Cloud with HyperSync (indexer/config.yaml). It goes live once two old deployments are cleared from the project's slots; switching is one URL on the relayer and one on the site.
 - Mainnet: pending.
 
