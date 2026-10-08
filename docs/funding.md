@@ -2,6 +2,8 @@
 
 Every amount below is the smallest that makes each flow run and read well on screen. Gas comes from [contracts/GAS.md](../contracts/GAS.md): suggested gas limits, measured against live Monad mainnet on 6 Oct 2026. Monad charges the gas limit, not the gas used. Price assumed: 102 gwei (100 gwei base fee floor plus a 2 gwei tip).
 
+Launch steps, scripts and commands: [mainnet-launch.md](mainnet-launch.md).
+
 **Send to two addresses only.** I spread the funds from there: MON to the relayer keys, AUSD to the claim links and demo accounts.
 
 ```
@@ -18,7 +20,7 @@ Funding comes in stages. Plan only around the stage that has arrived.
 | 1 | Now | Testnet | MON | 5 | Deployer | Testnet deploy (~1.0 MON) and all automated emulator runs | Test funds |
 | 1 | Now | Mainnet | MON | 15 | Deployer | Mainnet deploy (~1.0 MON); the rest goes to the 3 relayer keys | Spent as fees; leftover recoverable |
 | 1 | Now | Mainnet | AUSD | 8.00 | Treasury | $3 Agora video account, $3 demo members, $2 mainnet test runs | All recoverable |
-| 2 | Mainnet release of the app | Mainnet | AUSD | 4.00 | Treasury | 8 judge claim links × $0.50 | Unclaimed links refund automatically |
+| 2 | Mainnet release of the app | Mainnet | AUSD | 4.00 | Treasury | 8 judge claim links × $0.50 | Unclaimed links are refundable after expiry (`scripts/return-funds.mjs` refunds them; nothing refunds them by itself) |
 | 3 | You confirm pilot groups | Mainnet | AUSD | $0.50 × confirmed pilot users | Treasury | One claim link per pilot user | Claimed money is the pilot user's |
 
 **Rules while working:**

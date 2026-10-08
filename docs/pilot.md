@@ -52,7 +52,7 @@ Worked example for a group of four: each adds $0.30, so the pot holds $1.20. The
 ## 3. The 50¢ start, and what the pilot costs
 
 - Each pilot person gets one **$0.50 claim link** from the Plans treasury. You send it in the chat after they've joined.
-- A link that isn't claimed within 7 days returns to the treasury by itself.
+- A link that isn't claimed within 7 days can be refunded to the treasury: `scripts/return-funds.mjs` refunds every expired link (see [mainnet-launch.md](mainnet-launch.md), step 14).
 - Funding is stage 3 (see [funding.md](funding.md)). It is sent only when you confirm the groups: **$0.50 × confirmed pilot users**. For example, 12 people is $6.00 and 15 people is $7.50.
 
 | Item | Amount |
@@ -112,4 +112,4 @@ Once a group has settled, send me the plan's name. I will:
 - [ ] Clear storage and restore works. The encrypted receipt opens on a second device.
 - [ ] Push notifications arrive for approvals and settle-up.
 - [ ] Pilot rules preset available in the app.
-- [ ] Treasury funded with the pilot AUSD; claim links generated and stored privately for you.
+- [ ] Treasury funded with the pilot AUSD; claim links generated and stored privately for you (`scripts/claim-links.mjs --count <n> --expiry <7 days out>`, written to `../secrets/` only).
