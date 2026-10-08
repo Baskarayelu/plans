@@ -1,0 +1,274 @@
+{
+  "date": "2026-10-08T13:22:27.038Z",
+  "forkUrl": "https://rpc.monad.xyz",
+  "forkBlock": 111620590,
+  "passed": 47,
+  "failed": 0,
+  "deployment": {
+    "keyRegistry": "0xf514925f5f781455E162148eA5BF3E8f5626d5bb",
+    "fxReference": "0xFE5d4b34333A320b7848E22E0E4Ef21470CA0522",
+    "plansSend": "0x92C165CE160D531F175541803c60180664c7d5c2",
+    "plansFactory": "0x95d2C8f7d71e9772506D972459771ed495945576",
+    "claimEscrow": "0x25f93d9214673c58B02DB1db71DA769B6116da0a",
+    "potImplementation": "0x8D23FdA44DAeF78be1feb26D3e680Ec72ffD404D"
+  },
+  "deployGas": [
+    {
+      "contract": "KeyRegistry",
+      "anvilEstimate": "367378",
+      "gasLimit": "405000"
+    },
+    {
+      "contract": "FxReference",
+      "anvilEstimate": "1493604",
+      "gasLimit": "1643000"
+    },
+    {
+      "contract": "PlansSend",
+      "anvilEstimate": "801189",
+      "gasLimit": "882000"
+    },
+    {
+      "contract": "PlansFactory",
+      "anvilEstimate": "8653637",
+      "gasLimit": "9520000"
+    }
+  ],
+  "results": [
+    {
+      "name": "fork funding: TREASURY has $12.00 AUSD",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fork funding: RELAYER_1 has $0.25 AUSD",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fork funding: TEST_ALICE has $2.00 AUSD",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: forge dry run wrote the plan to the temp broadcast dir (not contracts/broadcast)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: monad-send without --fork refuses the anvil RPC",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: check prints 4 pending CREATE2 transactions and a fingerprint",
+      "ok": true,
+      "detail": "0xcb48ed46"
+    },
+    {
+      "name": "deploy: send with a wrong fingerprint refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: send verified code + wiring and wrote 143-fork.json (temp dir)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: 4 transactions sent, each with gas limit = estimate + 10 % rounded up",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at keyRegistry 0xf514925f5f781455E162148eA5BF3E8f5626d5bb",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at fxReference 0xFE5d4b34333A320b7848E22E0E4Ef21470CA0522",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at plansSend 0x92C165CE160D531F175541803c60180664c7d5c2",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at plansFactory 0x95d2C8f7d71e9772506D972459771ed495945576",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at claimEscrow 0x25f93d9214673c58B02DB1db71DA769B6116da0a",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: code at potImplementation 0x8D23FdA44DAeF78be1feb26D3e680Ec72ffD404D",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: contracts/deployments/143.json untouched",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deploy: re-run check skips everything (0 of 4 to send)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-demo: DEMO_BEN has $1.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-demo: DEMO_ASHA has $1.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-demo: DEMO_MAYA has $1.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-demo: treasury paid $3.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fund-demo: re-run has nothing to send",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: refuses an output directory inside the repository",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: check sends nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: no link printed to the terminal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: 8 links written to the private file",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: every link is an open $0.50 claim from the treasury, signer = the link key",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: treasury paid $4.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "claim-links: link 1 claimed with its key: TEST_ALICE +$0.50",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "judges-plan: check simulates createPot + 2 joins (eth_simulateV1) without failures",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "judges-plan: invite link not printed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "judges-plan: plan holds $1.00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "judges-plan: Maya, Ben and Asha are members",
+      "ok": true,
+      "detail": "[true,true,true]"
+    },
+    {
+      "name": "judges-plan: invite link format",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: without --fork the anvil RPC is refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: --fork against a non-local RPC is refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: check finds the 7 expired unclaimed links",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: check sends nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: wrong fingerprint refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: treasury AUSD = everything funded - $1.00 locked in the judges' plan",
+      "ok": true,
+      "detail": "$13.25"
+    },
+    {
+      "name": "return-funds: every other account holds 0 AUSD",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: escrow holds 0 AUSD (7 refunded, 1 claimed)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: MON conserved: before - gas paid = after",
+      "ok": true,
+      "detail": "gas 0.001714258320166736 MON over 18 txs"
+    },
+    {
+      "name": "return-funds: every MON holder was swept; what remains is at most its sweep's gasLimit x maxFee (fee dust)",
+      "ok": true,
+      "detail": "TREASURY 0.003004919496492 MON, RELAYER_1 0.003005054521599 MON, RELAYER_2 0.00300517267329 MON, RELAYER_3 0.003005276060154 MON, DEMO_BEN 0 MON, DEMO_ASHA 0 MON, DEMO_MAYA 0.003005366527293 MON, TEST_ALICE 0.003005445689208 MON"
+    },
+    {
+      "name": "return-funds: deployer MON after = before + swept - its own gas",
+      "ok": true,
+      "detail": "+4.401712 MON"
+    },
+    {
+      "name": "return-funds: MON moved only after a quiet window of k + 1 blocks",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "return-funds: re-run finds nothing left to move",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
