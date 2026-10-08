@@ -13,3 +13,9 @@ real person's account or email.
   minute." and a Refresh rates button. `send-amount`, `send-confirm`, `leave`, `settle`, `settle-rates`:
   the previews with the receipts' own rate lines (same round-or-quote choice). `summary`: the settled
   summary at 390 with its spend list answered (no "Couldn't load every spend").
+- `2026-10-09-trip-templates/`: Group 2 "trip templates" (fixture data, e2e/web/shoot.mjs), 1440 and
+  390, light and dark. `new-plan`: New plan with the "Start from" row (Blank chosen). `new-plan-template`:
+  Ski week chosen (name, emoji, colour, next Saturday to Saturday, Balanced). `new-plan-budgets`: people
+  going raised to 7 and the suggested budgets rescaled. `plan-rules-template`: step 2 with the budgets card
+  (and, on a laptop, budgets and "Started from" in the preview panel). `customise-budgets`: Change budgets
+  opens Customise rules with the template's budgets filled in.
