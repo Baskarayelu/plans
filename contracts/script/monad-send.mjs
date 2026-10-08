@@ -22,6 +22,11 @@
 //
 // Options: --rpc <url> (default: the public Monad RPC for the chain), --plan <dry-run json>,
 // --from <address> (check only, when no key is available), --tip-gwei <n> (priority fee, default 2).
+// --fork --out <dir>: REHEARSAL on a LOCAL anvil fork only (127.0.0.1/localhost, web3_clientVersion
+// anvil). Gas limits then come from anvil's estimator, which is acceptable only for that rehearsal;
+// deployments go to <dir>/<chainid>-fork.json, never to deployments/<chainid>.json. Without --fork an
+// anvil/hardhat/ganache/tenderly RPC is refused, and a quote that did not come from a Monad node is
+// never signed.
 // The deployer key comes from PLANS_DEPLOYER_KEY, else DEPLOYER in ../secrets/keys.env (outside the
 // repo). It is never printed or written anywhere.
 
@@ -99,18 +104,22 @@ const sameTx = (a, b) => lc(a.from) === lc(b.from) && lc(a.to) === lc(b.to) && l
  * deployer, for exactly this transaction, with no state override. Returns a frozen quote that
  * `signWithMonadGas` checks before signing.
  */
-export async function monadGasQuote(rpc, tx) {
+export async function monadGasQuote(rpc, tx, source = 'monad') {
   const req = { from: tx.from, to: tx.to, data: tx.data, ...(BigInt(tx.value ?? 0) ? { value: hex(tx.value) } : {}) };
   const estimate = BigInt(await rpc('eth_estimateGas', [req, 'latest']));
-  const quote = Object.freeze({ estimate, gasLimit: gasLimitFromEstimate(estimate), tx: Object.freeze({ ...tx, value: BigInt(tx.value ?? 0) }) });
+  const quote = Object.freeze({ estimate, gasLimit: gasLimitFromEstimate(estimate), source, tx: Object.freeze({ ...tx, value: BigInt(tx.value ?? 0) }) });
   issued.add(quote);
   return quote;
 }
 
-/** Signs `tx` with the quote's gas limit; refuses a quote that monadGasQuote did not issue for this exact tx. */
-export async function signWithMonadGas(account, quote, tx, { chainId, nonce, fees }) {
+/**
+ * Signs `tx` with the quote's gas limit; refuses a quote that monadGasQuote did not issue for this
+ * exact tx, and a quote whose source is not a Monad node unless this is a verified local fork rehearsal.
+ */
+export async function signWithMonadGas(account, quote, tx, { chainId, nonce, fees, fork = false }) {
   if (!issued.has(quote)) throw new Error('refusing to sign: gas limit did not come from monadGasQuote (Monad eth_estimateGas)');
   if (!sameTx(quote.tx, { ...tx, from: account.address })) throw new Error('refusing to sign: gas quote was estimated for a different transaction or sender');
+  if (quote.source !== 'monad' && !(fork && quote.source === 'anvil-fork')) throw new Error(`refusing to sign for chain ${chainId}: gas limit came from ${quote.source}, not a Monad RPC`);
   const raw = await account.signTransaction({
     chainId,
     type: 'eip1559',
@@ -292,9 +301,26 @@ async function assertMonadRpc(rpc, chainId) {
   if (/anvil|hardhat|ganache|tenderly/i.test(client)) throw new Error(`RPC is ${client}, not a Monad node: its eth_estimateGas is not Monad's`);
 }
 
+/** --fork only: the RPC must be a LOCAL anvil (a fork of `chainId`). Its estimates are anvil's. */
+export async function assertLocalFork(rpc, rpcUrl, chainId) {
+  let host = '';
+  try {
+    host = new URL(rpcUrl).hostname;
+  } catch {
+    /* not a URL */
+  }
+  if (!['127.0.0.1', 'localhost'].includes(host)) throw new Error(`--fork needs a local anvil (127.0.0.1/localhost), got ${rpcUrl}`);
+  const client = String(await rpc('web3_clientVersion', []).catch(() => ''));
+  if (!/anvil/i.test(client)) throw new Error(`--fork needs anvil, RPC is ${client || 'unknown'}`);
+  const live = Number(BigInt(await rpc('eth_chainId', [])));
+  if (live !== Number(chainId)) throw new Error(`fork is chain ${live}, expected ${chainId}`);
+}
+
 /** Estimates every pending transaction on Monad and collects what `check` prints. */
-export async function buildReport({ rpc, rpcUrl, plan, from, tipWei }) {
-  await assertMonadRpc(rpc, plan.chainId);
+export async function buildReport({ rpc, rpcUrl, plan, from, tipWei, fork = false }) {
+  if (fork) await assertLocalFork(rpc, rpcUrl, plan.chainId);
+  else await assertMonadRpc(rpc, plan.chainId);
+  const source = fork ? 'anvil-fork' : 'monad';
   if (!(await hasCode(rpc, CREATE2_DEPLOYER))) throw new Error(`no CREATE2 deployer at ${CREATE2_DEPLOYER} on chain ${plan.chainId}`);
   if (!(await hasCode(rpc, plan.deployment.ausd))) throw new Error(`no AUSD at ${plan.deployment.ausd} on chain ${plan.chainId}`);
   const [balance, nonce, f] = await Promise.all([
@@ -307,7 +333,7 @@ export async function buildReport({ rpc, rpcUrl, plan, from, tipWei }) {
     const row = { ...t, deployed: await hasCode(rpc, t.predicted) };
     if (!row.deployed) {
       try {
-        row.quote = await monadGasQuote(rpc, { from, to: t.to, data: t.data, value: t.value });
+        row.quote = await monadGasQuote(rpc, { from, to: t.to, data: t.data, value: t.value }, source);
         row.maxCost = row.quote.gasLimit * f.maxFeePerGas;
         row.cost = row.quote.gasLimit * (f.baseFee + f.maxPriorityFeePerGas);
       } catch (e) {
@@ -320,11 +346,11 @@ export async function buildReport({ rpc, rpcUrl, plan, from, tipWei }) {
   const totalLimit = pending.reduce((s, r) => s + (r.quote?.gasLimit ?? 0n), 0n);
   const totalMax = pending.reduce((s, r) => s + (r.maxCost ?? 0n), 0n);
   const totalCost = pending.reduce((s, r) => s + (r.cost ?? 0n), 0n);
-  return { chainId: plan.chainId, rpcUrl, from, balance, nonce, fees: f, rows, pending, totalLimit, totalMax, totalCost, fingerprint: fingerprint(plan, from), errors: rows.filter((r) => r.error), fx: plan.fx };
+  return { chainId: plan.chainId, rpcUrl, from, balance, nonce, fees: f, rows, pending, totalLimit, totalMax, totalCost, fingerprint: fingerprint(plan, from), errors: rows.filter((r) => r.error), fx: plan.fx, fork };
 }
 
 export function printReport(r, out = console.log) {
-  out('Plans deployment: CHECK (nothing is sent)');
+  out(`Plans deployment: CHECK (nothing is sent)${r.fork ? '  [LOCAL ANVIL FORK REHEARSAL: anvil estimates]' : ''}`);
   out('');
   out(`  chain id        ${r.chainId}`);
   out(`  rpc             ${r.rpcUrl}`);
@@ -373,7 +399,7 @@ export function printReport(r, out = console.log) {
     out('  Verify the above, then send with:');
   }
   out('');
-  out(`  node script/monad-send.mjs send --chain ${r.chainId} --rpc ${r.rpcUrl} --confirm ${r.fingerprint}`);
+  out(`  node script/monad-send.mjs send --chain ${r.chainId} --rpc ${r.rpcUrl}${r.fork ? ` --fork --out ${r.outDir ?? 'DIR'}` : ''}${r.planFile ? ` --plan ${r.planFile}` : ''} --confirm ${r.fingerprint}`);
 }
 
 // ───────────────────────────── send ─────────────────────────────
@@ -441,9 +467,9 @@ export async function verifyDeployment(rpc, d, fx) {
   }
 }
 
-export function writeDeployments(dir, d, sent, deployer, fx) {
+export function writeDeployments(dir, d, sent, deployer, fx, suffix = '') {
   mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${d.chainId}.json`);
+  const file = path.join(dir, `${d.chainId}${suffix}.json`);
   let previous = [];
   try {
     previous = JSON.parse(readFileSync(file, 'utf8')).transactions ?? [];
@@ -469,8 +495,8 @@ export function writeDeployments(dir, d, sent, deployer, fx) {
   return file;
 }
 
-export async function runSend({ rpc, rpcUrl, plan, account, tipWei, confirm, deploymentsDir, out = console.log, waitOpts }) {
-  const report = await buildReport({ rpc, rpcUrl, plan, from: account.address, tipWei });
+export async function runSend({ rpc, rpcUrl, plan, account, tipWei, confirm, deploymentsDir, out = console.log, waitOpts, fork = false }) {
+  const report = await buildReport({ rpc, rpcUrl, plan, from: account.address, tipWei, fork });
   if (confirm !== report.fingerprint) {
     throw new Error(`--confirm ${confirm ?? '(missing)'} does not match this plan's fingerprint ${report.fingerprint}: run \`check\` and verify it first`);
   }
@@ -486,10 +512,10 @@ export async function runSend({ rpc, rpcUrl, plan, account, tipWei, confirm, dep
     }
     const tx = { from: account.address, to: t.to, data: t.data, value: t.value };
     // Fresh Monad estimate right before signing (earlier transactions in this run have landed).
-    const quote = await monadGasQuote(rpc, tx);
+    const quote = await monadGasQuote(rpc, tx, fork ? 'anvil-fork' : 'monad');
     const nonce = Number(BigInt(await rpc('eth_getTransactionCount', [account.address, 'pending'])));
     const f = await fees(rpc, tipWei);
-    const raw = await signWithMonadGas(account, quote, tx, { chainId: plan.chainId, nonce, fees: f });
+    const raw = await signWithMonadGas(account, quote, tx, { chainId: plan.chainId, nonce, fees: f, fork });
     out(`  ${t.name}: Monad estimate ${num(quote.estimate)}, gas limit ${num(quote.gasLimit)}, nonce ${nonce}`);
     const { receipt, hash, sync } = await sendRaw(rpc, raw, state, waitOpts);
     if (receipt.status !== '0x1') throw new Error(`${t.name}: transaction ${hash} reverted`);
@@ -499,7 +525,7 @@ export async function runSend({ rpc, rpcUrl, plan, account, tipWei, confirm, dep
   }
   await verifyDeployment(rpc, plan.deployment, plan.fx);
   out('  verified: code at all 6 addresses; factory, PlansSend, Pot implementation and FxReference wiring matches');
-  const file = writeDeployments(deploymentsDir, plan.deployment, sent, account.address, plan.fx);
+  const file = writeDeployments(deploymentsDir, plan.deployment, sent, account.address, plan.fx, fork ? '-fork' : '');
   out(`  wrote ${path.relative(process.cwd(), file) || file}`);
   return { sent, file };
 }
@@ -512,7 +538,8 @@ function parseArgs(argv) {
   for (let i = 0; i < rest.length; i++) {
     const k = rest[i];
     if (!k.startsWith('--')) throw new Error(`unexpected argument ${k}`);
-    o[k.slice(2)] = rest[++i];
+    if (k === '--fork') o.fork = true;
+    else o[k.slice(2)] = rest[++i];
   }
   return o;
 }
@@ -532,17 +559,23 @@ async function main() {
   const tipWei = BigInt(Math.round(Number(a['tip-gwei'] ?? 2) * 1e9));
   const rpc = makeRpc(rpcUrl);
   const deployer = loadDeployer();
+  const fork = a.fork === true;
+  if (fork && !a.out) throw new Error('--fork needs --out <dir> (fork deployments never go to deployments/)');
+  const deploymentsDir = fork ? path.resolve(a.out) : path.join(CONTRACTS, 'deployments');
+  if (fork && path.resolve(deploymentsDir) === path.join(CONTRACTS, 'deployments')) throw new Error('--out must not be deployments/');
   if (a.mode === 'check') {
     const from = deployer?.account.address ?? (a.from ? getAddress(a.from) : null);
     if (!from) throw new Error('no deployer key (PLANS_DEPLOYER_KEY or ../secrets/keys.env DEPLOYER) and no --from');
     if (deployer && a.from && lc(a.from) !== lc(from)) throw new Error(`--from ${a.from} is not the deployer key's address ${from}`);
-    const r = await buildReport({ rpc, rpcUrl, plan, from, tipWei });
+    const r = await buildReport({ rpc, rpcUrl, plan, from, tipWei, fork });
+    if (fork) r.outDir = a.out;
+    if (a.plan) r.planFile = a.plan;
     printReport(r);
     if (r.errors.length) process.exit(1);
     return;
   }
   if (!deployer) throw new Error('send needs the deployer key: PLANS_DEPLOYER_KEY or DEPLOYER in ../secrets/keys.env');
-  await runSend({ rpc, rpcUrl, plan, account: deployer.account, tipWei, confirm: a.confirm, deploymentsDir: path.join(CONTRACTS, 'deployments') });
+  await runSend({ rpc, rpcUrl, plan, account: deployer.account, tipWei, confirm: a.confirm, deploymentsDir, fork });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

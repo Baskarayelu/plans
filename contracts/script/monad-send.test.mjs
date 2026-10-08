@@ -302,3 +302,30 @@ test('verify refuses a deployment whose PlansSend or Pot points at another FxRef
   const f = fakeMonad({ plan: p, deployed: [p.deployment.keyRegistry, p.deployment.fxReference, p.deployment.plansSend, p.deployment.plansFactory, p.deployment.claimEscrow, p.deployment.potImplementation], wiring: { chainSelector: 1n } });
   await assert.rejects(M.verifyDeployment(f.rpc, p.deployment, p.fx), /CHAIN_SELECTOR/);
 });
+
+test('--fork rehearsal: only a local anvil, anvil quotes never signed outside it, a Monad node refused in fork mode', async () => {
+  const p = plan();
+  const fp = M.fingerprint(p, account.address);
+  const dir = mkdtempSync(path.join(tmpdir(), 'ms-fork-'));
+  const send = (f, url, fork) => M.runSend({ rpc: f.rpc, rpcUrl: url, plan: p, account, tipWei: 1n, confirm: fp, deploymentsDir: dir, out: quiet, fork });
+  // fork mode against a real Monad node or a remote anvil: refused, nothing sent
+  const monadNode = fakeMonad({ plan: p });
+  await assert.rejects(send(monadNode, 'http://127.0.0.1:8545', true), /needs anvil/);
+  const remoteAnvil = fakeMonad({ plan: p, clientVersion: 'anvil/v1.5.0' });
+  await assert.rejects(send(remoteAnvil, 'https://rpc.monad.xyz', true), /local anvil/);
+  // without --fork an anvil is refused (unchanged)
+  await assert.rejects(send(fakeMonad({ plan: p, clientVersion: 'anvil/v1.5.0' }), 'http://127.0.0.1:8545', false), /not a Monad node/);
+  for (const f of [monadNode, remoteAnvil]) assert.equal(f.log.filter((x) => x.kind === 'send').length, 0);
+  // a quote from anvil can't be signed unless the run is a fork rehearsal
+  const t = p.txs[0];
+  const tx = { from: account.address, to: t.to, data: t.data, value: 0n };
+  const q = await M.monadGasQuote(remoteAnvil.rpc, tx, 'anvil-fork');
+  const opts = { chainId: 143, nonce: 0, fees: { maxFeePerGas: 2n, maxPriorityFeePerGas: 1n } };
+  await assert.rejects(M.signWithMonadGas(account, q, tx, opts), /not a Monad RPC/);
+  assert.equal(parseTransaction(await M.signWithMonadGas(account, q, tx, { ...opts, fork: true })).gas, q.gasLimit);
+  // a local anvil fork: sends, and writes <chain>-fork.json, never <chain>.json
+  const local = fakeMonad({ plan: p, clientVersion: 'anvil/v1.5.0' });
+  const r = await send(local, 'http://127.0.0.1:8545', true);
+  assert.equal(path.basename(r.file), `${CHAIN}-fork.json`);
+  assert.equal(local.log.filter((x) => x.kind === 'send').length, 4);
+});
