@@ -266,6 +266,62 @@ async function session(browser, width, { ended, stale = false }) {
       await sleep(1500);
     });
   } else if (!ended) {
+    // Group 2 · trip templates: "Start from" on 10, suggested budgets, then 11 and 12 with them.
+    const toNewPlan = async () => {
+      if (await visible(page, "screen-plan-new")) return;
+      await goPlace(page, "plans", desk);
+      await waitAny(page, ["screen-home"]);
+      await tap(page, desk ? "rail-new-plan" : "btn-new-plan", { timeout: 15000 });
+      await waitAny(page, ["screen-plan-new"]);
+      await sleep(900);
+    };
+    const withTemplate = async () => {
+      await toNewPlan();
+      if (!(await visible(page, "card-template-budgets"))) await tap(page, "template-ski-week");
+      await waitAny(page, ["card-template-budgets"]);
+      await sleep(600);
+    };
+    await step("new-plan", toNewPlan);
+    await step("new-plan-template", async () => {
+      await withTemplate();
+      await centre(page, "template-picker");
+    });
+    await step("new-plan-budgets", async () => {
+      await withTemplate();
+      await tap(page, "stepper-people-plus");
+      await sleep(400);
+      await centre(page, "card-template-budgets");
+    });
+    await step("plan-rules-template", async () => {
+      await withTemplate();
+      await tap(page, "btn-next-set-the-rules");
+      await waitAny(page, ["screen-plan-rules"]);
+      await sleep(1200);
+      if (!desk) await centre(page, "card-budgets");
+    });
+    await step("customise-budgets", async () => {
+      if (!(await visible(page, "screen-plan-rules"))) {
+        await withTemplate();
+        await tap(page, "btn-next-set-the-rules");
+        await waitAny(page, ["screen-plan-rules"]);
+      }
+      await tap(page, "btn-change-budgets");
+      await waitAny(page, ["screen-customise"]);
+      await sleep(900);
+      await centre(page, "stepper-budget-3");
+    });
+    if (["new-plan", "new-plan-template", "new-plan-budgets", "plan-rules-template", "customise-budgets"].some(want)) {
+      // leave the create flow (the draft is dropped by Cancel)
+      for (let i = 0; i < 4 && !(await visible(page, "btn-cancel-new-plan")) && !(await visible(page, "screen-plan-new")); i++) {
+        if (await visible(page, "btn-back")) await tap(page, "btn-back");
+        else if (await visible(page, "btn-back-to-basics")) await tap(page, "btn-back-to-basics");
+        else break;
+        await sleep(600);
+      }
+      if (await visible(page, "btn-cancel-new-plan")) await tap(page, "btn-cancel-new-plan");
+      else if (await visible(page, "btn-close")) await tap(page, "btn-close");
+      await sleep(800);
+    }
     await step("home", async () => {
       await goPlace(page, "plans", desk);
       await waitAny(page, [`plan-card-${L.slice(2, 8)}`]);
@@ -480,7 +536,7 @@ try {
     console.log(`\n${width} px`);
     await fresh(browser, width, "welcome", "/app", ["screen-welcome"]);
     await fresh(browser, width, "claim", claimPath(), ["screen-claim"]);
-    const normal = ["home", "plan", "approval", "pay", "send", "send-amount", "send-confirm", "leave", "activity", "you", "summary", "settled", "receipt-sent", "rate-sheet-sent", "receipt-received-quote", "receipt-received-same", "receipt-spend-round", "receipt-spend-quote", "receipt-spend-done", "receipt-sent-now", "rate-sheet-sent-now", "rate-sheet-settled", "share-card", "summary-rates"];
+    const normal = ["new-plan", "new-plan-template", "new-plan-budgets", "plan-rules-template", "customise-budgets", "home", "plan", "approval", "pay", "send", "send-amount", "send-confirm", "leave", "activity", "you", "summary", "settled", "receipt-sent", "rate-sheet-sent", "receipt-received-quote", "receipt-received-same", "receipt-spend-round", "receipt-spend-quote", "receipt-spend-done", "receipt-sent-now", "rate-sheet-sent-now", "rate-sheet-settled", "share-card", "summary-rates"];
     if (normal.some(want)) await session(browser, width, { ended: false });
     if (want("settle") || want("settle-rates") || want("receipt-settled-now")) await session(browser, width, { ended: true });
     if (want("send-confirm-stale") || want("personal-stale") || want("leave-stale")) await session(browser, width, { ended: false, stale: true });
