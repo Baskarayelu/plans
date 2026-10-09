@@ -19,3 +19,8 @@ real person's account or email.
   going raised to 7 and the suggested budgets rescaled. `plan-rules-template`: step 2 with the budgets card
   (and, on a laptop, budgets and "Started from" in the preview panel). `customise-budgets`: Change budgets
   opens Customise rules with the template's budgets filled in.
+- `2026-10-09-stage-b/`: Stage B on public Monad testnet: two Android emulators with the Plans Test APK
+  built from `5fe3a7f` and the live web app, one plan from invite to settle-up (fxRoundId 6), debt
+  payment and `collect`, link a browser by a camera scan, restore, and the Android first-transaction
+  timing. `RUN.md` has every step, result, transaction and bug. Test accounts only; the Google account
+  e-mail is blacked out.
