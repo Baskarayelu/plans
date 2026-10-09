@@ -83,11 +83,43 @@ Steps (1440): landing loaded 0.41 s · Welcome 0.81 s (1 tap) · passkey created
 account, I'm new to Plans) · Home 5.07 s (5 taps) · confirmed 6.04 s (8 taps). The extra tap against
 7 Oct is "I'm new to Plans"; the ~4 s before the passkey is created is the browser's search for an
 existing Plans passkey plus the create ceremony. A person adds the passkey gesture (about 1–2 s) and
-reading time. The Android path is re-measured on the emulators in Stage B.
+reading time. The Android path was measured on the emulators in Stage B (below).
+
+## Measured: Android (Stage B, 9 Oct 2026)
+
+Emulator play35-a (Android 15, Google Play, Google Password Manager), a fresh install of Plans Test
+built from `5fe3a7f` (sha256 `32ef9b2e…2367bca`), Monad testnet, live relayer. The stopwatch starts at
+the tap on the app icon (tap 7 of the table above; the browser download and install taps before it are
+not included). Taps were made with adb and `uiautomator`, step by step; the app's own `PLANS_TIMING`
+marks give its waits. Evidence: `e2e/evidence/2026-10-09-stage-b/s1-*` (`s1-steps.tsv`,
+`s1-logcat-PLANS_TIMING.txt`, screenshots).
+
+| Path | Taps | Keystrokes | Wall clock (automated run) | App waits only | Transaction |
+|---|---|---|---|---|---|
+| Fresh install → Create account → Get $25 test dollars | 9 + 1 fingerprint | 3 (the name) | 88.2 s | about 18 s | faucet `0xdf7b1233…13c1b` |
+
+The 9 taps: open the app · Create account · Allow notifications (Android's prompt on first run) ·
+Continue · the name field · Continue · Add money · Get test dollars · Get $25 test dollars. The
+fingerprint is the passkey prompt.
+
+App waits, from the marks: app start → Welcome 2.3 s (cold start of a fresh install) · Create account →
+passkey sheet shown 4.1 s (the app's own "slow" mark) · fingerprint → account open 9.8 s (passkey PRF
+and rebuilding the account) · every other screen change under 0.3 s · Get $25 → confirmed 0.7 s (relayer
+latency 0.68 s). The rest of the 88.2 s is the automation: each `uiautomator` screen read took 2–5 s with
+the machine's load average at 13–15. A person reading and tapping at 1–2 s a step would take roughly
+35–40 s.
+
+**Not a brand-new account.** The emulators are signed in to the owner's Google account, whose Password
+Manager already held a Plans passkey, so "Create account" offered "Use your saved passkey for Plans
+Test" and opened that account ("Welcome back"; the profile step followed because it had no plans). By
+design the app never makes a second account when the phone already has one, so a first account on a
+phone with no Plans passkey could not be measured here. That path swaps "Continue" on the restored screen
+for Google Password Manager's create sheet (and, the first time a phone saves a passkey, its "Enter your
+screen lock for the selected device" step, seen on play35-b).
 
 ## Measuring the Android path
 
-No emulator automation is used for this number. With a phone (or emulator) and a stopwatch:
+With a phone (or emulator) and a stopwatch:
 
 1. `adb logcat -c && adb logcat -s PLANS_TIMING PLANS_PRF` on the computer.
 2. Start the stopwatch when the landing page has loaded in the phone's browser; count every tap in the
