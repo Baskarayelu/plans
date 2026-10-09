@@ -1,0 +1,27 @@
+1791533611.846  6470  6501 I PLANS_TIMING: {"event":"app_boot","t":31,"wall":1791533611846}
+1791533611.875  6470  6501 I PLANS_TIMING: {"event":"app_ready","t":60,"wall":1791533611875}
+1791533611.886  6470  6501 I PLANS_TIMING: {"event":"route:/","t":71,"wall":1791533611886}
+1791533612.063  6470  6501 I PLANS_TIMING: {"event":"route:/welcome","t":248,"wall":1791533612063}
+1791533617.410  6470  6501 I PLANS_TIMING: passkey_sheet flow=create ms=316 result=shown slow=false
+1791533876.271  6470  6501 I PLANS_TIMING: {"event":"route:/join","t":264456,"wall":1791533876271}
+1791533891.013  6470  6501 I PLANS_TIMING: passkey_sheet flow=join ms=90 result=shown slow=false
+1791534048.527  6470  6501 I PLANS_TIMING: {"event":"route:/profile","t":436711,"wall":1791534048526}
+1791534050.482  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":438666,"wall":1791534050481,"action":"registerKey","txHash":"0x84fff94c1fc1ad8f231932f1b26d35894c2285ce119ee0f3b97754a08a02267e","latencyMs":229,"clientMs":729}
+1791534050.482  6470  6501 I PLANS_TIMING: {"event":"tx_first","t":438667,"wall":1791534050482,"kind":"relay_ok","action":"registerKey","txHash":"0x84fff94c1fc1ad8f231932f1b26d35894c2285ce119ee0f3b97754a08a02267e","latencyMs":229,"clientMs":729}
+1791534120.034  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":508218,"wall":1791534120033,"action":"join","txHash":"0x07f1788a4e8a6b6a870491a4e776c20391435f51b2c7b233abd4eacbe2ea0a28","latencyMs":242,"clientMs":533}
+1791534121.030  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":509215,"wall":1791534121030,"action":"postKeyWraps","txHash":"0x160c78eb9b403c03bbb392810d4934244e76277a047d5195a991b1e07da3a9af","latencyMs":524,"clientMs":776}
+1791534187.093  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e","t":575277,"wall":1791534187092}
+1791534395.651  6470  6501 I PLANS_TIMING: {"event":"route:/add-balance","t":783829,"wall":1791534395644}
+1791534402.615  6470  6501 I PLANS_TIMING: {"event":"route:/test-dollars","t":790800,"wall":1791534402615}
+1791534414.547  6470  6501 I PLANS_TIMING: {"event":"faucet_ok","t":802730,"wall":1791534414545,"txHash":"0x3469dc15bf689542293411dafc816a9f2a8bbf07440dd9614b3141b97d052ee2"}
+1791534452.656  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e/add","t":840839,"wall":1791534452654}
+1791534501.967  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":890152,"wall":1791534501967,"action":"contribute","txHash":"0xa9db624bc14e40eb85b95b4f15b936f46d90da30f1b52f0f2be97f93c90eaf45","latencyMs":458,"clientMs":737}
+1791534743.709  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e/pay","t":1131894,"wall":1791534743709}
+1791534750.403  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e/pay-form","t":1138588,"wall":1791534750403}
+1791534788.118  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":1176302,"wall":1791534788117,"action":"propose","txHash":"0x38fed6aea97e20c92341ff8439bdf55d9f7cf3452d6db609d11cb78ceec2abe2","latencyMs":205,"clientMs":519}
+1791535176.670  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e/review","t":1564854,"wall":1791535176669}
+1791535185.589  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":1573774,"wall":1791535185589,"action":"ack","txHash":"0xb585a02a65159195bd029915b9efb9496ac27d21cbc087e183499f4a72239e59","latencyMs":316,"clientMs":844}
+1791535271.687  6470  6501 I PLANS_TIMING: {"event":"route:/plan/0x7d446aa841ed3b961bf37b248d1e076d368cc89e/settle","t":1659872,"wall":1791535271687}
+1791535307.447  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":1695632,"wall":1791535307447,"action":"settle","txHash":"0xca48d73b1ba611e6ae3c1a8feb6e76bc182fee2a2688311b4bbab35f80741f68","latencyMs":329,"clientMs":656}
+1791535523.319  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":1911504,"wall":1791535523319,"action":"collect","txHash":"0xe9f09a4bb078ae97ae8c1f08a0f7c8f7f8f8d0de6afcdf5b04fdadffb1802049","latencyMs":332,"clientMs":844}
+1791535542.685  6470  6501 I PLANS_TIMING: {"event":"relay_ok","t":1930870,"wall":1791535542685,"action":"collect","txHash":"0x5ab3e68917613e4cd005b1d0cacdf517e64a2e48077c37b0f153e2d3c30d8d6b","latencyMs":356,"clientMs":751}

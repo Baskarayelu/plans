@@ -1,0 +1,11 @@
+1791533296.855  5611  5633 I PLANS_TIMING: {"event":"app_boot","t":37,"wall":1791533296855}
+1791533296.901  5611  5633 I PLANS_TIMING: {"event":"app_ready","t":83,"wall":1791533296901}
+1791533296.913  5611  5633 I PLANS_TIMING: {"event":"route:/","t":95,"wall":1791533296913}
+1791533296.975  5611  5633 I PLANS_TIMING: {"event":"route:/welcome","t":157,"wall":1791533296975}
+1791533310.562  5611  5633 I PLANS_TIMING: passkey_sheet flow=create ms=4093 result=shown slow=true
+1791533338.619  5611  5633 I PLANS_TIMING: {"event":"route:/restored","t":41801,"wall":1791533338619}
+1791533356.105  5611  5633 I PLANS_TIMING: {"event":"route:/profile","t":59287,"wall":1791533356105}
+1791533371.997  5611  5633 I PLANS_TIMING: {"event":"route:/add-balance","t":75178,"wall":1791533371996}
+1791533377.252  5611  5633 I PLANS_TIMING: {"event":"route:/test-dollars","t":80434,"wall":1791533377252}
+1791533382.772  5611  5633 I PLANS_TIMING: {"event":"faucet_ok","t":85954,"wall":1791533382772,"txHash":"0xdf7b1233b2efa51d815834e6b13eacd47fc6573d7527c0bbe0e771ba97113c1b"}
+1791533382.772  5611  5633 I PLANS_TIMING: {"event":"tx_first","t":85954,"wall":1791533382772,"kind":"faucet_ok","txHash":"0xdf7b1233b2efa51d815834e6b13eacd47fc6573d7527c0bbe0e771ba97113c1b"}
