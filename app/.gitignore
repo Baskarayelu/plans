@@ -1,7 +1,9 @@
 node_modules/
 .expo/
-android/
-ios/
+# the folders `expo prebuild` generates (anchored: modules/*/android is source)
+/android/
+/ios/
+modules/*/android/build/
 dist/
 *.apk
 *.aab
